@@ -1,0 +1,103 @@
+/**
+ * Content types.
+ *
+ * Tiers are HIDDEN from players. They exist only to curate the deck curve
+ * (see `$lib/game/deck.ts`). An item's real value is whatever players bid.
+ */
+export type Tier = 'bad' | 'mid' | 'good' | 'great';
+
+/** Positions used by categories with a positional roster (NBA, NFL). */
+export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C' | 'QB' | 'RB' | 'WR' | 'TE';
+
+/** What the per-category data files export. Hand-editable. */
+export interface ItemSeed {
+	name: string;
+	tier: Tier;
+	/** Optional small flavour line under the name on the card. */
+	note?: string;
+	/** Required only for categories that define a `roster` template. */
+	position?: Position;
+}
+
+/**
+ * One roster slot.
+ *
+ * `drafts` lists the positions this slot exists *for*. It shapes the deck (so a
+ * starting-five draft stocks a realistic spread) and picks the default landing
+ * spot for a won player. It deliberately does NOT restrict what can fill the
+ * slot — you're free to start Shaq at point guard. `null` means the category
+ * has no positions at all.
+ */
+export interface SlotSpec {
+	id: string;
+	label: string;
+	drafts: Position[] | null;
+}
+
+/** A seed with a stable id attached, built at import time by `variant()`. */
+export interface Item extends ItemSeed {
+	id: string;
+}
+
+/**
+ * A sub-pool of a category. Sports categories have two ("Current",
+ * "All-Time"); everything else has a single implicit one.
+ */
+export interface Variant {
+	id: string;
+	label: string;
+	items: Item[];
+}
+
+export interface Category {
+	id: string;
+	label: string;
+	emoji: string;
+	blurb: string;
+	/** Length > 1 renders a toggle on the setup screen. */
+	variants: Variant[];
+	/**
+	 * When present, roster size is locked to this template and every pick is
+	 * position-gated. Absent means free-form slots with an adjustable count.
+	 */
+	roster?: SlotSpec[];
+}
+
+/** Free-form slots, for every category without a positional template. */
+export function openRoster(count: number): SlotSpec[] {
+	return Array.from({ length: count }, (_, i) => ({
+		id: `slot-${i + 1}`,
+		label: `${i + 1}`,
+		drafts: null
+	}));
+}
+
+/**
+ * Whether this item is a natural fit for the slot. Only used to suggest a
+ * default — any item may be placed in any open slot.
+ */
+export function slotSuits(slot: SlotSpec, item: ItemSeed): boolean {
+	if (slot.drafts === null) return true;
+	return !!item.position && slot.drafts.includes(item.position);
+}
+
+function slug(name: string): string {
+	return name
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, '-')
+		.replace(/^-|-$/g, '');
+}
+
+/** Attaches collision-proof ids so data files stay clean to edit by hand. */
+export function variant(id: string, label: string, seeds: ItemSeed[]): Variant {
+	const seen = new Map<string, number>();
+	const items = seeds.map((seed) => {
+		const base = `${id}-${slug(seed.name)}`;
+		const n = (seen.get(base) ?? 0) + 1;
+		seen.set(base, n);
+		return { ...seed, id: n === 1 ? base : `${base}-${n}` };
+	});
+	return { id, label, items };
+}

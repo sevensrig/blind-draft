@@ -1,0 +1,120 @@
+import type { ItemSeed } from './types';
+
+export const NHL_CURRENT: ItemSeed[] = [
+	// great
+	{ name: 'Connor McDavid', tier: 'great' },
+	{ name: 'Nathan MacKinnon', tier: 'great' },
+	{ name: 'Leon Draisaitl', tier: 'great' },
+	{ name: 'Auston Matthews', tier: 'great' },
+	{ name: 'Cale Makar', tier: 'great' },
+	{ name: 'Nikita Kucherov', tier: 'great' },
+	{ name: 'David Pastrnak', tier: 'great' },
+	{ name: 'Connor Hellebuyck', tier: 'great' },
+	{ name: 'Quinn Hughes', tier: 'great' },
+	{ name: 'Kirill Kaprizov', tier: 'great' },
+	{ name: 'Macklin Celebrini', tier: 'great' },
+	{ name: 'Sidney Crosby', tier: 'great' },
+	{ name: 'Alex Ovechkin', tier: 'great' },
+
+	// good
+	{ name: 'Connor Bedard', tier: 'good' },
+	{ name: 'Jack Hughes', tier: 'good' },
+	{ name: 'Jack Eichel', tier: 'good' },
+	{ name: 'Mitch Marner', tier: 'good' },
+	{ name: 'Matthew Tkachuk', tier: 'good' },
+	{ name: 'Brady Tkachuk', tier: 'good' },
+	{ name: 'Igor Shesterkin', tier: 'good' },
+	{ name: 'Artemi Panarin', tier: 'good' },
+	{ name: 'Jason Robertson', tier: 'good' },
+	{ name: 'Tage Thompson', tier: 'good' },
+	{ name: 'Adam Fox', tier: 'good' },
+	{ name: 'Roman Josi', tier: 'good' },
+
+	// mid
+	{ name: 'William Nylander', tier: 'mid' },
+	{ name: 'Mikko Rantanen', tier: 'mid' },
+	{ name: 'Steven Stamkos', tier: 'mid' },
+	{ name: 'Brad Marchand', tier: 'mid' },
+	{ name: 'Elias Pettersson', tier: 'mid' },
+	{ name: 'Aleksander Barkov', tier: 'mid' },
+	{ name: 'Sam Reinhart', tier: 'mid' },
+	{ name: 'Dylan Larkin', tier: 'mid' },
+	{ name: 'Chris Kreider', tier: 'mid' },
+	{ name: 'Alex DeBrincat', tier: 'mid' },
+	{ name: 'Jake Guentzel', tier: 'mid' },
+	{ name: 'Brayden Point', tier: 'mid' },
+	{ name: 'Tim Stutzle', tier: 'mid' },
+	{ name: 'Cole Caufield', tier: 'mid' },
+	{ name: 'Sergei Bobrovsky', tier: 'mid' },
+	{ name: 'Jordan Binnington', tier: 'mid' },
+
+	// bad
+	{ name: 'Alexis Lafreniere', tier: 'bad' },
+	{ name: 'Trevor Zegras', tier: 'bad' },
+	{ name: 'Matt Rempe', tier: 'bad' },
+	{ name: 'Ryan Reaves', tier: 'bad' },
+	{ name: 'Tom Wilson', tier: 'bad' },
+	{ name: 'Erik Karlsson', tier: 'bad' },
+	{ name: 'Jonathan Huberdeau', tier: 'bad' },
+	{ name: 'Kaapo Kakko', tier: 'bad' },
+	{ name: 'Jeff Skinner', tier: 'bad' }
+];
+
+export const NHL_ALL_TIME: ItemSeed[] = [
+	// great
+	{ name: 'Wayne Gretzky', tier: 'great' },
+	{ name: 'Mario Lemieux', tier: 'great' },
+	{ name: 'Bobby Orr', tier: 'great' },
+	{ name: 'Gordie Howe', tier: 'great' },
+	{ name: 'Jaromir Jagr', tier: 'great' },
+	{ name: 'Mark Messier', tier: 'great' },
+	{ name: 'Patrick Roy', tier: 'great' },
+	{ name: 'Martin Brodeur', tier: 'great' },
+	{ name: 'Dominik Hasek', tier: 'great' },
+	{ name: 'Nicklas Lidstrom', tier: 'great' },
+	{ name: 'Sidney Crosby', tier: 'great' },
+	{ name: 'Alex Ovechkin', tier: 'great' },
+
+	// good
+	{ name: 'Steve Yzerman', tier: 'good' },
+	{ name: 'Joe Sakic', tier: 'good' },
+	{ name: 'Ray Bourque', tier: 'good' },
+	{ name: 'Teemu Selanne', tier: 'good' },
+	{ name: 'Brett Hull', tier: 'good' },
+	{ name: 'Peter Forsberg', tier: 'good' },
+	{ name: 'Evgeni Malkin', tier: 'good' },
+	{ name: 'Patrick Kane', tier: 'good' },
+	{ name: 'Jonathan Toews', tier: 'good' },
+	{ name: 'Henrik Lundqvist', tier: 'good' },
+	{ name: 'Zdeno Chara', tier: 'good' },
+	{ name: 'Patrice Bergeron', tier: 'good' },
+
+	// mid
+	{ name: 'Anze Kopitar', tier: 'mid' },
+	{ name: 'Marc-Andre Fleury', tier: 'mid' },
+	{ name: 'Duncan Keith', tier: 'mid' },
+	{ name: 'Chris Chelios', tier: 'mid' },
+	{ name: 'Mats Sundin', tier: 'mid' },
+	{ name: 'Jarome Iginla', tier: 'mid' },
+	{ name: 'Joe Thornton', tier: 'mid' },
+	{ name: 'Pavel Datsyuk', tier: 'mid' },
+	{ name: 'Marian Hossa', tier: 'mid' },
+	{ name: 'Eric Lindros', tier: 'mid' },
+	{ name: 'Claude Giroux', tier: 'mid' },
+	{ name: 'Ryan Getzlaf', tier: 'mid' },
+	{ name: 'Shea Weber', tier: 'mid' },
+	{ name: 'Carey Price', tier: 'mid' },
+	{ name: 'Sergei Fedorov', tier: 'mid' },
+	{ name: 'P.K. Subban', tier: 'mid' },
+
+	// bad
+	{ name: 'Tie Domi', tier: 'bad' },
+	{ name: 'Marty McSorley', tier: 'bad' },
+	{ name: 'Sean Avery', tier: 'bad' },
+	{ name: 'John Scott', tier: 'bad' },
+	{ name: 'Rick DiPietro', tier: 'bad' },
+	{ name: 'Nail Yakupov', tier: 'bad' },
+	{ name: 'Scott Gomez', tier: 'bad' },
+	{ name: 'Dion Phaneuf', tier: 'bad' },
+	{ name: 'Ilya Bryzgalov', tier: 'bad' }
+];

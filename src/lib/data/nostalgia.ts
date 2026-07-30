@@ -1,0 +1,65 @@
+import type { ItemSeed } from './types';
+
+/**
+ * Childhood Nostalgia — toys, trends, snacks, games and internet moments.
+ *
+ * Reference window is a 2008-2020 childhood, i.e. players aged 14-26. Anything
+ * that peaked before ~2007 belongs to someone else's childhood and gets cut.
+ */
+export const NOSTALGIA: ItemSeed[] = [
+	// great
+	{ name: 'Nintendo Wii', tier: 'great' },
+	{ name: 'Nintendo DS', tier: 'great' },
+	{ name: 'Club Penguin', tier: 'great' },
+	{ name: 'Minecraft', tier: 'great' },
+	{ name: 'Wii Sports', tier: 'great' },
+	{ name: 'iPod Touch', tier: 'great' },
+	{ name: 'Happy Meals', tier: 'great' },
+	{ name: "Dippin' Dots", tier: 'great' },
+	{ name: 'Hoverboards', tier: 'great' },
+	{ name: 'Mario Kart Wii', tier: 'great' },
+
+	// good
+	{ name: 'Pokemon cards', tier: 'good' },
+	{ name: 'Roblox', tier: 'good' },
+	{ name: 'Heelys', tier: 'good' },
+	{ name: 'Nerf guns', tier: 'good' },
+	{ name: 'Beyblades', tier: 'good' },
+	{ name: 'Just Dance', tier: 'good' },
+	{ name: 'Guitar Hero', tier: 'good' },
+	{ name: 'Scholastic Book Fair', tier: 'good' },
+	{ name: 'Lunchables', tier: 'good' },
+	{ name: 'Gushers', tier: 'good' },
+
+	// mid
+	{ name: 'Silly Bandz', tier: 'mid' },
+	{ name: 'Rainbow Loom', tier: 'mid' },
+	{ name: 'Webkinz', tier: 'mid' },
+	{ name: 'Flappy Bird', tier: 'mid' },
+	{ name: 'Temple Run', tier: 'mid' },
+	{ name: 'Subway Surfers', tier: 'mid' },
+	{ name: 'Angry Birds', tier: 'mid' },
+	{ name: 'Cool Math Games', tier: 'mid' },
+	{ name: 'Poptropica', tier: 'mid' },
+	{ name: 'Razor scooter', tier: 'mid' },
+	{ name: 'Crocs', tier: 'mid' },
+	{ name: 'Vine', tier: 'mid' },
+	{ name: 'Musical.ly', tier: 'mid' },
+	{ name: 'Dude Perfect', tier: 'mid' },
+	{ name: 'Supreme', tier: 'mid' },
+	{ name: 'Capri Sun', tier: 'mid' },
+	{ name: 'Kahoot', tier: 'mid' },
+	{ name: 'Fidget spinners', tier: 'mid' },
+
+	// bad
+	{ name: 'Caillou', tier: 'bad' },
+	{ name: 'Zhu Zhu Pets', tier: 'bad' },
+	{ name: 'Fingerlings', tier: 'bad' },
+	{ name: 'Shopkins', tier: 'bad' },
+	{ name: 'Dabbing', tier: 'bad' },
+	{ name: 'Planking', tier: 'bad' },
+	{ name: 'Harlem Shake', tier: 'bad' },
+	{ name: 'Bop It', tier: 'bad' },
+	{ name: 'Silly Putty', tier: 'bad' },
+	{ name: 'Slap bracelets', tier: 'bad' }
+];

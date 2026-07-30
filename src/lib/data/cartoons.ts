@@ -1,0 +1,60 @@
+import type { ItemSeed } from './types';
+
+export const CARTOONS: ItemSeed[] = [
+	// great
+	{ name: 'Avatar: The Last Airbender', tier: 'great' },
+	{ name: 'SpongeBob SquarePants', tier: 'great' },
+	{ name: 'Adventure Time', tier: 'great' },
+	{ name: 'Gravity Falls', tier: 'great' },
+	{ name: 'Phineas and Ferb', tier: 'great' },
+	{ name: 'Regular Show', tier: 'great' },
+	{ name: 'Pokemon', tier: 'great' },
+	{ name: 'Rick and Morty', tier: 'great' },
+	{ name: 'Naruto', tier: 'great' },
+	{ name: 'Dragon Ball Z', tier: 'great' },
+
+	// good
+	{ name: 'Steven Universe', tier: 'good' },
+	{ name: 'The Amazing World of Gumball', tier: 'good' },
+	{ name: 'Total Drama Island', tier: 'good' },
+	{ name: 'Ben 10', tier: 'good' },
+	{ name: 'Kim Possible', tier: 'good' },
+	{ name: 'My Hero Academia', tier: 'good' },
+	{ name: 'The Owl House', tier: 'good' },
+	{ name: 'Danny Phantom', tier: 'good' },
+	{ name: 'The Fairly OddParents', tier: 'good' },
+	{ name: 'Scooby-Doo', tier: 'good' },
+	{ name: 'Teen Titans', tier: 'good' },
+
+	// mid
+	{ name: 'Teen Titans Go!', tier: 'mid' },
+	{ name: 'We Bare Bears', tier: 'mid' },
+	{ name: 'Amphibia', tier: 'mid' },
+	{ name: 'Miraculous Ladybug', tier: 'mid' },
+	{ name: 'Bluey', tier: 'mid' },
+	{ name: 'Star vs. the Forces of Evil', tier: 'mid' },
+	{ name: 'The Loud House', tier: 'mid' },
+	{ name: 'Craig of the Creek', tier: 'mid' },
+	{ name: 'Ninjago', tier: 'mid' },
+	{ name: 'Attack on Titan', tier: 'mid' },
+	{ name: 'Demon Slayer', tier: 'mid' },
+	{ name: 'Ed, Edd n Eddy', tier: 'mid' },
+	{ name: 'Courage the Cowardly Dog', tier: 'mid' },
+	{ name: 'Tom and Jerry', tier: 'mid' },
+	{ name: 'The Powerpuff Girls', tier: 'mid' },
+	{ name: 'Yu-Gi-Oh!', tier: 'mid' },
+	{ name: 'Beyblade', tier: 'mid' },
+	{ name: 'Jimmy Neutron', tier: 'mid' },
+	{ name: 'Winx Club', tier: 'mid' },
+
+	// bad
+	{ name: 'Johnny Test', tier: 'bad' },
+	{ name: 'Fanboy & Chum Chum', tier: 'bad' },
+	{ name: 'Breadwinners', tier: 'bad' },
+	{ name: 'Sanjay and Craig', tier: 'bad' },
+	{ name: 'Uncle Grandpa', tier: 'bad' },
+	{ name: 'Almost Naked Animals', tier: 'bad' },
+	{ name: 'Chowder', tier: 'bad' },
+	{ name: 'Caillou', tier: 'bad' },
+	{ name: 'Pickle and Peanut', tier: 'bad' }
+];

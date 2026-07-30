@@ -1,0 +1,4 @@
+# Prettier only owns .svelte files here; Biome owns everything else.
+# See the "Testing and quality tooling" section of the README.
+*
+!src/**/*.svelte

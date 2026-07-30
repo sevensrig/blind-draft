@@ -1,0 +1,121 @@
+import type { ItemSeed } from './types';
+
+export const MLB_CURRENT: ItemSeed[] = [
+	// great
+	{ name: 'Shohei Ohtani', tier: 'great' },
+	{ name: 'Aaron Judge', tier: 'great' },
+	{ name: 'Juan Soto', tier: 'great' },
+	{ name: 'Bobby Witt Jr.', tier: 'great' },
+	{ name: 'Paul Skenes', tier: 'great' },
+	{ name: 'Tarik Skubal', tier: 'great' },
+	{ name: 'Jose Ramirez', tier: 'great' },
+	{ name: 'Mookie Betts', tier: 'great' },
+	{ name: 'Freddie Freeman', tier: 'great' },
+	{ name: 'Elly De La Cruz', tier: 'great' },
+	{ name: 'Ronald Acuna Jr.', tier: 'great' },
+
+	// good
+	{ name: 'Bryce Harper', tier: 'good' },
+	{ name: 'Vladimir Guerrero Jr.', tier: 'good' },
+	{ name: 'Fernando Tatis Jr.', tier: 'good' },
+	{ name: 'Yordan Alvarez', tier: 'good' },
+	{ name: 'Francisco Lindor', tier: 'good' },
+	{ name: 'Julio Rodriguez', tier: 'good' },
+	{ name: 'Kyle Tucker', tier: 'good' },
+	{ name: 'Corbin Carroll', tier: 'good' },
+	{ name: 'Gunnar Henderson', tier: 'good' },
+	{ name: 'Corey Seager', tier: 'good' },
+	{ name: 'Adley Rutschman', tier: 'good' },
+	{ name: 'Ketel Marte', tier: 'good' },
+	{ name: 'Zack Wheeler', tier: 'good' },
+
+	// mid
+	{ name: 'Pete Alonso', tier: 'mid' },
+	{ name: 'Mike Trout', tier: 'mid' },
+	{ name: 'Jose Altuve', tier: 'mid' },
+	{ name: 'Manny Machado', tier: 'mid' },
+	{ name: 'Rafael Devers', tier: 'mid' },
+	{ name: 'Trea Turner', tier: 'mid' },
+	{ name: 'Bo Bichette', tier: 'mid' },
+	{ name: 'Matt Olson', tier: 'mid' },
+	{ name: 'Marcus Semien', tier: 'mid' },
+	{ name: 'Christian Yelich', tier: 'mid' },
+	{ name: 'Salvador Perez', tier: 'mid' },
+	{ name: 'Jazz Chisholm Jr.', tier: 'mid' },
+	{ name: 'Jeremy Pena', tier: 'mid' },
+	{ name: 'Clayton Kershaw', tier: 'mid' },
+	{ name: 'Gerrit Cole', tier: 'mid' },
+	{ name: 'Spencer Strider', tier: 'mid' },
+	{ name: 'Aaron Nola', tier: 'mid' },
+
+	// bad
+	{ name: 'Joey Gallo', tier: 'bad' },
+	{ name: 'Anthony Rendon', tier: 'bad' },
+	{ name: 'Kris Bryant', tier: 'bad' },
+	{ name: 'Javier Baez', tier: 'bad' },
+	{ name: 'Cody Bellinger', tier: 'bad' },
+	{ name: 'Giancarlo Stanton', tier: 'bad' },
+	{ name: 'Trevor Story', tier: 'bad' },
+	{ name: 'Nolan Arenado', tier: 'bad' },
+	{ name: 'Anthony Volpe', tier: 'bad' }
+];
+
+export const MLB_ALL_TIME: ItemSeed[] = [
+	// great
+	{ name: 'Babe Ruth', tier: 'great' },
+	{ name: 'Jackie Robinson', tier: 'great' },
+	{ name: 'Hank Aaron', tier: 'great' },
+	{ name: 'Willie Mays', tier: 'great' },
+	{ name: 'Barry Bonds', tier: 'great' },
+	{ name: 'Ken Griffey Jr.', tier: 'great' },
+	{ name: 'Mickey Mantle', tier: 'great' },
+	{ name: 'Ted Williams', tier: 'great' },
+	{ name: 'Lou Gehrig', tier: 'great' },
+	{ name: 'Derek Jeter', tier: 'great' },
+	{ name: 'Roberto Clemente', tier: 'great' },
+	{ name: 'Pedro Martinez', tier: 'great' },
+	{ name: 'Sandy Koufax', tier: 'great' },
+	{ name: 'Rickey Henderson', tier: 'great' },
+
+	// good
+	{ name: 'Nolan Ryan', tier: 'good' },
+	{ name: 'Ichiro Suzuki', tier: 'good' },
+	{ name: 'David Ortiz', tier: 'good' },
+	{ name: 'Mariano Rivera', tier: 'good' },
+	{ name: 'Randy Johnson', tier: 'good' },
+	{ name: 'Greg Maddux', tier: 'good' },
+	{ name: 'Albert Pujols', tier: 'good' },
+	{ name: 'Alex Rodriguez', tier: 'good' },
+	{ name: 'Cal Ripken Jr.', tier: 'good' },
+	{ name: 'Frank Thomas', tier: 'good' },
+	{ name: 'Bo Jackson', tier: 'good' },
+
+	// mid
+	{ name: 'Sammy Sosa', tier: 'mid' },
+	{ name: 'Mark McGwire', tier: 'mid' },
+	{ name: 'Chipper Jones', tier: 'mid' },
+	{ name: 'Mike Piazza', tier: 'mid' },
+	{ name: 'Ozzie Smith', tier: 'mid' },
+	{ name: 'Reggie Jackson', tier: 'mid' },
+	{ name: 'Roger Clemens', tier: 'mid' },
+	{ name: 'Justin Verlander', tier: 'mid' },
+	{ name: 'Max Scherzer', tier: 'mid' },
+	{ name: 'Miguel Cabrera', tier: 'mid' },
+	{ name: 'Jim Thome', tier: 'mid' },
+	{ name: 'Vladimir Guerrero', tier: 'mid' },
+	{ name: 'Tony Gwynn', tier: 'mid' },
+	{ name: 'Joe DiMaggio', tier: 'mid' },
+	{ name: 'CC Sabathia', tier: 'mid' },
+	{ name: 'Buster Posey', tier: 'mid' },
+
+	// bad
+	{ name: 'Deion Sanders', tier: 'bad' },
+	{ name: 'Bartolo Colon', tier: 'bad' },
+	{ name: 'Pablo Sandoval', tier: 'bad' },
+	{ name: 'Ryan Howard', tier: 'bad' },
+	{ name: 'Tim Lincecum', tier: 'bad' },
+	{ name: 'Alfonso Soriano', tier: 'bad' },
+	{ name: 'Prince Fielder', tier: 'bad' },
+	{ name: 'Yasiel Puig', tier: 'bad' },
+	{ name: 'Jacoby Ellsbury', tier: 'bad' }
+];

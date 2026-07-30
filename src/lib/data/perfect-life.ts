@@ -1,0 +1,58 @@
+import type { ItemSeed } from './types';
+
+export const PERFECT_LIFE: ItemSeed[] = [
+	// great
+	{ name: 'Billionaire', tier: 'great' },
+	{ name: 'Teleportation', tier: 'great' },
+	{ name: 'Never sleep again', tier: 'great' },
+	{ name: '6\'5" 245 lbs', tier: 'great' },
+	{ name: 'Immortality', tier: 'great' },
+	{ name: 'Fly', tier: 'great' },
+	{ name: 'Perfect health', tier: 'great' },
+	{ name: 'Read minds', tier: 'great' },
+	{ name: 'Time travel', tier: 'great' },
+	{ name: 'Never age', tier: 'great' },
+	{ name: 'Super strength', tier: 'great' },
+
+	// good
+	{ name: '200 IQ', tier: 'good' },
+	{ name: 'Talk to animals', tier: 'good' },
+	{ name: 'Photographic memory', tier: 'good' },
+	{ name: 'Speak every language', tier: 'good' },
+	{ name: 'Free flights forever', tier: 'good' },
+	{ name: 'Never get sick', tier: 'good' },
+	{ name: 'Perfect voice', tier: 'good' },
+	{ name: 'Invisibility', tier: 'good' },
+	{ name: 'Unlimited rizz', tier: 'good' },
+	{ name: 'Private jet', tier: 'good' },
+
+	// mid
+	{ name: '10M followers', tier: 'mid' },
+	{ name: 'Never pay taxes', tier: 'mid' },
+	{ name: 'Live to 100', tier: 'mid' },
+	{ name: 'Never need glasses', tier: 'mid' },
+	{ name: 'Perfect metabolism', tier: 'mid' },
+	{ name: 'Master any skill instantly', tier: 'mid' },
+	{ name: 'Dog that never ages', tier: 'mid' },
+	{ name: 'Front row every concert', tier: 'mid' },
+	{ name: 'Never stuck in traffic', tier: 'mid' },
+	{ name: 'Always spot a liar', tier: 'mid' },
+	{ name: 'Free food forever', tier: 'mid' },
+	{ name: 'Never forget a name', tier: 'mid' },
+	{ name: 'Perfect skin', tier: 'mid' },
+	{ name: 'Read twice as fast', tier: 'mid' },
+	{ name: 'Date your celebrity crush', tier: 'mid' },
+	{ name: 'Never sunburn', tier: 'mid' },
+	{ name: 'Never wait in line', tier: 'mid' },
+
+	// bad
+	{ name: 'Always find parking', tier: 'bad' },
+	{ name: 'Never stub your toe', tier: 'bad' },
+	{ name: 'Perfect handwriting', tier: 'bad' },
+	{ name: 'Always win rock paper scissors', tier: 'bad' },
+	{ name: 'Never get a paper cut', tier: 'bad' },
+	{ name: 'Always find the remote', tier: 'bad' },
+	{ name: 'Never mismatch your socks', tier: 'bad' },
+	{ name: 'Immune to brain freeze', tier: 'bad' },
+	{ name: 'Whistle any song perfectly', tier: 'bad' }
+];

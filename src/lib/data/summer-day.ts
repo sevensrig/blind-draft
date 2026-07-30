@@ -1,0 +1,58 @@
+import type { ItemSeed } from './types';
+
+export const SUMMER_DAY: ItemSeed[] = [
+	// great
+	{ name: 'Beach day', tier: 'great' },
+	{ name: 'Sleeping in till noon', tier: 'great' },
+	{ name: 'Pool day', tier: 'great' },
+	{ name: 'Bonfire', tier: 'great' },
+	{ name: 'Road trip', tier: 'great' },
+	{ name: 'No school', tier: 'great' },
+	{ name: 'Lake day', tier: 'great' },
+	{ name: 'Golden hour', tier: 'great' },
+	{ name: 'Concert', tier: 'great' },
+	{ name: 'Jet ski', tier: 'great' },
+	{ name: 'Sunset drive', tier: 'great' },
+
+	// good
+	{ name: 'Fireflies', tier: 'good' },
+	{ name: 'Boat day', tier: 'good' },
+	{ name: 'Waterpark', tier: 'good' },
+	{ name: 'Sleepover', tier: 'good' },
+	{ name: 'Water balloon fight', tier: 'good' },
+	{ name: 'Late night drive', tier: 'good' },
+	{ name: 'Cliff jumping', tier: 'good' },
+	{ name: 'Camping', tier: 'good' },
+	{ name: 'Slip N Slide', tier: 'good' },
+	{ name: 'Music festival', tier: 'good' },
+
+	// mid
+	{ name: 'Ice cream truck', tier: 'mid' },
+	{ name: 'Sprinklers', tier: 'mid' },
+	{ name: 'Cookout', tier: 'mid' },
+	{ name: 'Mini golf', tier: 'mid' },
+	{ name: 'Iced coffee run', tier: 'mid' },
+	{ name: 'Hammock', tier: 'mid' },
+	{ name: 'Fireworks', tier: 'mid' },
+	{ name: 'Watermelon', tier: 'mid' },
+	{ name: 'Community pool', tier: 'mid' },
+	{ name: 'Bike ride', tier: 'mid' },
+	{ name: 'Beach volleyball', tier: 'mid' },
+	{ name: 'Popsicles', tier: 'mid' },
+	{ name: 'Summer job', tier: 'mid' },
+	{ name: 'Warm lake water', tier: 'mid' },
+	{ name: 'Backyard nap', tier: 'mid' },
+	{ name: 'Parade', tier: 'mid' },
+	{ name: 'Gas station snacks', tier: 'mid' },
+
+	// bad
+	{ name: 'Sunburn', tier: 'bad' },
+	{ name: 'Sand in everything', tier: 'bad' },
+	{ name: 'Mosquito bites', tier: 'bad' },
+	{ name: 'Hot car seatbelt', tier: 'bad' },
+	{ name: 'Wet swimsuit car ride', tier: 'bad' },
+	{ name: "Farmer's tan", tier: 'bad' },
+	{ name: 'Sweaty phone screen', tier: 'bad' },
+	{ name: 'Melted candy', tier: 'bad' },
+	{ name: 'Wasp at the cookout', tier: 'bad' }
+];

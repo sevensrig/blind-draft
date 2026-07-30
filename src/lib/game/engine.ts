@@ -1,0 +1,338 @@
+import type { Item, SlotSpec } from '$lib/data/types';
+import { openRoster, slotSuits } from '$lib/data/types';
+import type { Action, Award, GameConfig, GameState, ItemMode, Player, PlayerId } from './types';
+
+/**
+ * The whole rulebook, as one pure reducer.
+ *
+ * Nothing in here touches Svelte, the DOM, or storage. The UI reads state and
+ * dispatches actions through `$lib/game/store.svelte.ts`; that store is the only
+ * file Tier 2 has to change to sync these same actions through Supabase.
+ *
+ * Invalid actions return the state untouched rather than throwing, so a stray
+ * double-tap can't wedge a game. The screens disable controls using the
+ * `can*` selectors below, so users shouldn't reach those paths anyway.
+ */
+
+export const DEFAULT_BUDGET = 20;
+export const DEFAULT_SLOTS = 5;
+export const MIN_BID = 1;
+
+const OTHER: Record<PlayerId, PlayerId> = { 0: 1, 1: 0 };
+
+export const other = (id: PlayerId): PlayerId => OTHER[id];
+
+function blankPlayer(id: PlayerId, name: string, money: number): Player {
+	return { id, name, money, roster: [] };
+}
+
+export function defaultConfig(): GameConfig {
+	return {
+		budget: DEFAULT_BUDGET,
+		slots: DEFAULT_SLOTS,
+		roster: openRoster(DEFAULT_SLOTS),
+		positional: false,
+		categoryId: '',
+		variantId: '',
+		categoryLabel: '',
+		variantLabel: null
+	};
+}
+
+export function initialState(): GameState {
+	return {
+		phase: 'setup',
+		config: defaultConfig(),
+		players: [
+			blankPlayer(0, 'Player 1', DEFAULT_BUDGET),
+			blankPlayer(1, 'Player 2', DEFAULT_BUDGET)
+		],
+		deck: [],
+		index: 0,
+		bid: null,
+		freeTurn: 0,
+		lastAward: null,
+		history: []
+	};
+}
+
+/* ------------------------------------------------------------------ *
+ * Slots
+ * ------------------------------------------------------------------ */
+
+export function currentItem(state: GameState): Item | null {
+	return state.deck[state.index] ?? null;
+}
+
+export function openSlots(state: GameState, id: PlayerId): SlotSpec[] {
+	const filled = new Set(state.players[id].roster.map((entry) => entry.slotId));
+	return state.config.roster.filter((slot) => !filled.has(slot.id));
+}
+
+/**
+ * Where a won item lands by default: the open slot it naturally suits, else the
+ * first open slot. Only a starting point — `assign` can move it anywhere open,
+ * so nothing stops you starting a centre at point guard.
+ */
+export function defaultSlotFor(state: GameState, id: PlayerId, item: Item): SlotSpec | null {
+	const open = openSlots(state, id);
+	return open.find((slot) => slotSuits(slot, item)) ?? open[0] ?? null;
+}
+
+/**
+ * Whether this player can win the current item. Any item fits any open slot, so
+ * this is purely "do they have room left".
+ */
+export function canReceive(state: GameState, id: PlayerId, item: Item): boolean {
+	return defaultSlotFor(state, id, item) !== null;
+}
+
+export function slotsLeft(state: GameState, id: PlayerId): number {
+	return openSlots(state, id).length;
+}
+
+export function isBroke(state: GameState, id: PlayerId): boolean {
+	return state.players[id].money <= 0;
+}
+
+/**
+ * Which rule governs the current item. Order matters: a full roster overrides
+ * the money rules, because a player with no slots can't receive anything.
+ */
+export function itemMode(state: GameState): ItemMode {
+	const item = currentItem(state);
+	if (!item) return 'forced';
+
+	if (!canReceive(state, 0, item) || !canReceive(state, 1, item)) return 'forced';
+	if (!isBroke(state, 0) && !isBroke(state, 1)) return 'contest';
+	if (isBroke(state, 0) && isBroke(state, 1)) return 'alternate';
+	return 'solo';
+}
+
+/** In `solo` mode, the player who still has money to spend. */
+export function solventPlayer(state: GameState): PlayerId {
+	return isBroke(state, 0) ? 1 : 0;
+}
+
+/** Who receives a free award. */
+export function freeRecipient(state: GameState): PlayerId {
+	const item = currentItem(state);
+	const mode = itemMode(state);
+
+	if (mode === 'forced') return item && canReceive(state, 0, item) ? 0 : 1;
+	if (mode === 'solo') return other(solventPlayer(state));
+	// Alternate: follow the pointer, skipping a player who can't use the item.
+	if (item && !canReceive(state, state.freeTurn, item)) return other(state.freeTurn);
+	return state.freeTurn;
+}
+
+/** Smallest legal bid right now: $1 to open, else a dollar over the standing bid. */
+export function minBid(state: GameState): number {
+	return state.bid ? state.bid.amount + 1 : MIN_BID;
+}
+
+/** Deliberately capped only by the player's wallet — no reserve, per rule 6. */
+export function maxBid(state: GameState, id: PlayerId): number {
+	return state.players[id].money;
+}
+
+export function canBid(state: GameState, id: PlayerId, amount: number): boolean {
+	if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return false;
+	// You can't raise your own standing bid.
+	if (state.bid?.holder === id) return false;
+	if (!Number.isInteger(amount)) return false;
+	return amount >= minBid(state) && amount <= maxBid(state, id);
+}
+
+export function canBuy(state: GameState, id: PlayerId, amount: number): boolean {
+	if (state.phase !== 'resolve' || itemMode(state) !== 'solo') return false;
+	if (id !== solventPlayer(state)) return false;
+	if (!Number.isInteger(amount)) return false;
+	return amount >= MIN_BID && amount <= maxBid(state, id);
+}
+
+export function totalSpent(player: Player): number {
+	return player.roster.reduce((sum, entry) => sum + entry.price, 0);
+}
+
+export function rosterFull(state: GameState, id: PlayerId): boolean {
+	return slotsLeft(state, id) === 0;
+}
+
+export function isGameOver(state: GameState): boolean {
+	return rosterFull(state, 0) && rosterFull(state, 1);
+}
+
+/** 1-based position in the deck, for the "Item 3 of 10" readout. */
+export function itemNumber(state: GameState): number {
+	return Math.min(state.index + 1, state.deck.length);
+}
+
+/** The roster entry filling a slot, for the slot-by-slot roster views. */
+export function entryInSlot(
+	state: GameState,
+	id: PlayerId,
+	slotId: string
+): GameState['players'][PlayerId]['roster'][number] | undefined {
+	return state.players[id].roster.find((entry) => entry.slotId === slotId);
+}
+
+/* ------------------------------------------------------------------ *
+ * Reducer
+ * ------------------------------------------------------------------ */
+
+function replacePlayer(state: GameState, id: PlayerId, next: Player): [Player, Player] {
+	return id === 0 ? [next, state.players[1]] : [state.players[0], next];
+}
+
+/**
+ * Hands the current item to `playerId` and moves into the award celebration.
+ * The single place money leaves a wallet and a roster slot gets consumed.
+ */
+function awardCurrent(
+	state: GameState,
+	playerId: PlayerId,
+	price: number,
+	options: { free: boolean; declined?: boolean }
+): GameState {
+	const item = currentItem(state);
+	if (!item) return state;
+
+	const slot = defaultSlotFor(state, playerId, item);
+	if (!slot) return state;
+
+	const winner = state.players[playerId];
+	const charge = options.free ? 0 : price;
+	if (charge > winner.money) return state;
+
+	const award: Award = {
+		playerId,
+		item,
+		price: charge,
+		free: options.free,
+		mode: itemMode(state),
+		declined: options.declined ?? false,
+		slotId: slot.id,
+		slotLabel: slot.label
+	};
+
+	const updated: Player = {
+		...winner,
+		money: winner.money - charge,
+		roster: [...winner.roster, { item, price: charge, free: options.free, slotId: slot.id }]
+	};
+
+	return {
+		...state,
+		phase: 'award',
+		players: replacePlayer(state, playerId, updated),
+		bid: null,
+		lastAward: award,
+		history: [...state.history, award]
+	};
+}
+
+export function applyAction(state: GameState, action: Action): GameState {
+	switch (action.type) {
+		case 'start': {
+			const [nameA, nameB] = action.names;
+			return {
+				...initialState(),
+				phase: 'reveal',
+				config: action.config,
+				players: [
+					blankPlayer(0, nameA.trim() || 'Player 1', action.config.budget),
+					blankPlayer(1, nameB.trim() || 'Player 2', action.config.budget)
+				],
+				deck: action.deck
+			};
+		}
+
+		case 'reveal': {
+			if (state.phase !== 'reveal') return state;
+			return { ...state, phase: 'resolve' };
+		}
+
+		case 'bid': {
+			if (!canBid(state, action.player, action.amount)) return state;
+			return { ...state, bid: { amount: action.amount, holder: action.player } };
+		}
+
+		case 'sold': {
+			// Requires a standing bid, which is what makes opening mandatory:
+			// with 2xN items and N slots each, every item has to find an owner.
+			if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return state;
+			if (!state.bid) return state;
+			return awardCurrent(state, state.bid.holder, state.bid.amount, { free: false });
+		}
+
+		case 'buy': {
+			if (!canBuy(state, action.player, action.amount)) return state;
+			return awardCurrent(state, action.player, action.amount, { free: false });
+		}
+
+		case 'decline': {
+			if (state.phase !== 'resolve' || itemMode(state) !== 'solo') return state;
+			if (action.player !== solventPlayer(state)) return state;
+			// Rule 7: nobody bought it, so the broke player takes it for nothing.
+			return awardCurrent(state, other(action.player), 0, { free: true, declined: true });
+		}
+
+		case 'claim': {
+			if (state.phase !== 'resolve') return state;
+			const mode = itemMode(state);
+			if (mode !== 'alternate' && mode !== 'forced') return state;
+
+			const recipient = freeRecipient(state);
+			const next = awardCurrent(state, recipient, 0, { free: true });
+			if (next === state) return state;
+			// Rule 8's alternation advances only on alternating awards.
+			return mode === 'alternate' ? { ...next, freeTurn: other(recipient) } : next;
+		}
+
+		case 'assign': {
+			// Re-slots the player just won, while the award is still on screen.
+			if (state.phase !== 'award' || !state.lastAward) return state;
+			const award = state.lastAward;
+			const target = state.config.roster.find((slot) => slot.id === action.slotId);
+			if (!target || target.id === award.slotId) return state;
+
+			const player = state.players[award.playerId];
+			const taken = player.roster.some(
+				(entry) => entry.slotId === target.id && entry.item.id !== award.item.id
+			);
+			if (taken) return state;
+
+			const roster = player.roster.map((entry) =>
+				entry.item.id === award.item.id ? { ...entry, slotId: target.id } : entry
+			);
+			const moved: Award = { ...award, slotId: target.id, slotLabel: target.label };
+
+			return {
+				...state,
+				players: replacePlayer(state, award.playerId, { ...player, roster }),
+				lastAward: moved,
+				history: [...state.history.slice(0, -1), moved]
+			};
+		}
+
+		case 'next': {
+			if (state.phase !== 'award') return state;
+			const index = state.index + 1;
+			const done = index >= state.deck.length;
+			return {
+				...state,
+				phase: done ? 'results' : 'reveal',
+				index,
+				bid: null,
+				lastAward: done ? state.lastAward : null
+			};
+		}
+
+		case 'reset':
+			return initialState();
+
+		default:
+			return state;
+	}
+}
