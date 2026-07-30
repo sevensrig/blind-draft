@@ -22,13 +22,28 @@
 	 */
 	--ink-muted: #6b6b66;
 	--white: #ffffff;
+	/*
+	 * The accent set. Every one of these is light enough to carry black text at
+	 * well over 4.5:1, which is what lets the whole system put ink straight onto
+	 * colour. Add a new accent only if it clears that bar — the axe suites will
+	 * fail loudly if it doesn't.
+	 */
 	--red: #ff6b6b;
 	--yellow: #ffd93d;
 	--violet: #c4b5fd;
+	--green: #8ce99a;
+	--blue: #8ecae6;
 
 	/* Player identities. Both are light, so text on them stays black. */
 	--p1: var(--violet);
 	--p2: var(--yellow);
+
+	/*
+	 * Money on the table. Deliberately not yellow: yellow is Player 2's identity,
+	 * and having the same colour mean both "Alex" and "dollars" muddled the bid
+	 * screen. Green reads as money and nothing else.
+	 */
+	--money: var(--green);
 
 	--bw: 4px;
 	--bw-thin: 2px;

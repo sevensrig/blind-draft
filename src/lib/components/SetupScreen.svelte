@@ -149,6 +149,7 @@
 				<button
 					class="tile"
 					class:tile--on={picked}
+					style:--accent={`var(--${entry.accent})`}
 					type="button"
 					aria-pressed={picked}
 					onclick={() => (categoryId = entry.id)}
@@ -408,8 +409,10 @@
 		box-shadow: none;
 	}
 
+	/* Selecting floods the tile with its own accent, so the colour previewed in
+	   the emoji chip is the colour you get. */
 	.tile--on {
-		background: var(--red);
+		background: var(--accent);
 		box-shadow: var(--shadow-lg);
 		transform: rotate(-1deg);
 	}
@@ -419,9 +422,19 @@
 		box-shadow: none;
 	}
 
+	/* A chip rather than a bare glyph: it carries the category's accent while the
+	   tile itself stays white, which keeps 14 tiles legible instead of loud. */
 	.tile__emoji {
-		font-size: 1.25rem;
-		line-height: 1.1;
+		align-self: flex-start;
+		padding: 0.1rem 0.3rem 0.15rem;
+		background: var(--accent);
+		border: var(--bw-thin) solid var(--ink);
+		font-size: 1.1rem;
+		line-height: 1.15;
+	}
+
+	.tile--on .tile__emoji {
+		background: var(--white);
 	}
 
 	.tile__label {

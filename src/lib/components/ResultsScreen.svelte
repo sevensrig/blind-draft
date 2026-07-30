@@ -279,17 +279,19 @@
 		gap: 0.5rem;
 	}
 
+	/* Two stats, two accents, so the footer reads as a pair rather than one
+	   highlighted box next to a blank one. */
 	.stat {
 		display: flex;
 		flex-direction: column;
 		gap: 0.05rem;
 		padding: 0.55rem 0.6rem;
-		background: var(--cream);
+		background: var(--blue);
 		border: var(--bw-thin) solid var(--ink);
 	}
 
 	.stat--alt {
-		background: var(--red);
+		background: var(--green);
 	}
 
 	.stat b {

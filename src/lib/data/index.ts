@@ -47,6 +47,7 @@ export const CATEGORIES: Category[] = [
 		label: 'NBA Players',
 		emoji: '🏀',
 		blurb: 'Build a starting five.',
+		accent: 'blue',
 		roster: NBA_ROSTER,
 		variants: [
 			variant('nba-current', 'Current', NBA_CURRENT),
@@ -58,6 +59,7 @@ export const CATEGORIES: Category[] = [
 		label: 'NFL Players',
 		emoji: '🏈',
 		blurb: 'QB, RB, two WR, flex.',
+		accent: 'blue',
 		roster: NFL_ROSTER,
 		variants: [
 			variant('nfl-current', 'Current', NFL_CURRENT),
@@ -69,6 +71,7 @@ export const CATEGORIES: Category[] = [
 		label: 'MLB Players',
 		emoji: '⚾',
 		blurb: 'Nine innings of regret.',
+		accent: 'blue',
 		variants: [
 			variant('mlb-current', 'Current', MLB_CURRENT),
 			variant('mlb-all-time', 'All-Time', MLB_ALL_TIME)
@@ -79,6 +82,7 @@ export const CATEGORIES: Category[] = [
 		label: 'NHL Players',
 		emoji: '🏒',
 		blurb: 'Drop the puck.',
+		accent: 'blue',
 		variants: [
 			variant('nhl-current', 'Current', NHL_CURRENT),
 			variant('nhl-all-time', 'All-Time', NHL_ALL_TIME)
@@ -89,6 +93,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Celebrities',
 		emoji: '🌟',
 		blurb: 'Assemble an entourage.',
+		accent: 'red',
 		variants: [variant('celebrities', 'Celebrities', CELEBRITIES)]
 	},
 	{
@@ -96,6 +101,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Childhood Cartoons',
 		emoji: '📺',
 		blurb: 'The Cartoon Network block.',
+		accent: 'violet',
 		variants: [variant('cartoons', 'Cartoons', CARTOONS)]
 	},
 	{
@@ -103,6 +109,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Childhood TV Shows',
 		emoji: '🛋️',
 		blurb: 'Disney Channel prime time.',
+		accent: 'violet',
 		variants: [variant('tv-shows', 'TV Shows', TV_SHOWS)]
 	},
 	{
@@ -110,6 +117,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Childhood Nostalgia',
 		emoji: '🎒',
 		blurb: 'Your whole childhood, going once.',
+		accent: 'violet',
 		variants: [variant('nostalgia', 'Nostalgia', NOSTALGIA)]
 	},
 	{
@@ -117,6 +125,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Fictional Duos',
 		emoji: '👯',
 		blurb: 'Two for one.',
+		accent: 'red',
 		variants: [variant('duos', 'Duos', DUOS)]
 	},
 	{
@@ -124,6 +133,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Iconic Movies',
 		emoji: '🎬',
 		blurb: 'Draft the marquee.',
+		accent: 'red',
 		variants: [variant('movies', 'Movies', MOVIES)]
 	},
 	{
@@ -131,6 +141,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Foods',
 		emoji: '🍕',
 		blurb: 'Bid hungry, lose money.',
+		accent: 'green',
 		variants: [variant('foods', 'Foods', FOODS)]
 	},
 	{
@@ -138,6 +149,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Drinks',
 		emoji: '🥤',
 		blurb: 'Something to wash it down.',
+		accent: 'green',
 		variants: [variant('drinks', 'Drinks', DRINKS)]
 	},
 	{
@@ -145,6 +157,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Perfect Life',
 		emoji: '✨',
 		blurb: 'Wishes, going once.',
+		accent: 'yellow',
 		variants: [variant('perfect-life', 'Perfect Life', PERFECT_LIFE)]
 	},
 	{
@@ -152,6 +165,7 @@ export const CATEGORIES: Category[] = [
 		label: 'Summer Day',
 		emoji: '🌊',
 		blurb: 'Assemble one perfect day.',
+		accent: 'yellow',
 		variants: [variant('summer-day', 'Summer Day', SUMMER_DAY)]
 	}
 ];
@@ -167,4 +181,4 @@ export function getVariant(category: Category, variantId: string): Variant {
 
 export const hasVariants = (category: Category): boolean => category.variants.length > 1;
 
-export type { Category, Item, ItemSeed, Position, SlotSpec, Tier, Variant } from './types';
+export type { Accent, Category, Item, ItemSeed, Position, SlotSpec, Tier, Variant } from './types';
