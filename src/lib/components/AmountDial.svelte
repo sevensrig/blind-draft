@@ -100,7 +100,8 @@
 		justify-content: center;
 		gap: 0.05rem;
 		padding: 0.35rem;
-		background: var(--yellow);
+		/* Money, not Player 2. */
+		background: var(--money);
 		border: var(--bw) solid var(--ink);
 		box-shadow: var(--shadow-sm);
 	}

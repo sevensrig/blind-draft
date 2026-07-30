@@ -463,7 +463,8 @@
 		justify-content: center;
 		gap: 0.5rem;
 		padding: 0.4rem 0.6rem;
-		background: var(--yellow);
+		/* Money on the table, so green rather than a player's colour. */
+		background: var(--money);
 		border: var(--bw) solid var(--ink);
 		box-shadow: var(--shadow-sm);
 	}
