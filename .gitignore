@@ -28,3 +28,6 @@ vite.config.ts.timestamp-*
 /test-results
 /blob-report
 /src/**/__screenshots__
+
+# Private skills
+/.claude/skills/twenty-dollar-draft-project/
