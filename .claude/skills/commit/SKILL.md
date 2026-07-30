@@ -10,6 +10,29 @@ Turn whatever is sitting in the working tree into a clean, readable history.
 Two things carry the whole skill: **grouping by concern** and **a message tone that
 sounds like a person typed it**. Everything else is mechanics.
 
+## When to run — and when not to
+
+This runs **only when the user explicitly asks for a commit.** "commit", "commit
+this", "let's commit", "commit my changes". That's the whole trigger list.
+
+Finishing a piece of work is not a commit request. Adding a file, fixing a bug,
+writing docs, completing a refactor — none of them imply committing, no matter how
+naturally a commit seems to follow, and no matter how many commits the session has
+already made. A session that has been committing regularly has not been granted
+standing permission; each commit is asked for individually.
+
+**Never stage as a side effect of doing other work.** `git add` belongs to
+committing, not to editing. When a task finishes, leave the working tree exactly as
+dirty as the work made it.
+
+Unstaged changes piling up across several unrelated tasks is the **expected**
+state, not a mess to tidy. That accumulation is precisely what the grouping logic
+below exists to handle — the user decides when the pile gets turned into history,
+and the pile being large is what makes the grouping worth doing.
+
+Don't nag either. Finishing work with "shall I commit that?" every time is its own
+kind of noise. Do the work, report it, stop. The request will come.
+
 ## Grouping
 
 Read the diff before deciding anything. The question to answer is "how many
@@ -111,6 +134,8 @@ That's a footer, not part of the subject — the subject stays a short one-liner
 
 ## Boundaries
 
+- **Don't commit or stage unless asked.** See "When to run" above — this is the
+  boundary most easily broken by good intentions.
 - **Don't push.** Committing is local and easy to amend; pushing is outward-facing.
   Offer it, wait to be asked.
 - **Don't commit secrets or junk.** If `.env`, credentials, large binaries, or
