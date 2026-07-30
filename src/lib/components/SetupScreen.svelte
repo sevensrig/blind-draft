@@ -3,6 +3,7 @@
 	import { buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
+	import Icon from './Icon.svelte';
 
 	const BUDGET_PRESETS = [10, 20, 50];
 	const SLOT_PRESETS = [3, 4, 5, 6, 7, 8];
@@ -154,7 +155,7 @@
 					aria-pressed={picked}
 					onclick={() => (categoryId = entry.id)}
 				>
-					<span class="tile__emoji">{entry.emoji}</span>
+					<span class="tile__icon"><Icon name={entry.icon} /></span>
 					<span class="tile__label">{entry.label}</span>
 					<span class="tile__blurb">{entry.blurb}</span>
 				</button>
@@ -423,17 +424,21 @@
 	}
 
 	/* A chip rather than a bare glyph: it carries the category's accent while the
-	   tile itself stays white, which keeps 14 tiles legible instead of loud. */
-	.tile__emoji {
+	   tile itself stays white, which keeps 14 tiles legible instead of loud.
+	   Fixed square so fourteen icons of differing widths still line up. */
+	.tile__icon {
+		display: grid;
+		place-items: center;
 		align-self: flex-start;
-		padding: 0.1rem 0.3rem 0.15rem;
+		width: 1.85rem;
+		height: 1.85rem;
 		background: var(--accent);
 		border: var(--bw-thin) solid var(--ink);
-		font-size: 1.1rem;
-		line-height: 1.15;
+		/* Drives the glyph size — Icon sizes itself in em. */
+		font-size: 1rem;
 	}
 
-	.tile--on .tile__emoji {
+	.tile--on .tile__icon {
 		background: var(--white);
 	}
 

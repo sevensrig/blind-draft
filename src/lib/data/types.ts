@@ -4,6 +4,8 @@
  * Tiers are HIDDEN from players. They exist only to curate the deck curve
  * (see `$lib/game/deck.ts`). An item's real value is whatever players bid.
  */
+import type { IconName } from '$lib/icons';
+
 export type Tier = 'bad' | 'mid' | 'good' | 'great';
 
 /**
@@ -58,7 +60,8 @@ export interface Variant {
 export interface Category {
 	id: string;
 	label: string;
-	emoji: string;
+	/** Font Awesome Free glyph, inlined from `$lib/icons`. */
+	icon: IconName;
 	blurb: string;
 	/** Themes the category's tile. Required, so a new category can't slip in colourless. */
 	accent: Accent;
