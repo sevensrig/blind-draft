@@ -254,6 +254,35 @@ blur, zero radius, no gradients, and a mechanical press that slides a control
 onto its own shadow. Palette and rules follow the "Neo Brutalism (Mobile)" spec
 from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill).
 
+### The accent palette
+
+Five accents, all pastel enough to carry black text at well over 4.5:1 — that's
+what lets the system put ink straight onto colour with no light/dark variants:
+
+| Token      | Colour        | Means                                          |
+| ---------- | ------------- | ---------------------------------------------- |
+| `--red`    | Hot red       | Primary action, live progress tick, positions  |
+| `--yellow` | Vivid yellow  | Player 2, tags and badges                      |
+| `--violet` | Soft violet   | Player 1, face-down card, rule banners         |
+| `--green`  | Pastel green  | Money (aliased as `--money`)                   |
+| `--blue`   | Pastel blue   | Sports categories, the top-price stat          |
+
+Two conventions worth keeping:
+
+- **Green means money, and only money.** It's aliased to `--money` and used for
+  the standing bid and the amount dial. Yellow used to do this job as well as
+  being Player 2's identity, which made the bid screen ambiguous — the same
+  colour meant both "Alex" and "dollars".
+- **Categories carry their own accent**, set as a required `accent` field on each
+  entry in `src/lib/data/index.ts` and grouped by theme (sports blue, childhood
+  violet, screen and people red, food and drink green, abstract yellow). Tiles
+  stay white with a coloured emoji chip and flood with their own accent when
+  selected. The field is required, so a new category can't ship colourless.
+
+If you add an accent, add it to `:root` in `src/app.css` and run
+`npm run test:a11y` — axe checks contrast at both component and page level and
+will fail if the new colour can't carry black text.
+
 One deviation: that spec asks for Space Grotesk, but loading a web font would be
 a runtime network request, which this build rules out. Space Grotesk sits first
 in the stack so it's used when installed locally, otherwise the heavy system
