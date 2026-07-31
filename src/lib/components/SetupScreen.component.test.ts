@@ -1,6 +1,6 @@
 import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { render } from 'vitest-browser-svelte';
+import { cleanup, render } from 'vitest-browser-svelte';
 import { game } from '$lib/game/store.svelte';
 import SetupScreen from './SetupScreen.svelte';
 
@@ -115,5 +115,81 @@ describe('SetupScreen', () => {
 		await page.getByRole('button', { name: /Start the draft/ }).click();
 
 		expect(game.state.config.budget).toBe(30);
+	});
+});
+
+describe('SetupScreen — custom category', () => {
+	beforeEach(() => {
+		localStorage.clear();
+		game.dispatch({ type: 'reset' });
+	});
+
+	const SIX = 'Pizza\nSushi\nTacos\nRamen\nBurgers\nWings';
+
+	it('drafts from a typed list and uses the typed category name', async () => {
+		render(SetupScreen);
+
+		await page.getByRole('button', { name: /Make Your Own/ }).click();
+		await page.getByPlaceholder('Custom Draft').fill('Late Night Food');
+		await page.getByRole('textbox', { name: /one per line/i }).fill(SIX);
+		await page.getByRole('button', { name: '3', exact: true }).click();
+		await page.getByRole('button', { name: /Start the draft/ }).click();
+
+		const state = game.state;
+		expect(state.phase).toBe('reveal');
+		expect(state.config.categoryLabel).toBe('Late Night Food');
+		expect(state.config.slots).toBe(3);
+		expect(state.deck).toHaveLength(6);
+		expect(state.deck.map((item) => item.name).sort()).toEqual(
+			['Burgers', 'Pizza', 'Ramen', 'Sushi', 'Tacos', 'Wings'].sort()
+		);
+		// The pool travels with the game so "run it back" doesn't need the form.
+		expect(state.config.customItems).toHaveLength(6);
+	});
+
+	it('will not start until there are enough options', async () => {
+		render(SetupScreen);
+
+		await page.getByRole('button', { name: /Make Your Own/ }).click();
+		await page.getByRole('textbox', { name: /one per line/i }).fill('Pizza\nSushi');
+
+		await expect.element(page.getByText(/2\/6 options/)).toBeVisible();
+		// The dock appears but refuses — there's nothing to draft from yet.
+		await expect.element(page.getByRole('button', { name: /Add more options/ })).toBeDisabled();
+		expect(game.state.phase).toBe('setup');
+
+		await page.getByRole('textbox', { name: /one per line/i }).fill(SIX);
+		await page.getByRole('button', { name: /Start the draft/ }).click();
+		expect(game.state.phase).toBe('reveal');
+	});
+
+	it('ignores blank lines and repeats', async () => {
+		render(SetupScreen);
+
+		await page.getByRole('button', { name: /Make Your Own/ }).click();
+		await page
+			.getByRole('textbox', { name: /one per line/i })
+			.fill('Pizza\n\n  Sushi  \nTacos\npizza\nRamen\nBurgers\nWings\n\n');
+
+		// Seven non-blank lines, one of which repeats 'Pizza' in another case.
+		await expect.element(page.getByText(/6 options/)).toBeVisible();
+		await page.getByRole('button', { name: /Start the draft/ }).click();
+
+		const names = game.state.config.customItems?.map((item) => item.name) ?? [];
+		expect(names).toContain('Sushi');
+		expect(names.filter((n) => n.toLowerCase() === 'pizza')).toHaveLength(1);
+	});
+
+	it('remembers the typed list across a remount', async () => {
+		render(SetupScreen);
+		await page.getByRole('button', { name: /Make Your Own/ }).click();
+		await page.getByPlaceholder('Custom Draft').fill('Snack Draft');
+		await page.getByRole('textbox', { name: /one per line/i }).fill(SIX);
+		cleanup();
+
+		render(SetupScreen);
+		await page.getByRole('button', { name: /Make Your Own/ }).click();
+		await expect.element(page.getByPlaceholder('Custom Draft')).toHaveValue('Snack Draft');
+		await expect.element(page.getByRole('textbox', { name: /one per line/i })).toHaveValue(SIX);
 	});
 });

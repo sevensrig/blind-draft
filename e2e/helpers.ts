@@ -28,10 +28,13 @@ export interface SetupOptions {
 	slots?: '3' | '4' | '5' | '6' | '7' | '8';
 	category?: string;
 	variant?: 'Current' | 'All-Time';
+	/** Fills in the custom category editor. Implies category 'Make Your Own'. */
+	custom?: { name?: string; items: string[] };
 }
 
 export async function setUpGame(page: Page, options: SetupOptions = {}): Promise<void> {
-	const { names = ['Sri', 'Alex'], budget, slots, category = 'Foods', variant } = options;
+	const { names = ['Sri', 'Alex'], budget, slots, variant, custom } = options;
+	const category = custom ? 'Make Your Own' : (options.category ?? 'Foods');
 
 	await page.goto('/');
 	await waitForHydration(page);
@@ -40,10 +43,17 @@ export async function setUpGame(page: Page, options: SetupOptions = {}): Promise
 	await page.getByPlaceholder('Player 2').fill(names[1]);
 
 	if (budget) await page.getByRole('button', { name: budget, exact: true }).click();
-	if (slots) await page.getByRole('button', { name: slots, exact: true }).click();
 
 	await page.getByRole('button', { name: new RegExp(category) }).click();
 	if (variant) await page.getByRole('button', { name: variant, exact: true }).click();
+
+	// Typing the pool changes the slot ceiling, so it has to happen before slots.
+	if (custom) {
+		if (custom.name) await page.getByPlaceholder('Custom Draft').fill(custom.name);
+		await page.getByRole('textbox', { name: /one per line/i }).fill(custom.items.join('\n'));
+	}
+
+	if (slots) await page.getByRole('button', { name: slots, exact: true }).click();
 
 	await page.getByRole('button', { name: /Start the draft/ }).click();
 	await expect(page.getByText('Tap to reveal')).toBeVisible();

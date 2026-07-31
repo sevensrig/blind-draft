@@ -130,3 +130,45 @@ test('quitting twice abandons the draft and returns to setup', async ({ page }) 
 	await expect(page.getByText("Who's playing")).toBeVisible();
 	await expect(page.getByText('Pick a category to start')).toBeVisible();
 });
+
+test('drafts a category the player typed themselves', async ({ page }) => {
+	const items = ['Pierogi', 'Khinkali', 'Arepas', 'Bao', 'Injera', 'Poutine'];
+	await setUpGame(page, {
+		names: ['Sri', 'Alex'],
+		custom: { name: 'Street Food', items },
+		slots: '3'
+	});
+
+	// Six typed options and three slots each, so the whole list gets drafted.
+	await expect(page.getByText('of 6')).toBeVisible();
+	await expect(page.getByText('Street Food')).toBeVisible();
+
+	await playToResults(page, { winner: 'Sri' });
+
+	// The typed name headlines the results sheet, not "Make Your Own".
+	await expect(page.getByText(/Street Food/)).toBeVisible();
+	await expect(page.locator('.pick__price')).toHaveCount(6);
+
+	// The roster renders uppercase, so compare on case-folded names.
+	const drafted = await page.locator('.pick__name').allInnerTexts();
+	expect(drafted.map((t) => t.trim().toLowerCase()).sort()).toEqual(
+		items.map((i) => i.toLowerCase()).sort()
+	);
+});
+
+test('run it back reshuffles a typed category instead of emptying it', async ({ page }) => {
+	await setUpGame(page, {
+		custom: {
+			name: 'Snacks',
+			items: ['Pretzels', 'Popcorn', 'Olives', 'Hummus', 'Crisps', 'Nuts']
+		},
+		slots: '3'
+	});
+	await playToResults(page, { winner: 'Sri' });
+
+	// The pool lives in the game config, so this must not rebuild from nothing.
+	await page.getByRole('button', { name: /Run it back/ }).click();
+	await expect(page.getByText('Tap to reveal')).toBeVisible();
+	await expect(page.getByText('of 6')).toBeVisible();
+	await expect(page.getByText('Snacks')).toBeVisible();
+});

@@ -65,6 +65,12 @@ export interface Category {
 	blurb: string;
 	/** Themes the category's tile. Required, so a new category can't slip in colourless. */
 	accent: Accent;
+	/**
+	 * Ships with no items — the player types their own on the setup screen. The
+	 * pool lives in `GameConfig.customItems` rather than here, so a saved game
+	 * stays self-contained and "run it back" works without the list.
+	 */
+	custom?: true;
 	/** Length > 1 renders a toggle on the setup screen. */
 	variants: Variant[];
 	/**

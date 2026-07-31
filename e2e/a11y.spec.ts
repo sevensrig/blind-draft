@@ -127,3 +127,20 @@ test('results sheet is accessible', async ({ page }) => {
 	await expect(page.getByText('Rosters are full')).toBeVisible();
 	await scan(page, 'results sheet');
 });
+
+test('custom category editor is accessible', async ({ page }) => {
+	await page.goto('/');
+	await waitForHydration(page);
+
+	await page.getByRole('button', { name: /Make Your Own/ }).click();
+	// Scan the shortfall state too: it swaps in an inverted warning chip.
+	await expect(page.getByText(/0\/6 options/)).toBeVisible();
+	await scan(page, 'custom editor, empty');
+
+	await page.getByPlaceholder('Custom Draft').fill('Street Food');
+	await page
+		.getByRole('textbox', { name: /one per line/i })
+		.fill('Pierogi\nKhinkali\nArepas\nBao\nInjera\nPoutine');
+	await expect(page.getByRole('button', { name: /Start the draft/ })).toBeEnabled();
+	await scan(page, 'custom editor, ready');
+});

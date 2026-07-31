@@ -35,6 +35,12 @@ export interface GameConfig {
 	categoryLabel: string;
 	/** Null when the category has no sub-modes. */
 	variantLabel: string | null;
+	/**
+	 * The player-typed pool, present only for the custom category. Carried in the
+	 * config so a saved game and "run it back" don't depend on the setup form
+	 * still holding the list.
+	 */
+	customItems?: Item[];
 }
 
 export type Phase = 'setup' | 'reveal' | 'resolve' | 'award' | 'results';

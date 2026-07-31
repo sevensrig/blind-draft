@@ -356,7 +356,11 @@ describe('full games across every category', () => {
 			variant,
 			roster: category.roster ?? null
 		}))
-	);
+	)
+		// The custom category ships empty on purpose — its pool is typed by the
+		// player on the setup screen. `plays a player-typed custom pool` below
+		// covers that path with a real list.
+		.filter(({ variant }) => variant.items.length > 0);
 
 	it.each(variants)('$label always reaches a complete draft', ({ variant, roster }) => {
 		const rng = seeded(variant.items.length);
@@ -392,6 +396,41 @@ describe('full games across every category', () => {
 			const owned = end.players.flatMap((player) => player.roster.map((entry) => entry.item.id));
 			expect(new Set(owned).size).toBe(deck.length);
 			expect(new Set(owned)).toEqual(new Set(deck.map((item) => item.id)));
+		}
+	});
+
+	/**
+	 * A typed pool is all one tier, so the curve has nothing to shape and the
+	 * finale weighting has no polarised item to pull forward. Both should degrade
+	 * quietly rather than throw or hand back a short deck.
+	 */
+	it('plays a player-typed custom pool through to a full draft', () => {
+		const rng = seeded(4242);
+		const typed = (n: number): Item[] =>
+			Array.from({ length: n }, (_, i) => ({
+				id: `custom-thing-${i}`,
+				name: `Thing ${i}`,
+				tier: 'mid' as Tier
+			}));
+
+		for (let run = 0; run < 40; run++) {
+			const slots = 3 + Math.floor(rng() * 6);
+			// Sometimes exactly 2xN items typed, sometimes a surplus to sample from.
+			const pool = typed(slots * 2 + Math.floor(rng() * 20));
+			const template = openRoster(slots);
+			const budget = 5 + Math.floor(rng() * 40);
+
+			const deck = buildDeck(pool, template, rng);
+			expect(deck).toHaveLength(slots * 2);
+
+			const end = autoPlay(startGame(deck, template, budget), rng, run / 40);
+			expect(end.phase).toBe('results');
+			for (const player of end.players) {
+				expect(player.roster).toHaveLength(slots);
+				expect(totalSpent(player) + player.money).toBe(budget);
+			}
+			const owned = end.players.flatMap((p) => p.roster.map((e) => e.item.id));
+			expect(new Set(owned).size).toBe(deck.length);
 		}
 	});
 

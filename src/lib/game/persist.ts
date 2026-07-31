@@ -78,3 +78,42 @@ export function clearState(): void {
 		// Nothing to do — see saveState.
 	}
 }
+
+/* ------------------------------------------------------------------ *
+ * The custom category's typed list
+ *
+ * Kept under its own key and outside the game snapshot. Someone who has just
+ * typed twenty items should not lose them to a refresh, a finished game, or a
+ * schema bump on the save format — none of which have anything to do with the
+ * list itself.
+ * ------------------------------------------------------------------ */
+
+const CUSTOM_KEY = 'blind-draft:custom:v1';
+
+export interface CustomDraft {
+	name: string;
+	/** Raw textarea contents, one item per line, kept verbatim so the caret behaves. */
+	text: string;
+}
+
+export function saveCustomDraft(draft: CustomDraft): void {
+	try {
+		localStorage.setItem(CUSTOM_KEY, JSON.stringify(draft));
+	} catch {
+		// See saveState — losing the convenience is fine, breaking play is not.
+	}
+}
+
+export function loadCustomDraft(): CustomDraft | null {
+	try {
+		const raw = localStorage.getItem(CUSTOM_KEY);
+		if (!raw) return null;
+		const parsed: unknown = JSON.parse(raw);
+		if (!parsed || typeof parsed !== 'object') return null;
+		const draft = parsed as Partial<CustomDraft>;
+		if (typeof draft.name !== 'string' || typeof draft.text !== 'string') return null;
+		return { name: draft.name, text: draft.text };
+	} catch {
+		return null;
+	}
+}

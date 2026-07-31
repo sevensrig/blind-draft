@@ -34,7 +34,10 @@ const WANTED = [
 	'pizza-slice',
 	'glass-water',
 	'wand-magic-sparkles',
-	'umbrella-beach'
+	'umbrella-beach',
+	'pen-to-square',
+	'ice-cream',
+	'cheese'
 ];
 
 function extract(slug) {

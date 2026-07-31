@@ -16,16 +16,21 @@
 	);
 	const freebies = $derived(s.history.filter((award) => award.free).length);
 
-	/** Same names, same settings, brand new blind order. */
+	/**
+	 * Same names, same settings, brand new blind order.
+	 *
+	 * A custom game carries its pool in the config, because the category registry
+	 * has no items for it — looking it up would rebuild from an empty list.
+	 */
 	function runItBack() {
 		const category = getCategory(s.config.categoryId);
-		if (!category) return;
-		const pool = getVariant(category, s.config.variantId);
+		const pool = s.config.customItems ?? (category ? getVariant(category, s.config.variantId).items : []);
+		if (!pool.length) return;
 		game.dispatch({
 			type: 'start',
 			config: s.config,
 			names: [p1.name, p2.name],
-			deck: buildDeck(pool.items, s.config.roster)
+			deck: buildDeck(pool, s.config.roster)
 		});
 	}
 

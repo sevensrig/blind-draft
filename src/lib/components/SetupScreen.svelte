@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
+	import { variant as buildVariant, type ItemSeed } from '$lib/data/types';
 	import { buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
+	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { game } from '$lib/game/store.svelte';
 	import Icon from './Icon.svelte';
 
@@ -10,6 +13,8 @@
 	const BUDGET_MIN = 5;
 	const BUDGET_MAX = 200;
 	const SLOT_CEILING = 10;
+	/** Enough to cover the smallest roster on both sides (3 slots each). */
+	const CUSTOM_MIN_ITEMS = 6;
 
 	let names = $state<[string, string]>(['', '']);
 	let budget = $state(DEFAULT_BUDGET);
@@ -18,29 +23,83 @@
 	/** Remembers each category's sub-mode while you browse around. */
 	let variantChoice = $state<Record<string, string>>({});
 
+	let customName = $state('');
+	/** Raw textarea text. Parsed into items on the fly; stored verbatim. */
+	let customText = $state('');
+
 	const category = $derived(categoryId ? getCategory(categoryId) : undefined);
 	const activeVariant = $derived(
 		category ? getVariant(category, variantChoice[category.id] ?? '') : undefined
 	);
+	const isCustom = $derived(!!category?.custom);
 	/** Positional categories lock the roster; everything else stays adjustable. */
 	const template = $derived(category?.roster ?? null);
-	/** A pool has to cover both rosters, so a thin pool lowers the ceiling. */
+
+	/**
+	 * One item per line. Blank lines and repeats are dropped rather than flagged —
+	 * this gets pasted from notes apps, where both are normal.
+	 *
+	 * Everything is tagged `mid`. Tiers exist to curate which items get dealt from
+	 * a large pool; when the player hands over the exact list there is nothing to
+	 * curate, and a fake spread of tiers would only distort the draw order.
+	 */
+	const customSeeds = $derived.by(() => {
+		const seen = new Set<string>();
+		const seeds: ItemSeed[] = [];
+		for (const line of customText.split('\n')) {
+			const name = line.trim();
+			if (!name) continue;
+			const key = name.toLowerCase();
+			if (seen.has(key)) continue;
+			seen.add(key);
+			seeds.push({ name, tier: 'mid' });
+		}
+		return seeds;
+	});
+	const customItems = $derived(buildVariant('custom', 'Custom', customSeeds).items);
+	const poolItems = $derived(isCustom ? customItems : (activeVariant?.items ?? []));
+
+	/**
+	 * A pool has to cover both rosters, so a thin pool lowers the ceiling. An
+	 * empty custom list leaves the picker alone instead of collapsing it to zero —
+	 * `canStart` is the real gate.
+	 */
 	const slotCap = $derived(
-		activeVariant ? Math.min(SLOT_CEILING, maxSlotsFor(activeVariant.items.length)) : SLOT_CEILING
+		poolItems.length ? Math.min(SLOT_CEILING, maxSlotsFor(poolItems.length)) : SLOT_CEILING
 	);
 	const effectiveSlots = $derived(template ? template.length : Math.min(slots, slotCap));
 	const rosterTemplate = $derived(template ?? openRoster(effectiveSlots));
+
+	const customLabel = $derived(customName.trim() || 'Custom Draft');
+	const canStart = $derived(
+		!!category &&
+			(!isCustom || customSeeds.length >= CUSTOM_MIN_ITEMS) &&
+			poolItems.length >= deckSizeFor(effectiveSlots)
+	);
+
+	onMount(() => {
+		const saved = loadCustomDraft();
+		if (saved) {
+			customName = saved.name;
+			customText = saved.text;
+		}
+	});
+
+	$effect(() => {
+		// Cheap, and it means a refresh mid-typing doesn't cost the whole list.
+		saveCustomDraft({ name: customName, text: customText });
+	});
 
 	function adjustBudget(delta: number) {
 		budget = Math.min(BUDGET_MAX, Math.max(BUDGET_MIN, budget + delta));
 	}
 
 	function start() {
-		if (!category || !activeVariant) return;
+		if (!category || !activeVariant || !canStart) return;
 		const roster = rosterTemplate;
 		game.dispatch({
 			type: 'start',
-			deck: buildDeck(activeVariant.items, roster),
+			deck: buildDeck(poolItems, roster),
 			names: [names[0], names[1]],
 			config: {
 				budget,
@@ -49,8 +108,9 @@
 				positional: !!template,
 				categoryId: category.id,
 				variantId: activeVariant.id,
-				categoryLabel: category.label,
-				variantLabel: hasVariants(category) ? activeVariant.label : null
+				categoryLabel: isCustom ? customLabel : category.label,
+				variantLabel: hasVariants(category) ? activeVariant.label : null,
+				...(isCustom ? { customItems: poolItems } : {})
 			}
 		});
 	}
@@ -144,23 +204,47 @@
 
 	<section class="block">
 		<h2 class="block__title">Category</h2>
-		<div class="grid">
-			{#each CATEGORIES as entry (entry.id)}
-				{@const picked = categoryId === entry.id}
-				<button
-					class="tile"
-					class:tile--on={picked}
-					style:--accent={`var(--${entry.accent})`}
-					type="button"
-					aria-pressed={picked}
-					onclick={() => (categoryId = entry.id)}
-				>
-					<span class="tile__icon"><Icon name={entry.icon} /></span>
-					<span class="tile__label">{entry.label}</span>
-					<span class="tile__blurb">{entry.blurb}</span>
-				</button>
-			{/each}
-		</div>
+
+		<!--
+			Above the grid on purpose. The sports tiles are the first four, so below
+			fourteen tiles this toggle appeared off-screen and looked like it hadn't
+			appeared at all.
+		-->
+		{#if isCustom}
+			<div class="custom">
+				<label class="custom__field">
+					<span class="eyebrow">Category name</span>
+					<input
+						type="text"
+						bind:value={customName}
+						placeholder="Custom Draft"
+						maxlength="28"
+						autocomplete="off"
+					/>
+				</label>
+
+				<label class="custom__field">
+					<span class="eyebrow">Draft options — one per line</span>
+					<textarea
+						bind:value={customText}
+						rows="7"
+						placeholder={'Pizza\nSushi\nTacos\nRamen\nBurgers\nWings'}
+						autocomplete="off"
+						spellcheck="false"
+					></textarea>
+				</label>
+
+				<p class="custom__count" class:custom__count--short={customSeeds.length < CUSTOM_MIN_ITEMS}>
+					{#if customSeeds.length < CUSTOM_MIN_ITEMS}
+						{customSeeds.length}/{CUSTOM_MIN_ITEMS} options — add
+						{CUSTOM_MIN_ITEMS - customSeeds.length} more to start
+					{:else}
+						{customSeeds.length} options · {deckSizeFor(effectiveSlots)} get drafted, picked at
+						random each game
+					{/if}
+				</p>
+			</div>
+		{/if}
 
 		{#if category && hasVariants(category)}
 			<div class="variants">
@@ -179,6 +263,24 @@
 				</div>
 			</div>
 		{/if}
+
+		<div class="grid">
+			{#each CATEGORIES as entry (entry.id)}
+				{@const picked = categoryId === entry.id}
+				<button
+					class="tile"
+					class:tile--on={picked}
+					style:--accent={`var(--${entry.accent})`}
+					type="button"
+					aria-pressed={picked}
+					onclick={() => (categoryId = entry.id)}
+				>
+					<span class="tile__icon"><Icon name={entry.icon} /></span>
+					<span class="tile__label">{entry.label}</span>
+					<span class="tile__blurb">{entry.blurb}</span>
+				</button>
+			{/each}
+		</div>
 	</section>
 
 	<details class="rules">
@@ -204,10 +306,10 @@
 	-->
 	{#if category}
 		<div class="dock">
-			<button class="btn btn--hot start" type="button" onclick={start}>
-				Start the draft
+			<button class="btn btn--hot start" type="button" disabled={!canStart} onclick={start}>
+				{canStart ? 'Start the draft' : 'Add more options'}
 				<span class="btn__sub">
-					{category.label}{activeVariant && hasVariants(category)
+					{isCustom ? customLabel : category.label}{activeVariant && hasVariants(category)
 						? ` · ${activeVariant.label}`
 						: ''} · ${budget} · {effectiveSlots} slots
 				</span>
@@ -463,6 +565,67 @@
 		background: var(--violet);
 		border: var(--bw) solid var(--ink);
 		box-shadow: var(--shadow-sm);
+	}
+
+	.custom {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding: 0.7rem 0.6rem;
+		background: var(--yellow);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.custom__field {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+	}
+
+	.custom input,
+	.custom textarea {
+		width: 100%;
+		padding: 0.5rem 0.55rem;
+		background: var(--white);
+		border: var(--bw-thin) solid var(--ink);
+		font-size: 0.95rem;
+		font-weight: 800;
+	}
+
+	.custom textarea {
+		font-size: 0.9rem;
+		line-height: 1.5;
+		/* Vertical only — horizontal resize would break the tile grid beside it. */
+		resize: vertical;
+	}
+
+	.custom input:focus,
+	.custom textarea:focus {
+		outline: var(--bw-thin) solid var(--ink);
+		outline-offset: 2px;
+	}
+
+	.custom input::placeholder,
+	.custom textarea::placeholder {
+		color: var(--ink-muted);
+		font-weight: 700;
+	}
+
+	.custom__count {
+		margin: 0;
+		font-size: 0.68rem;
+		font-weight: 900;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	/* Sits on yellow, so the shortfall warning inverts rather than going red. */
+	.custom__count--short {
+		align-self: flex-start;
+		padding: 0.15rem 0.35rem;
+		background: var(--ink);
+		color: var(--cream);
 	}
 
 	.rules {

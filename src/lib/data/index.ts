@@ -32,6 +32,8 @@ import { DUOS } from './duos';
 import { MOVIES } from './movies';
 import { FOODS } from './foods';
 import { DRINKS } from './drinks';
+import { DESSERTS } from './desserts';
+import { PIZZA_TOPPINGS } from './pizza-toppings';
 import { PERFECT_LIFE } from './perfect-life';
 import { SUMMER_DAY } from './summer-day';
 
@@ -42,6 +44,16 @@ import { SUMMER_DAY } from './summer-day';
  * a single-variant category renders no toggle at all.
  */
 export const CATEGORIES: Category[] = [
+	{
+		id: 'custom',
+		label: 'Make Your Own',
+		icon: 'pen-to-square',
+		blurb: 'Type your own list.',
+		accent: 'yellow',
+		custom: true,
+		// No bundled items: the pool comes from the setup form.
+		variants: [variant('custom', 'Custom', [])]
+	},
 	{
 		id: 'nba',
 		label: 'NBA Players',
@@ -151,6 +163,22 @@ export const CATEGORIES: Category[] = [
 		blurb: 'Something to wash it down.',
 		accent: 'green',
 		variants: [variant('drinks', 'Drinks', DRINKS)]
+	},
+	{
+		id: 'desserts',
+		label: 'Desserts',
+		icon: 'ice-cream',
+		blurb: 'Save room for this.',
+		accent: 'green',
+		variants: [variant('desserts', 'Desserts', DESSERTS)]
+	},
+	{
+		id: 'pizza-toppings',
+		label: 'Pizza Toppings',
+		icon: 'cheese',
+		blurb: 'Yes, pineapple is in here.',
+		accent: 'green',
+		variants: [variant('pizza-toppings', 'Pizza Toppings', PIZZA_TOPPINGS)]
 	},
 	{
 		id: 'perfect-life',
