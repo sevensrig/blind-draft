@@ -31,3 +31,6 @@ vite.config.ts.timestamp-*
 
 # Private skills
 /.claude/skills/twenty-dollar-draft-project/
+
+# Vitest browser-mode failure screenshots
+.vitest-attachments/
