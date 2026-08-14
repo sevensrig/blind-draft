@@ -4,6 +4,7 @@
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
 	import SetupScreen from '$lib/components/SetupScreen.svelte';
 	import { game } from '$lib/game/store.svelte';
+	import { SITE_DESCRIPTION } from '$lib/site';
 
 	onMount(() => {
 		// Picks a game back up if the phone reloaded mid-draft.
@@ -22,11 +23,8 @@
 </script>
 
 <svelte:head>
-	<title>$20 Blind Draft</title>
-	<meta
-		name="description"
-		content="A two-player blind bidding draft. One phone, twenty dollars, no idea what's coming next."
-	/>
+	<title>$20 Blind Draft — two-player blind bidding party game</title>
+	<meta name="description" content={SITE_DESCRIPTION} />
 </svelte:head>
 
 <main>

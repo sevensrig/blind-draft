@@ -285,6 +285,16 @@
 
 	<details class="rules">
 		<summary>How it works</summary>
+		<!--
+			Plain definition first. Answer engines quote sentences shaped like
+			"X is a Y that does Z", and the hero tagline is deliberately not that.
+			Inside the collapsed block it's still in the prerendered HTML, so it's
+			indexable without competing with the copy on screen.
+		-->
+		<p class="rules__what">
+			$20 Blind Draft is a free two-player party game played in a browser. Two players share one
+			phone, each get a $20 budget, and bid against each other for items revealed one at a time.
+		</p>
 		<ol>
 			<li>An item is revealed. Neither of you knew it was coming.</li>
 			<li>
@@ -640,6 +650,13 @@
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		cursor: pointer;
+	}
+
+	.rules__what {
+		margin: 0.7rem 0 0;
+		font-size: 0.78rem;
+		font-weight: 700;
+		line-height: 1.35;
 	}
 
 	.rules ol {

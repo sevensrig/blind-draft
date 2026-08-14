@@ -247,6 +247,34 @@ report Svelte's own `a11y_*` warnings on markup. Treat that as the a11y linter.
 Worth revisiting once Biome ships a real Svelte parser; at that point Prettier
 can probably go.
 
+## Metadata and sharing
+
+`src/lib/site.ts` holds the origin, description and card paths. **`SITE_URL` is the
+only thing to change when the real domain is set** — the canonical link, Open
+Graph tags, JSON-LD and sitemap all read from it, and `robots.txt` and
+`sitemap.xml` are prerendered routes rather than static files precisely so a
+hardcoded domain can't rot in a corner.
+
+The social card is generated, not hand-drawn:
+
+```bash
+node scripts/generate-og.mjs
+```
+
+That renders HTML with the app's own tokens and screenshots it to
+`static/og.png` at 1200x630 using the Playwright browser already installed for
+the E2E suite. Re-run it after a palette change so the card doesn't drift from
+the app.
+
+Two deliberate choices worth knowing. Nothing player-entered goes in the page
+head — a custom category name is arbitrary text and belongs nowhere near
+metadata. And `robots.txt` disallows nothing, AI crawlers included: being
+readable by them is the whole on-site half of getting cited by answer engines.
+
+`e2e/metadata.spec.ts` covers all of it against the built output, because
+metadata is uniquely prone to silent rot — nothing on screen breaks when an OG
+tag disappears, and the cost only shows up as a dead link preview months later.
+
 ## Styling
 
 Neo-brutalism: cream canvas, 4px black borders, hard offset shadows with no
