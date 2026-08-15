@@ -87,3 +87,25 @@ test('the page ships real text for crawlers that do not run javascript', async (
 		expect(text).toContain(name);
 	}
 });
+
+test('serves the tab icon in every form the browsers ask for', async ({ page, request }) => {
+	await page.goto('/');
+
+	// The Svelte template's logo used to live here; make sure it stays gone.
+	// Read as pathnames: the DOM resolves link hrefs against the origin, and the
+	// path is the part worth pinning anyway.
+	const paths = await page
+		.locator('link[rel="icon"], link[rel="apple-touch-icon"]')
+		.evaluateAll((links) => links.map((l) => new URL(l.getAttribute('href') ?? '', location.href).pathname));
+	expect(paths).toEqual(['/favicon.svg', '/favicon-96.png', '/apple-touch-icon.png']);
+
+	for (const [path, type] of [
+		['/favicon.svg', 'svg'],
+		['/favicon-96.png', 'png'],
+		['/apple-touch-icon.png', 'png']
+	]) {
+		const res = await request.get(path);
+		expect(res.status(), `${path} should be served`).toBe(200);
+		expect(res.headers()['content-type']).toContain(type);
+	}
+});

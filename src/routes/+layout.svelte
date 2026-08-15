@@ -1,6 +1,5 @@
 <script lang="ts">
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import {
 		OG_IMAGE,
 		OG_IMAGE_ALT,
@@ -39,7 +38,11 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
+	<!-- SVG first for browsers that take it; PNG for the ones that don't, and
+	     apple-touch-icon because iOS ignores both for Add to Home Screen. -->
+	<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+	<link rel="icon" href="/favicon-96.png" sizes="96x96" type="image/png" />
+	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 	<meta name="theme-color" content="#fffdf5" />
 	<link rel="canonical" href={SITE_URL} />
 
