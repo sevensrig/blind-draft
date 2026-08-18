@@ -8,7 +8,7 @@
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
-		"check": "npm run typecheck && npm run lint && npm run test",
+		"check": "npm run typecheck && npm run check:functions && npm run lint && npm run test",
 		"test": "npm run test:unit && npm run test:component && npm run test:e2e",
 		"typecheck": "svelte-kit sync && tsc --noEmit && svelte-check --tsconfig ./tsconfig.json",
 		"lint": "biome lint .",
@@ -18,7 +18,9 @@
 		"test:component": "vitest run --project component",
 		"test:e2e": "playwright test",
 		"test:a11y": "vitest run --project component src/lib/components/a11y.component.test.ts && playwright test e2e/a11y.spec.ts",
-		"coverage": "vitest run --project unit --coverage"
+		"coverage": "vitest run --project unit --coverage",
+		"check:functions": "deno check --config supabase/functions/deno.json supabase/functions/create-room/index.ts supabase/functions/join-room/index.ts supabase/functions/room-action/index.ts",
+		"vendor": "node scripts/vendor-engine.mjs"
 	},
 	"devDependencies": {
 		"@axe-core/playwright": "^4.12.1",
@@ -28,6 +30,7 @@
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
+		"@types/node": "^26.2.0",
 		"@vitest/browser": "^4.1.10",
 		"@vitest/browser-playwright": "^4.1.10",
 		"@vitest/coverage-v8": "^4.1.10",
@@ -41,5 +44,8 @@
 		"vite": "^8.0.16",
 		"vitest": "^4.1.10",
 		"vitest-browser-svelte": "^3.0.0"
+	},
+	"dependencies": {
+		"@supabase/supabase-js": "^2.112.3"
 	}
 }
