@@ -220,9 +220,18 @@ suppressed:
 
 This found two real WCAG AA failures on first run, both mine: de-emphasised text
 using `opacity` on black landed at 3.36:1 and 3.94:1 against the cream
-background, under the 4.5:1 minimum. Fixed by adding an `--ink-muted` token that
-measures ~5:1. **Don't reach for `opacity` to mute text in this palette** — it
-looks fine and quietly fails.
+background, under the 4.5:1 minimum. Fixed by adding a `--foreground-muted` token
+that measures 5.26:1. **Don't reach for `opacity` to mute text in this palette** —
+it looks fine and quietly fails. The styling pass found three more of these that
+had survived: a hint paragraph and an input placeholder, both switched to the
+muted token, and a "nothing yet" label sitting on a player accent, where no muted
+tone clears the bar, so it went back to full strength.
+
+Component tests also load `src/app.css` now (via `setupFiles`). They didn't
+before — `+layout.svelte` is what imports it and component tests never render the
+layout — which meant every design token was undefined and the contrast assertions
+were measuring black text on a bare white body rather than on the colours the app
+ships.
 
 ### Known gap: Biome doesn't lint `.svelte`
 
@@ -277,10 +286,79 @@ tag disappears, and the cost only shows up as a dead link preview months later.
 
 ## Styling
 
-Neo-brutalism: cream canvas, 4px black borders, hard offset shadows with no
-blur, zero radius, no gradients, and a mechanical press that slides a control
-onto its own shadow. Palette and rules follow the "Neo Brutalism (Mobile)" spec
-from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill).
+Neo-brutalism: cream canvas, 2px near-black borders, a 5px radius, hard offset
+shadows with no blur, no gradients, and a mechanical press that slides a control
+onto its own shadow. The colours are this project's own; the border, shadow,
+radius and press mechanics follow the neobrutalism.dev technique, read out of that
+project's source rather than described from memory.
+
+### Tokens come in two layers
+
+`src/app.css` defines raw values once, then maps them onto the names the rest of
+the app actually consumes. **No component contains a hex code.** That indirection
+is what makes runtime theming a two-variable change instead of a find-and-replace:
+
+| Token                            | Themed? | Means                                     |
+| -------------------------------- | ------- | ----------------------------------------- |
+| `--background`                   | yes     | The canvas                                |
+| `--secondary-background`         | yes     | Cards and controls sitting on the canvas  |
+| `--main` / `--main-foreground`   | yes     | Primary actions, live tick, badges        |
+| `--foreground`                   | no      | Ink                                       |
+| `--foreground-muted`             | no      | De-emphasised text, at 5.26:1 on cream    |
+| `--border` / `--shadow`          | no      | The near-black edge, and the same value   |
+
+`--border` and `--shadow` are deliberately one colour, not two that happen to
+match — a near-black edge is what makes this style read, and it has to survive
+whichever accent a player picks.
+
+### Geometry, and why the shadow is rationed
+
+- `--bw: 2px` — one border width, everywhere.
+- `--radius: 5px` — cards, buttons and inputs. `rounded-full` is reserved for
+  genuinely circular things, of which this app currently has none.
+- `--press: 4px` — **one number drives both the shadow offset and the distance a
+  pressed element travels**, via `--shadow-hard: var(--press) var(--press) 0 0
+  var(--shadow)`. If they ever drifted apart an element would stop landing flush
+  on its own shadow and the effect would fall apart, so they can't.
+
+The shadow is the scarce resource. It marks a small set of raised things —
+primary buttons, the reveal/bid card, the sold stamp, the results sheet and
+roster cards, the selected category tile, the player panel that's currently
+winning. Everything else (menus, chips, list items, panels, the seventeen
+unselected category tiles) carries a border and nothing else. Putting the shadow
+on all of it is the failure mode: seventeen raised objects is no hierarchy at all.
+
+Because there's only one depth, **raised is a state rather than a decoration**.
+That's load-bearing in a couple of places: holding the standing bid is what lifts
+a player panel, and the item card goes flat when it's won so the sold stamp is the
+only lifted thing left.
+
+### The press, and the mobile fix
+
+`.press` / `.press--reverse` in `src/app.css` are the shared interaction. Two
+details are deliberate:
+
+- **It fires on `:active`, not `:hover`.** The reference implementation only
+  hovers, which never happens on a phone — on a mobile-first game that means the
+  most tactile thing in the UI silently doesn't exist for most players. iOS Safari
+  additionally withholds `:active` unless something on the page is listening for
+  touches, so `src/app.html` registers a no-op `touchstart` listener.
+- **It animates `translate`, not `transform`.** Several cards sit at a slight
+  rotation; they're separate properties, so the press composes with the tilt
+  instead of overwriting it.
+
+`.press--reverse` is the inverse — flat at rest, lifting with the shadow appearing
+underneath — and is reserved for the resolution beat, where an item has just been
+won and "pressing down" is the wrong feeling. `e2e/press.spec.ts` verifies all of
+this under real touch emulation; see that file for why it has to hover-sample as
+well, or it would pass against a hover-only press.
+
+### Typography is weight, not family
+
+The typeface doesn't change. Body sits at **700** — above the 500 floor the
+technique asks for, so nothing reads as normal weight — and headings, prices and
+the standing bid sit at **900**. The live bid is also the largest thing in the
+control stack, since it's the number both players are arguing about.
 
 ### The accent palette
 
@@ -289,8 +367,8 @@ what lets the system put ink straight onto colour with no light/dark variants:
 
 | Token      | Colour        | Means                                          |
 | ---------- | ------------- | ---------------------------------------------- |
-| `--red`    | Hot red       | Primary action, live progress tick, positions  |
-| `--yellow` | Vivid yellow  | Player 2, tags and badges                      |
+| `--red`    | Hot red       | Default `--main`; also three categories        |
+| `--yellow` | Vivid yellow  | Player 2, tags, the `$20` wordmark             |
 | `--violet` | Soft violet   | Player 1, face-down card, rule banners         |
 | `--green`  | Pastel green  | Money (aliased as `--money`)                   |
 | `--blue`   | Pastel blue   | Sports categories, the top-price stat          |
@@ -311,10 +389,47 @@ If you add an accent, add it to `:root` in `src/app.css` and run
 `npm run test:a11y` — axe checks contrast at both component and page level and
 will fail if the new colour can't carry black text.
 
-One deviation: that spec asks for Space Grotesk, but loading a web font would be
-a runtime network request, which this build rules out. Space Grotesk sits first
-in the stack so it's used when installed locally, otherwise the heavy system
-face carries it.
+One deviation from the technique: it asks for Space Grotesk, but loading a web
+font would be a runtime network request, which this build rules out. Space Grotesk
+sits first in the stack so it's used when installed locally, otherwise the heavy
+system face carries it.
+
+### Themes
+
+Players can pick their own accent from six presets. Changing one re-skins the app
+instantly — it sets `data-theme` on `<html>` and the values live in `app.css`
+under `[data-theme='…']`, so there's no rebuild, no reload, and no second copy of
+the palette in JavaScript. `src/lib/theme.ts` carries only ids and labels.
+
+What a theme moves: `--main`, `--background`, `--secondary-background`. What it
+never moves: `--border`, `--shadow` and `--foreground`. Holding the edge constant
+is exactly what keeps the technique intact regardless of which accent is active,
+and `e2e/theme.spec.ts` asserts it for every preset.
+
+Three details that are easy to get wrong:
+
+- **Every preset is scanned, not just the default.** It's very easy to ship one
+  low-contrast accent unnoticed when the default is the only one you look at while
+  building. The component suite scans all six across the bid, award and results
+  screens; `e2e/a11y.spec.ts` scans them on assembled pages too. Verified to
+  actually catch something by planting a dark accent, which failed four scans.
+- **There is no green preset.** Green means money here and nothing else, and an
+  accent that close to `--money` would make the bid screen ambiguous — the exact
+  problem yellow caused before money moved to green.
+- **The theme is applied before first paint**, by an inline snippet in
+  `src/app.html`, or every visit would flash the default accent first. That
+  snippet can only shape-check the stored id without carrying a copy of the preset
+  list, so `ThemePicker` re-applies the validated id on mount; otherwise a
+  well-formed but unknown id would leave the document and the picker disagreeing.
+
+The `$20` wordmark deliberately stays yellow rather than following `--main`: the
+favicon and the social card are that chip, and they're static files that can't
+know which accent someone picked.
+
+> **Note** — `static/og.png` and the favicon set still use the previous 4px
+> borders and square corners. They're generated (`node scripts/generate-og.mjs`,
+> `node scripts/generate-icons.mjs`) and were left alone by the styling pass, since
+> regenerating outward-facing assets is a separate call.
 
 ### Icons
 

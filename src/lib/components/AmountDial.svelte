@@ -72,22 +72,23 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: var(--white);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
 		font-size: 1.7rem;
 		line-height: 1;
 	}
 
 	.knob:active:not(:disabled) {
-		background: var(--ink);
-		color: var(--cream);
-		transform: translate(4px, 4px);
+		background: var(--foreground);
+		color: var(--background);
+		translate: var(--press) var(--press);
 		box-shadow: none;
 	}
 
 	.knob:disabled {
-		transform: translate(4px, 4px);
+		translate: var(--press) var(--press);
 		box-shadow: none;
 		opacity: 0.4;
 		cursor: not-allowed;
@@ -102,8 +103,9 @@
 		padding: 0.35rem;
 		/* Money, not Player 2. */
 		background: var(--money);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
 	}
 
 	.value {
@@ -122,21 +124,22 @@
 	.chip {
 		flex: 1;
 		padding: 0.45rem 0.2rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.72rem;
 		letter-spacing: 0.04em;
 		text-transform: uppercase;
 	}
 
 	.chip:active:not(:disabled) {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
 	}
 
 	.chip--max {
 		flex: 1.7;
-		background: var(--violet);
+		background: var(--main);
 	}
 
 	.chip:disabled {

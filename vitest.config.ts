@@ -35,6 +35,12 @@ export default defineConfig({
 				test: {
 					name: 'component',
 					include: ['src/lib/**/*.component.test.ts'],
+					/*
+					 * The app loads app.css from the root layout, which component tests
+					 * never render. Without it every design token is undefined and the axe
+					 * contrast scans measure colours the app doesn't actually use.
+					 */
+					setupFiles: ['src/lib/testing/component-setup.ts'],
 					browser: {
 						enabled: true,
 						provider: playwright(),

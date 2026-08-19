@@ -162,7 +162,13 @@
 					</div>
 				</div>
 			{/if}
-			<button class="btn btn--hot" type="button" onclick={() => game.dispatch({ type: 'next' })}>
+			<!-- The one button that pops up instead of pressing down: this is the beat
+			     where an item has just been won, not a control being depressed. -->
+			<button
+				class="btn btn--hot btn--pop"
+				type="button"
+				onclick={() => game.dispatch({ type: 'next' })}
+			>
 				{lastItem ? 'See the results' : 'Next item'}
 			</button>
 		</div>
@@ -306,25 +312,23 @@
 
 	.count i {
 		font-style: normal;
-		color: var(--ink-muted);
+		color: var(--foreground-muted);
 	}
 
 	.quit {
 		flex: none;
 		padding: 0.3rem 0.5rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
-		box-shadow: 3px 3px 0 var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.6rem;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 	}
 
 	.quit:active {
-		background: var(--ink);
-		color: var(--cream);
-		transform: translate(3px, 3px);
-		box-shadow: none;
+		background: var(--foreground);
+		color: var(--background);
 	}
 
 	/* Hard blocks, not a soft progress bar. */
@@ -336,16 +340,16 @@
 	.tick {
 		flex: 1;
 		height: 10px;
-		background: var(--white);
-		border: 2px solid var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
 	}
 
 	.tick.done {
-		background: var(--ink);
+		background: var(--foreground);
 	}
 
 	.tick.live {
-		background: var(--red);
+		background: var(--main);
 	}
 
 	.players {
@@ -368,20 +372,21 @@
 		width: 100%;
 		min-height: 11rem;
 		padding: 1.3rem 1rem;
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-lg);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
 		text-align: center;
 	}
 
 	.item--back {
 		background: var(--violet);
-		transform: rotate(-1deg);
+		rotate: -1deg;
 	}
 
 	.item--back:active {
-		background: var(--ink);
-		color: var(--cream);
-		transform: rotate(-1deg) translate(8px, 8px);
+		background: var(--foreground);
+		color: var(--background);
+		translate: var(--press) var(--press);
 		box-shadow: none;
 	}
 
@@ -401,22 +406,29 @@
 	}
 
 	.item--face {
-		background: var(--white);
-		transform: rotate(1deg);
+		background: var(--secondary-background);
+		rotate: 1deg;
 		animation: slam-card 90ms linear;
 	}
 
-	/* Steps back so the sold stamp owns the screen, but still absorbs the slack
-	   above it rather than leaving a hole. */
+	/*
+	 * Steps back so the sold stamp owns the screen, while still absorbing the slack
+	 * above it rather than leaving a hole.
+	 *
+	 * It steps back by dropping to the page rather than by casting a smaller shadow:
+	 * there's one shadow depth in this system, so "raised" is binary. Going flat is
+	 * how an element yields, and it leaves the stamp as the only lifted thing here.
+	 */
 	.item--won {
 		min-height: 7.5rem;
-		box-shadow: var(--shadow-sm);
+		box-shadow: none;
 	}
 
 	.item__tag {
 		padding: 0.1rem 0.3rem;
 		background: var(--yellow);
-		border: var(--bw-thin) solid var(--ink);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.56rem;
 		font-weight: 900;
 		letter-spacing: 0.12em;
@@ -426,7 +438,7 @@
 	/* The position is load-bearing information, so it gets more weight. */
 	.item__tag--pos {
 		padding: 0.15rem 0.5rem;
-		background: var(--red);
+		background: var(--main);
 		font-size: 0.95rem;
 		letter-spacing: 0.06em;
 	}
@@ -465,16 +477,22 @@
 		padding: 0.4rem 0.6rem;
 		/* Money on the table, so green rather than a player's colour. */
 		background: var(--money);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
 	}
 
 	.standing--idle {
-		background: var(--white);
+		background: var(--secondary-background);
 	}
 
+	/*
+	 * The live bid. This is the number both players are arguing about, so it's the
+	 * largest thing in the control stack and sits at the top of the weight scale —
+	 * nothing else on the screen outranks it.
+	 */
 	.standing__amount {
-		font-size: 1.8rem;
+		font-size: 2.5rem;
 		font-weight: 900;
 		line-height: 1;
 		letter-spacing: -0.05em;
@@ -505,8 +523,8 @@
 	 * letting the washed-out disabled style imply something is wrong.
 	 */
 	.duel__btn--holding:disabled {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
 		opacity: 1;
 	}
 
@@ -514,8 +532,8 @@
 		margin: 0;
 		padding: 0.65rem 0.7rem;
 		background: var(--violet);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.82rem;
 		font-weight: 700;
 		line-height: 1.3;
@@ -541,9 +559,9 @@
 		flex-direction: column;
 		gap: 0.3rem;
 		padding: 0.5rem 0.55rem 0.55rem;
-		background: var(--white);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 	}
 
 	.assign__label {
@@ -561,15 +579,16 @@
 	.assign__slot {
 		flex: 1;
 		padding: 0.4rem 0.1rem;
-		background: var(--cream);
-		border: var(--bw-thin) solid var(--ink);
+		background: var(--background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.78rem;
 		text-transform: uppercase;
 	}
 
 	.assign__slot.on {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
 	}
 
 	.assign__slot:active:not(.on) {
@@ -585,10 +604,11 @@
 		gap: 0.05rem;
 		padding: 0.8rem;
 		background: var(--accent);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-lg);
-		transform: rotate(-2deg);
-		animation: slam-stamp 110ms linear;
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
+		rotate: -2deg;
+		animation: pop-stamp 110ms linear;
 	}
 
 	.stamp__price {
@@ -607,17 +627,27 @@
 		text-transform: uppercase;
 	}
 
-	/* Mechanical, linear — no eased overshoot. Each keeps its own tilt so the
-	   animation can't drop the rotation mid-flight. */
+	/*
+	 * Mechanical, linear — no eased overshoot. These animate `scale`, `translate`
+	 * and the shadow as separate properties, leaving each card's `rotate` alone, so
+	 * the animation can't drop the tilt mid-flight.
+	 */
 	@keyframes slam-card {
 		from {
-			transform: rotate(1deg) scale(1.07);
+			scale: 1.07;
 		}
 	}
 
-	@keyframes slam-stamp {
+	/*
+	 * The reverse press, played as an entrance: the stamp starts flat on the page
+	 * with no shadow and lifts into place. Same 4px the press uses, so winning an
+	 * item reads as the opposite gesture to pushing a button.
+	 */
+	@keyframes pop-stamp {
 		from {
-			transform: rotate(-2deg) scale(1.12);
+			scale: 1.12;
+			translate: var(--press) var(--press);
+			box-shadow: none;
 		}
 	}
 </style>

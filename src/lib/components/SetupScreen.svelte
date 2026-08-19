@@ -7,6 +7,7 @@
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { game } from '$lib/game/store.svelte';
 	import Icon from './Icon.svelte';
+	import ThemePicker from './ThemePicker.svelte';
 
 	const BUDGET_PRESETS = [10, 20, 50];
 	const SLOT_PRESETS = [3, 4, 5, 6, 7, 8];
@@ -124,6 +125,9 @@
 			<span class="hero__rest">Blind<br />Draft</span>
 		</h1>
 		<p class="hero__tag">Nobody knows what's coming next. Bid anyway.</p>
+		<!-- Personalisation, deliberately small. It sits under the tagline rather than
+		     floating over the game so it never competes with the draft itself. -->
+		<ThemePicker />
 	</header>
 
 	<section class="block">
@@ -348,16 +352,24 @@
 		margin: 0.4rem 0 0.6rem;
 	}
 
-	/* Highlighter block, knocked askew. */
+	/*
+	 * Highlighter block, knocked askew. The one decorative element that keeps the
+	 * shadow — it's the app's mark, so it should read as sitting on top of the page.
+	 *
+	 * Deliberately yellow rather than following `--main`: the favicon and the social
+	 * card are this chip, and they're static files that can't know which accent a
+	 * player picked. The wordmark is the one thing a theme doesn't move.
+	 */
 	.hero__dollar {
 		padding: 0.1rem 0.35rem 0.2rem;
 		background: var(--yellow);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
 		font-size: 2.6rem;
 		line-height: 0.95;
 		letter-spacing: -0.05em;
-		transform: rotate(-2deg);
+		rotate: -2deg;
 	}
 
 	.hero__rest {
@@ -400,7 +412,8 @@
 		align-self: flex-start;
 		padding: 0.1rem 0.3rem;
 		background: var(--accent);
-		border: var(--bw-thin) solid var(--ink);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius) var(--radius) 0 0;
 		border-bottom: 0;
 		font-size: 0.56rem;
 		font-weight: 900;
@@ -411,9 +424,8 @@
 	.name input {
 		width: 100%;
 		padding: 0.6rem 0.55rem;
-		background: var(--white);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
 		font-size: 1rem;
 		font-weight: 900;
 	}
@@ -424,9 +436,8 @@
 	}
 
 	.name input::placeholder {
-		color: var(--ink);
+		color: var(--foreground-muted);
 		font-weight: 700;
-		opacity: 0.4;
 	}
 
 	.chips {
@@ -443,9 +454,9 @@
 		flex: 1;
 		min-width: 2.5rem;
 		padding: 0.55rem 0.45rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.9rem;
 		font-variant-numeric: tabular-nums;
 		text-transform: uppercase;
@@ -453,13 +464,11 @@
 
 	/* Instant inversion, no easing. */
 	.chip--on {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
 	}
 
 	.chip:disabled {
-		transform: translate(4px, 4px);
-		box-shadow: none;
 		opacity: 0.35;
 		cursor: not-allowed;
 	}
@@ -468,9 +477,9 @@
 		flex: 1.5;
 		display: flex;
 		align-items: center;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 	}
 
 	.nudge button {
@@ -480,8 +489,8 @@
 	}
 
 	.nudge button:active {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
 	}
 
 	.nudge__value {
@@ -494,10 +503,10 @@
 
 	.hint {
 		margin: 0.15rem 0 0;
+		color: var(--foreground-muted);
 		font-size: 0.72rem;
 		font-weight: 700;
 		line-height: 1.35;
-		opacity: 0.7;
 	}
 
 	.grid {
@@ -506,32 +515,36 @@
 		gap: 0.55rem;
 	}
 
+	/*
+	 * Seventeen of these on one screen. A shadow on every tile would be seventeen
+	 * competing raised objects and no hierarchy at all, so at rest they're a
+	 * bordered grid — flat, quiet, scannable.
+	 */
 	.tile {
 		display: flex;
 		flex-direction: column;
 		gap: 0.1rem;
 		padding: 0.6rem 0.6rem 0.65rem;
-		background: var(--white);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		text-align: left;
 	}
 
 	.tile:active {
-		transform: translate(4px, 4px);
-		box-shadow: none;
+		background: var(--accent);
 	}
 
 	/* Selecting floods the tile with its own accent, so the colour previewed in
-	   the emoji chip is the colour you get. */
+	   the icon chip is the colour you get — and lifts it out of the grid. */
 	.tile--on {
 		background: var(--accent);
-		box-shadow: var(--shadow-lg);
-		transform: rotate(-1deg);
+		box-shadow: var(--shadow-hard);
+		rotate: -1deg;
 	}
 
 	.tile--on:active {
-		transform: rotate(-1deg) translate(4px, 4px);
+		translate: var(--press) var(--press);
 		box-shadow: none;
 	}
 
@@ -545,13 +558,14 @@
 		width: 1.85rem;
 		height: 1.85rem;
 		background: var(--accent);
-		border: var(--bw-thin) solid var(--ink);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		/* Drives the glyph size — Icon sizes itself in em. */
 		font-size: 1rem;
 	}
 
 	.tile--on .tile__icon {
-		background: var(--white);
+		background: var(--secondary-background);
 	}
 
 	.tile__label {
@@ -573,8 +587,8 @@
 		gap: 0.45rem;
 		padding: 0.6rem;
 		background: var(--violet);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 	}
 
 	.custom {
@@ -583,8 +597,8 @@
 		gap: 0.6rem;
 		padding: 0.7rem 0.6rem;
 		background: var(--yellow);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 	}
 
 	.custom__field {
@@ -597,8 +611,8 @@
 	.custom textarea {
 		width: 100%;
 		padding: 0.5rem 0.55rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
 		font-size: 0.95rem;
 		font-weight: 800;
 	}
@@ -612,13 +626,13 @@
 
 	.custom input:focus,
 	.custom textarea:focus {
-		outline: var(--bw-thin) solid var(--ink);
+		outline: var(--bw) solid var(--border);
 		outline-offset: 2px;
 	}
 
 	.custom input::placeholder,
 	.custom textarea::placeholder {
-		color: var(--ink-muted);
+		color: var(--foreground-muted);
 		font-weight: 700;
 	}
 
@@ -634,14 +648,16 @@
 	.custom__count--short {
 		align-self: flex-start;
 		padding: 0.15rem 0.35rem;
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
+		border-radius: var(--radius);
 	}
 
 	.rules {
 		padding: 0.75rem 0.85rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 	}
 
 	.rules summary {
@@ -677,8 +693,8 @@
 		z-index: 2;
 		margin: -0.3rem -1rem 0;
 		padding: 0.8rem 1rem 1rem;
-		background: var(--cream);
-		border-top: var(--bw) solid var(--ink);
+		background: var(--background);
+		border-top: var(--bw) solid var(--border);
 	}
 
 	/* Stands in for the dock so the page doesn't jump when it appears. */
@@ -690,6 +706,6 @@
 		font-weight: 900;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		color: var(--ink-muted);
+		color: var(--foreground-muted);
 	}
 </style>

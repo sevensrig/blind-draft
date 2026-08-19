@@ -1,8 +1,9 @@
 import { page } from 'vitest/browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { game } from '$lib/game/store.svelte';
 import { expectNoViolations } from '$lib/testing/axe';
+import { THEMES } from '$lib/theme';
 import {
 	bothBrokeFallback,
 	brokeFallback,
@@ -14,6 +15,7 @@ import {
 import BidScreen from './BidScreen.svelte';
 import ResultsScreen from './ResultsScreen.svelte';
 import SetupScreen from './SetupScreen.svelte';
+import ThemePicker from './ThemePicker.svelte';
 
 /**
  * Component-level accessibility scans.
@@ -112,4 +114,68 @@ describe('accessibility', () => {
 		await expect.element(page.getByText('Rosters are full')).toBeVisible();
 		await expectNoViolations();
 	});
+});
+
+/**
+ * Every preset, not just the default.
+ *
+ * A "swap two custom properties" feature makes it very easy to ship one accent
+ * that quietly fails contrast, because the one you build against is the only one
+ * you ever look at. These scans run the same axe engine over each preset in turn,
+ * on the screens where `--main` and the surface tones actually carry text: the
+ * bid controls, the award stamp and the results sheet.
+ *
+ * `data-theme` on <html> is exactly what the picker sets, so this exercises the
+ * real mechanism rather than a stand-in.
+ */
+describe('every theme preset is accessible', () => {
+	beforeEach(() => {
+		localStorage.clear();
+		game.dispatch({ type: 'reset' });
+	});
+
+	afterEach(() => {
+		delete document.documentElement.dataset.theme;
+	});
+
+	it('the picker itself is clean', async () => {
+		render(ThemePicker);
+		await expect.element(page.getByRole('radio', { name: 'Gold' })).toBeVisible();
+		await expectNoViolations();
+	});
+
+	for (const theme of THEMES) {
+		it(`${theme.label}: setup screen`, async () => {
+			document.documentElement.dataset.theme = theme.id;
+			render(SetupScreen);
+			await page.getByRole('button', { name: /NBA Players/ }).click();
+			await expect.element(page.getByRole('button', { name: /Start the draft/ })).toBeVisible();
+			await expectNoViolations();
+		});
+
+		it(`${theme.label}: bid controls with a standing bid`, async () => {
+			document.documentElement.dataset.theme = theme.id;
+			game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 4));
+			render(BidScreen);
+			await expect.element(page.getByText('Sri leads')).toBeVisible();
+			await expectNoViolations();
+		});
+
+		it(`${theme.label}: award stamp`, async () => {
+			document.documentElement.dataset.theme = theme.id;
+			game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 4));
+			render(BidScreen);
+			await page.getByRole('button', { name: /^Sold to/ }).click();
+			await expect.element(page.getByText(/to Sri/)).toBeVisible();
+			await expectNoViolations();
+		});
+
+		it(`${theme.label}: results sheet`, async () => {
+			document.documentElement.dataset.theme = theme.id;
+			game.replace(finishedGame({ slots: 3, names: ['Sri', 'Alex'] }));
+			render(ResultsScreen);
+			await expect.element(page.getByText('Rosters are full')).toBeVisible();
+			await expectNoViolations();
+		});
+	}
 });

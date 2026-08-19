@@ -132,22 +132,26 @@
 		flex-direction: column;
 		gap: 0.85rem;
 		padding: 1rem 0.85rem;
-		background: var(--white);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-lg);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
 	}
 
+	/* The wordmark, so it stays yellow to match the favicon and social card — see
+	   .hero__dollar in SetupScreen. This sheet is what people screenshot. */
 	.stampline {
 		display: inline-block;
 		align-self: flex-start;
 		padding: 0.15rem 0.35rem;
 		background: var(--yellow);
-		border: var(--bw-thin) solid var(--ink);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.6rem;
 		font-weight: 900;
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
-		transform: rotate(-1.5deg);
+		rotate: -1.5deg;
 	}
 
 	.sheet__head h1 {
@@ -172,9 +176,10 @@
 	.roster {
 		padding: 0.65rem 0.7rem 0.7rem;
 		background: var(--accent);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-		transform: rotate(var(--tilt));
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		box-shadow: var(--shadow-hard);
+		rotate: var(--tilt);
 	}
 
 	.roster__head {
@@ -184,7 +189,7 @@
 		gap: 0.5rem;
 		padding-bottom: 0.45rem;
 		margin-bottom: 0.5rem;
-		border-bottom: var(--bw-thin) solid var(--ink);
+		border-bottom: var(--bw) solid var(--border);
 	}
 
 	.roster__head h2 {
@@ -234,8 +239,9 @@
 		flex: none;
 		width: 2.6rem;
 		padding: 0.1rem 0.2rem;
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
+		border-radius: var(--radius);
 		font-size: 0.62rem;
 		font-weight: 900;
 		letter-spacing: 0.04em;
@@ -247,8 +253,9 @@
 		flex: none;
 		width: 2.9rem;
 		padding: 0.1rem 0.2rem;
-		background: var(--white);
-		border: 2px solid var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.78rem;
 		font-weight: 900;
 		text-align: center;
@@ -256,8 +263,8 @@
 	}
 
 	.pick__price--free {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
 		font-size: 0.6rem;
 		letter-spacing: 0.06em;
 		text-transform: uppercase;
@@ -292,7 +299,8 @@
 		gap: 0.05rem;
 		padding: 0.55rem 0.6rem;
 		background: var(--blue);
-		border: var(--bw-thin) solid var(--ink);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 	}
 
 	.stat--alt {

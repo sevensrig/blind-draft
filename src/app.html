@@ -5,6 +5,34 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
 		%sveltekit.head%
+		<script>
+			/*
+			 * Two presentational fixes that have to run before the first paint, so
+			 * they live here rather than in a component.
+			 *
+			 * 1. The chosen theme. The page is prerendered with the default accent
+			 *    baked in, so applying a stored theme after hydration would flash the
+			 *    wrong colours on every load. Only the preset id is stored, and it's
+			 *    validated against a strict pattern before it touches an attribute —
+			 *    the colour values themselves live in app.css and are matched by
+			 *    `[data-theme='…']`. An unknown id simply matches nothing and the
+			 *    default stands.
+			 *
+			 * 2. iOS Safari withholds `:active` from elements unless something on the
+			 *    page is listening for touches. Every press in this app is an
+			 *    `:active` state, so without this no-op listener the entire press
+			 *    interaction is invisible on iPhone while working fine on desktop.
+			 */
+			try {
+				var theme = localStorage.getItem('blind-draft:theme:v1');
+				if (theme && /^[a-z]{2,16}$/.test(theme)) {
+					document.documentElement.dataset.theme = theme;
+				}
+			} catch (e) {
+				// Private mode or storage disabled: the default theme is fine.
+			}
+			document.addEventListener('touchstart', function () {}, { passive: true });
+		</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">
 		<div style="display: contents">%sveltekit.body%</div>

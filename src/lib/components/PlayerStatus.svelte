@@ -70,14 +70,19 @@
 		gap: 0.35rem;
 		padding: 0.6rem 0.6rem 0.5rem;
 		background: var(--accent);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-		transform: rotate(var(--tilt));
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
+		rotate: var(--tilt);
 	}
 
+	/*
+	 * The only panel on the screen that gets lifted, and only while it's winning.
+	 * With a single shadow depth in the system, "raised" is a state rather than a
+	 * decoration — holding the bid is what earns it.
+	 */
 	.status.leading {
-		box-shadow: var(--shadow-lg);
-		transform: rotate(var(--tilt)) translate(-2px, -2px);
+		box-shadow: var(--shadow-hard);
+		translate: calc(var(--press) / -2) calc(var(--press) / -2);
 	}
 
 	/* Slapped on at an angle, per the style's badge rule. */
@@ -87,13 +92,14 @@
 		right: -0.4rem;
 		z-index: 1;
 		padding: 0.15rem 0.35rem;
-		background: var(--red);
-		border: var(--bw-thin) solid var(--ink);
+		background: var(--main);
+		border: var(--bw) solid var(--border);
+		border-radius: var(--radius);
 		font-size: 0.55rem;
 		font-weight: 900;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
-		transform: rotate(6deg);
+		rotate: 6deg;
 	}
 
 	.name {
@@ -117,8 +123,9 @@
 	.wallet.broke {
 		align-self: flex-start;
 		padding: 0.1rem 0.3rem;
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
+		border-radius: var(--radius);
 		font-size: 1.05rem;
 		letter-spacing: 0.02em;
 		text-transform: uppercase;
@@ -133,12 +140,12 @@
 	.pip {
 		width: 100%;
 		height: 8px;
-		background: var(--white);
-		border: 2px solid var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
 	}
 
 	.pip.on {
-		background: var(--ink);
+		background: var(--foreground);
 	}
 
 	.slots {
@@ -149,8 +156,8 @@
 	.slot {
 		flex: 1;
 		padding: 1px 0;
-		background: var(--white);
-		border: 2px solid var(--ink);
+		background: var(--secondary-background);
+		border: var(--bw) solid var(--border);
 		font-size: 0.48rem;
 		font-weight: 900;
 		line-height: 1.35;
@@ -161,8 +168,8 @@
 	/* Filled slots go solid. Open slots stay neutral — any of them will take
 	   any player, so highlighting one would imply a restriction. */
 	.slot.on {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--foreground);
+		color: var(--background);
 	}
 
 	.latest {
@@ -187,6 +194,7 @@
 	}
 
 	.empty {
-		opacity: 0.5;
+		font-weight: 700;
+		letter-spacing: 0.04em;
 	}
 </style>

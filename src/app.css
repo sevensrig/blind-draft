@@ -1,27 +1,35 @@
 /*
  * Neo-brutalism, mobile-first.
  *
- * Palette and rules follow the "Neo Brutalism (Mobile)" spec from
- * nextlevelbuilder/ui-ux-pro-max-skill: cream canvas, 4px black borders,
- * hard offset shadows with no blur, mechanical press that translates an
- * element onto its own shadow, zero radius, no gradients, no blur, bold
- * weights only.
+ * The technique — hard near-black borders, a zero-blur offset shadow used
+ * sparingly, weight-driven type, and a mechanical press that lands an element
+ * flat against the page — is what this file encodes. The colours are this
+ * project's own: cream canvas, black ink, and a small set of accents light
+ * enough to carry black text directly.
  *
- * One deliberate deviation: that spec calls for Space Grotesk, but a web font
- * would mean a network request at runtime, which this build forbids. Space
- * Grotesk is listed first so it's used when locally installed, otherwise the
- * heavy system face carries it.
+ * One deliberate deviation from the reference style: it calls for Space Grotesk,
+ * but a web font would mean a network request at runtime, which this build
+ * forbids. Space Grotesk is listed first so it's used when locally installed,
+ * otherwise the heavy system face carries it.
  */
 :root {
+	/* ------------------------------------------------------------------ *
+	 * Layer 1 — raw values, written down exactly once.
+	 *
+	 * Nothing outside this block should contain a hex code. Components consume
+	 * the semantic tokens below, which is what lets a theme re-point a couple of
+	 * variables and re-skin the whole app with no rebuild.
+	 * ------------------------------------------------------------------ */
 	--cream: #fffdf5;
-	--ink: #000000;
-	/*
-	 * De-emphasised text. Use this instead of dropping opacity on --ink: at the
-	 * sizes this app uses, `opacity: 0.5` lands around 3.9:1 on cream, which fails
-	 * WCAG AA. This sits near 5:1 while still reading as secondary.
-	 */
-	--ink-muted: #6b6b66;
 	--white: #ffffff;
+	--black: #000000;
+	/*
+	 * De-emphasised text. Use this instead of dropping opacity on the ink: at the
+	 * sizes this app uses, `opacity: 0.5` lands around 3.9:1 on cream, which fails
+	 * WCAG AA. This measures 5.26:1 on cream while still reading as secondary.
+	 */
+	--grey: #6b6b66;
+
 	/*
 	 * The accent set. Every one of these is light enough to carry black text at
 	 * well over 4.5:1, which is what lets the whole system put ink straight onto
@@ -34,6 +42,30 @@
 	--green: #77dd88;
 	--blue: #8ecae6;
 
+	/* ------------------------------------------------------------------ *
+	 * Layer 2 — semantic tokens. This is the app's actual vocabulary.
+	 *
+	 * `--main`, `--background` and `--secondary-background` are the only ones a
+	 * theme overrides. `--border`, `--shadow` and `--foreground` are held
+	 * constant on purpose: a near-black edge is what makes this style read, and
+	 * it has to survive whichever accent the player picked.
+	 * ------------------------------------------------------------------ */
+	--background: var(--cream);
+	--secondary-background: var(--white);
+	--foreground: var(--black);
+	--foreground-muted: var(--grey);
+
+	/* The action colour: primary CTAs, the live progress tick, the brand mark. */
+	--main: var(--red);
+	--main-foreground: var(--black);
+
+	/*
+	 * Near-black regardless of anything else in the palette. The shadow is the
+	 * same value, not a parallel one — they must never drift apart.
+	 */
+	--border: var(--black);
+	--shadow: var(--border);
+
 	/* Player identities. Both are light, so text on them stays black. */
 	--p1: var(--violet);
 	--p2: var(--yellow);
@@ -41,17 +73,74 @@
 	/*
 	 * Money on the table. Deliberately not yellow: yellow is Player 2's identity,
 	 * and having the same colour mean both "Alex" and "dollars" muddled the bid
-	 * screen. Green reads as money and nothing else.
+	 * screen. Green reads as money and nothing else — which is also why no theme
+	 * preset uses a green accent.
 	 */
 	--money: var(--green);
 
-	--bw: 4px;
-	--bw-thin: 2px;
-	--shadow-sm: 4px 4px 0 var(--ink);
-	--shadow-lg: 8px 8px 0 var(--ink);
+	/* ---------- geometry ---------- */
+	--bw: 2px;
+	--radius: 5px;
+	/*
+	 * One number drives both the shadow offset and the distance a pressed element
+	 * travels. They have to match or the element won't land flat on its own
+	 * shadow, so they read from the same token rather than both hard-coding 4px.
+	 */
+	--press: 4px;
+	--shadow-hard: var(--press) var(--press) 0 0 var(--shadow);
 
 	--shell: 30rem;
 	--font: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ------------------------------------------------------------------ *
+ * Themes
+ *
+ * A player-chosen accent, applied by setting `data-theme` on <html>. Only the
+ * accent and the two surface tones move; border, shadow and foreground stay put,
+ * which is what keeps the technique intact no matter which preset is active.
+ *
+ * These are bare attribute selectors rather than `html[data-theme=…]` so the
+ * picker's own swatches can carry `data-theme` and preview themselves. That way
+ * the colour values live here and nowhere else — the picker never repeats them.
+ *
+ * Every `--main` and `--background` below is verified to carry black text at
+ * 4.5:1 or better. `npm run test:a11y` scans all of them, not just the default.
+ * ------------------------------------------------------------------ */
+[data-theme='coral'] {
+	--main: #ff6b6b;
+	--background: var(--cream);
+	--secondary-background: var(--white);
+}
+
+[data-theme='gold'] {
+	--main: #ffc233;
+	--background: #fff8e8;
+	--secondary-background: var(--cream);
+}
+
+[data-theme='tangerine'] {
+	--main: #ff9f45;
+	--background: #fff6ec;
+	--secondary-background: var(--cream);
+}
+
+[data-theme='magenta'] {
+	--main: #ff8ad4;
+	--background: #fff5fb;
+	--secondary-background: var(--white);
+}
+
+[data-theme='cyan'] {
+	--main: #5ed9e8;
+	--background: #f2fcff;
+	--secondary-background: var(--white);
+}
+
+[data-theme='lilac'] {
+	--main: #b9a2ff;
+	--background: #f8f5ff;
+	--secondary-background: var(--white);
 }
 
 * {
@@ -61,16 +150,21 @@
 }
 
 html {
-	background: var(--cream);
+	background: var(--background);
 	min-height: 100%;
 }
 
 body {
 	margin: 0;
 	min-height: 100dvh;
-	background: var(--cream);
-	color: var(--ink);
+	background: var(--background);
+	color: var(--foreground);
 	font-family: var(--font);
+	/*
+	 * Weight is doing the work in this style, not font choice. Body sits at 700 —
+	 * well above the 500 floor the technique asks for — so nothing on screen ever
+	 * reads as normal weight, and headings still have 900 to climb to.
+	 */
 	font-weight: 700;
 	-webkit-font-smoothing: antialiased;
 	-webkit-tap-highlight-color: transparent;
@@ -90,18 +184,19 @@ h3 {
 button {
 	font-family: inherit;
 	font-weight: 900;
-	color: var(--ink);
+	color: var(--foreground);
 	border: 0;
-	border-radius: 0;
+	border-radius: var(--radius);
 	background: none;
 	cursor: pointer;
 	touch-action: manipulation;
 }
 
-input {
+input,
+textarea {
 	font-family: inherit;
-	color: var(--ink);
-	border-radius: 0;
+	color: var(--foreground);
+	border-radius: var(--radius);
 }
 
 /* ---------- primitives ---------- */
@@ -121,10 +216,49 @@ input {
 	text-transform: uppercase;
 }
 
+/* ------------------------------------------------------------------ *
+ * The raised state, and the press
+ *
+ * Restraint is the whole point. Only elements that should read as lifted off
+ * the page get `.press` — primary buttons, the reveal/bid card, the sold stamp,
+ * the results sheet. Secondary structure (menus, chips, list items, panels)
+ * carries a border and no shadow. Putting the shadow on everything flattens the
+ * hierarchy it exists to create.
+ *
+ * The press fires on `:active`, not `:hover`. The reference implementation only
+ * hovers, which never fires on a touch screen — on a phone-first game that
+ * means the interaction simply doesn't exist. `:active` covers touch and mouse
+ * both. (iOS Safari withholds `:active` unless something is listening for
+ * touches, so app.html registers a no-op touchstart listener.)
+ *
+ * It animates `translate`, not `transform`, because several cards here sit at a
+ * slight rotation. They're separate properties, so the press composes with the
+ * tilt instead of overwriting it.
+ * ------------------------------------------------------------------ */
+.press {
+	box-shadow: var(--shadow-hard);
+}
+
+.press:active:not(:disabled) {
+	translate: var(--press) var(--press);
+	box-shadow: none;
+}
+
 /*
- * The workhorse block: hard border, solid offset shadow, and a press that
- * slides it onto the shadow so the button physically bottoms out.
+ * The inverse, for moments that should pop rather than depress: starts flat and
+ * lifts, with the shadow appearing underneath it. Reserved for the resolution
+ * beat — winning an item — where "pressing down" is the wrong feeling.
  */
+.press--reverse {
+	box-shadow: none;
+}
+
+.press--reverse:active:not(:disabled) {
+	translate: calc(-1 * var(--press)) calc(-1 * var(--press));
+	box-shadow: var(--shadow-hard);
+}
+
+/* The workhorse block: hard border, offset shadow, mechanical press. */
 .btn {
 	display: flex;
 	flex-direction: column;
@@ -134,9 +268,10 @@ input {
 	width: 100%;
 	min-height: 3.5rem;
 	padding: 0.7rem 1rem;
-	background: var(--white);
-	border: var(--bw) solid var(--ink);
-	box-shadow: var(--shadow-sm);
+	background: var(--secondary-background);
+	border: var(--bw) solid var(--border);
+	border-radius: var(--radius);
+	box-shadow: var(--shadow-hard);
 	font-size: 1rem;
 	line-height: 1.05;
 	letter-spacing: -0.01em;
@@ -145,21 +280,22 @@ input {
 }
 
 .btn:active:not(:disabled) {
-	transform: translate(4px, 4px);
+	translate: var(--press) var(--press);
 	box-shadow: none;
 }
 
 /* Reads as bottomed-out and dead rather than mushy grey. */
 .btn:disabled {
 	cursor: not-allowed;
-	transform: translate(4px, 4px);
+	translate: var(--press) var(--press);
 	box-shadow: none;
-	background: var(--white);
+	background: var(--secondary-background);
 	opacity: 0.45;
 }
 
 .btn--hot {
-	background: var(--red);
+	background: var(--main);
+	color: var(--main-foreground);
 	min-height: 4rem;
 	font-size: 1.15rem;
 }
@@ -168,18 +304,30 @@ input {
 	background: var(--yellow);
 }
 
+/*
+ * Pops up instead of pressing down. Composed with `.btn`, whose own rules would
+ * otherwise win, so it has to restate both halves of the interaction.
+ */
+.btn--pop {
+	box-shadow: none;
+}
+
+.btn--pop:active:not(:disabled) {
+	translate: calc(-1 * var(--press)) calc(-1 * var(--press));
+	box-shadow: var(--shadow-hard);
+}
+
 .btn--ghost {
-	background: var(--cream);
+	background: var(--background);
 	min-height: 3rem;
 	font-size: 0.8rem;
 	box-shadow: none;
-	border-width: var(--bw-thin);
 }
 
 .btn--ghost:active:not(:disabled) {
-	background: var(--ink);
-	color: var(--cream);
-	transform: none;
+	background: var(--foreground);
+	color: var(--background);
+	translate: none;
 }
 
 .btn__sub {

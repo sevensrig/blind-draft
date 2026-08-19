@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
+import { THEMES } from '../src/lib/theme';
 import { playRound, playToResults, setUpGame, waitForHydration } from './helpers';
 
 /**
@@ -144,3 +145,47 @@ test('custom category editor is accessible', async ({ page }) => {
 	await expect(page.getByRole('button', { name: /Start the draft/ })).toBeEnabled();
 	await scan(page, 'custom editor, ready');
 });
+
+/**
+ * Every theme preset, on assembled pages.
+ *
+ * The component suite scans all the presets across all the screens; this covers
+ * them where the document-scoped rules apply too, on the two screens where the
+ * accent does the most work — the setup screen (brand mark, start button, the
+ * picker itself) and the bid screen (standing bid, the live tick, the sold
+ * button).
+ *
+ * The point of scanning each one is that a "swap two custom properties" feature
+ * makes it very easy to ship a single low-contrast accent unnoticed, because the
+ * default is the only one anybody looks at while building it.
+ */
+for (const theme of THEMES) {
+	test(`${theme.label} theme: setup screen is accessible`, async ({ page }) => {
+		await page.addInitScript((id) => localStorage.setItem('blind-draft:theme:v1', id), theme.id);
+
+		await page.goto('/');
+		await waitForHydration(page);
+		await expect(page.locator('html')).toHaveAttribute('data-theme', theme.id);
+
+		await page.getByRole('button', { name: /NBA Players/ }).click();
+		await expect(page.getByRole('button', { name: /Start the draft/ })).toBeVisible();
+		await scan(page, `setup screen on the ${theme.id} theme`);
+	});
+
+	test(`${theme.label} theme: bid screen is accessible`, async ({ page }) => {
+		await page.addInitScript((id) => localStorage.setItem('blind-draft:theme:v1', id), theme.id);
+
+		await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
+		await expect(page.locator('html')).toHaveAttribute('data-theme', theme.id);
+
+		await page.getByRole('button', { name: /Tap to reveal/ }).click();
+		await page.getByRole('button', { name: /Sri[\s\S]*bid \$/ }).click();
+		await expect(page.getByText('Sri leads')).toBeVisible();
+		await scan(page, `bid screen on the ${theme.id} theme`);
+
+		// The award stamp lands on a player accent over the themed canvas.
+		await page.getByRole('button', { name: /^Sold to/ }).click();
+		await expect(page.locator('.stamp')).toBeVisible();
+		await scan(page, `award screen on the ${theme.id} theme`);
+	});
+}
