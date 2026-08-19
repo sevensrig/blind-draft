@@ -1,0 +1,47 @@
+name: Supabase keep-alive
+
+# Free-tier Supabase projects pause after roughly a week idle, and a paused
+# project means remote play is simply broken for whoever tries it next. This does
+# nothing functional: it touches a public endpoint often enough that the project
+# never counts as inactive.
+#
+# The rooms list is the right target — it is public by design, returns almost
+# nothing, and exercises Postgres rather than just the edge, which is what
+# actually counts as activity.
+
+on:
+  schedule:
+    # Every third day, 06:12 UTC. Off the hour because cron minute 0 is a
+    # stampede across all of GitHub.
+    - cron: '12 6 */3 * *'
+  # So it can be proven to work without waiting three days.
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Touch the public rooms endpoint
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY must be set as repository secrets"
+            exit 1
+          fi
+
+          status=$(curl -s -o /tmp/body -w '%{http_code}' \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/public_room_listings?select=room_id&limit=1")
+
+          echo "status=$status"
+          head -c 200 /tmp/body
+
+          # 200 is a live project. Anything else means it is paused, the keys
+          # rotated, or the table is gone — all worth a red run.
+          if [ "$status" != "200" ]; then
+            echo "::error::Expected 200, got $status"
+            exit 1
+          fi

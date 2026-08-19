@@ -5,6 +5,7 @@
 	import { buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
+	import { remoteEnabled } from '$lib/remote/client';
 	import { game } from '$lib/game/store.svelte';
 	import Icon from './Icon.svelte';
 
@@ -124,6 +125,18 @@
 			<span class="hero__rest">Blind<br />Draft</span>
 		</h1>
 		<p class="hero__tag">Nobody knows what's coming next. Bid anyway.</p>
+
+		<!--
+			Local play stays the default: this screen is what a shared link opens, and
+			putting a mode chooser first would cost every pass-and-play game a tap.
+			Hidden entirely when Supabase isn't configured, so a local-only deploy
+			never offers something that can't work.
+		-->
+		{#if remoteEnabled}
+			<a class="online" href="/online">
+				Playing apart? <b>Play online</b>
+			</a>
+		{/if}
 	</header>
 
 	<section class="block">
@@ -371,6 +384,26 @@
 		font-size: 0.92rem;
 		font-weight: 700;
 		line-height: 1.3;
+	}
+
+	/* Reads as a signpost rather than a second primary action. */
+	.online {
+		display: inline-block;
+		align-self: flex-start;
+		margin-top: 0.8rem;
+		padding: 0.4rem 0.6rem;
+		background: var(--blue);
+		border: var(--bw-thin) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+		font-size: 0.76rem;
+		font-weight: 700;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.online b {
+		font-weight: 900;
+		text-transform: uppercase;
 	}
 
 	.block {

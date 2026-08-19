@@ -98,9 +98,20 @@ The failure mode to watch for is drifting corporate. "implement", "comprehensive
 "various", "enhance", "leverage" and Title Case are all signs the voice has
 slipped. Reach for the phrasing you'd use telling a teammate what you just did.
 
-Skip the body entirely unless something is genuinely non-obvious and would cost
-someone real time later — a subtle reason, a gotcha, a link to an issue. A body
-that just restates the subject in longer words is noise.
+## Keep it to one line
+
+**Default to subject-only. No body.** A commit is a label on a change, not a
+place to explain it.
+
+The pull to write a body is strongest right after solving something hard — the
+reasoning feels valuable and the commit feels like the place for it. It isn't.
+Nobody reads commit bodies; they read code. Reasoning that matters belongs in a
+comment next to the thing it explains, where someone will actually hit it. A
+paragraph in a commit is reasoning filed where it won't be found.
+
+If a body is genuinely unavoidable — an issue link, a one-line gotcha — keep it
+to a single short line. Three sentences is already too long. Multiple paragraphs
+means the explanation wanted to be a code comment.
 
 ## Trailer
 
@@ -136,6 +147,8 @@ That's a footer, not part of the subject — the subject stays a short one-liner
 
 - **Don't commit or stage unless asked.** See "When to run" above — this is the
   boundary most easily broken by good intentions.
+- **One line per commit.** See "Keep it to one line" — bodies are the other
+  boundary that slips, usually right after doing something clever.
 - **Don't push.** Committing is local and easy to amend; pushing is outward-facing.
   Offer it, wait to be asked.
 - **Don't commit secrets or junk.** If `.env`, credentials, large binaries, or
