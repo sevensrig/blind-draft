@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { PUBLIC_SUPABASE_ANON_KEY, PUBLIC_SUPABASE_URL } from '$env/static/public';
+import { env } from '$env/dynamic/public';
 import { deviceToken } from './identity';
 
 /**
@@ -17,15 +17,27 @@ import { deviceToken } from './identity';
 
 let cached: SupabaseClient | null = null;
 
+/*
+ * Dynamic, not static.
+ *
+ * `$env/static/public` turns each variable into a named export, so a build where
+ * one is unset fails outright with "not exported" — which is exactly what
+ * happened on Vercel. That defeats the point: remote play is meant to switch
+ * itself off when unconfigured, not take the whole build down with it. The
+ * dynamic module hands back a plain object, so a missing key is just undefined.
+ */
+const SUPABASE_URL = env.PUBLIC_SUPABASE_URL;
+const SUPABASE_ANON_KEY = env.PUBLIC_SUPABASE_ANON_KEY;
+
 /** True when the deploy has Supabase wired up. Remote play hides itself if not. */
-export const remoteEnabled = !!PUBLIC_SUPABASE_URL && !!PUBLIC_SUPABASE_ANON_KEY;
+export const remoteEnabled = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
 
 export function supabase(): SupabaseClient {
 	if (!remoteEnabled) {
 		throw new Error('Remote play is not configured: PUBLIC_SUPABASE_URL / ANON_KEY are missing');
 	}
 	if (cached) return cached;
-	cached = createClient(PUBLIC_SUPABASE_URL, PUBLIC_SUPABASE_ANON_KEY, {
+	cached = createClient(SUPABASE_URL as string, SUPABASE_ANON_KEY as string, {
 		auth: { persistSession: false },
 		global: { headers: { 'x-player-token': deviceToken() } },
 		realtime: { params: { eventsPerSecond: 20 } }
