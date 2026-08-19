@@ -17,9 +17,34 @@
 		solventPlayer
 	} from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
-	import type { PlayerId } from '$lib/game/types';
+	import type { Action, GameState, PlayerId } from '$lib/game/types';
 
-	const s = $derived(game.state);
+	interface Props {
+		/**
+		 * Omitted for local play, where the in-memory store is the truth. Remote
+		 * play passes the server's state so both modes share this screen rather
+		 * than growing a second copy of it.
+		 */
+		view?: GameState;
+		/** Where actions go. Defaults to applying them locally. */
+		dispatch?: (action: Action) => void;
+		/** The seat this device controls, or null when one device drives both. */
+		seat?: 0 | 1 | null;
+	}
+
+	let { view, dispatch, seat = null }: Props = $props();
+
+	const s = $derived(view ?? game.state);
+	/*
+	 * Wrapped rather than passed by reference: `game.dispatch` is a class method
+	 * and loses its receiver when detached. The prop is named `view`, not `state`,
+	 * because a local binding called `state` shadows the `$state` rune and breaks
+	 * every `$state(...)` below it.
+	 */
+	const send = (action: Action) => (dispatch ? dispatch(action) : game.dispatch(action));
+
+	/** In remote play a device may only act for its own seat. */
+	const controls = (player: PlayerId) => seat === null || seat === player;
 	const item = $derived(currentItem(s));
 	const mode = $derived(itemMode(s));
 	const facedown = $derived(s.phase === 'reveal');
@@ -87,7 +112,7 @@
 			class="quit"
 			type="button"
 			onclick={() => {
-				if (confirmQuit) game.dispatch({ type: 'reset' });
+				if (confirmQuit) send({ type: 'reset' });
 				else confirmQuit = true;
 			}}
 			onblur={() => (confirmQuit = false)}
@@ -114,7 +139,7 @@
 	</div>
 
 	{#if facedown}
-		<button class="item item--back" type="button" onclick={() => game.dispatch({ type: 'reveal' })}>
+		<button class="item item--back" type="button" onclick={() => send({ type: 'reveal' })}>
 			<span class="back__mark">?</span>
 			<span class="back__cue">Tap to reveal</span>
 		</button>
@@ -154,7 +179,7 @@
 								class="assign__slot"
 								class:on={slot.id === award.slotId}
 								type="button"
-								onclick={() => game.dispatch({ type: 'assign', slotId: slot.id })}
+								onclick={() => send({ type: 'assign', slotId: slot.id })}
 							>
 								{slot.label}
 							</button>
@@ -162,7 +187,7 @@
 					</div>
 				</div>
 			{/if}
-			<button class="btn btn--hot" type="button" onclick={() => game.dispatch({ type: 'next' })}>
+			<button class="btn btn--hot" type="button" onclick={() => send({ type: 'next' })}>
 				{lastItem ? 'See the results' : 'Next item'}
 			</button>
 		</div>
@@ -194,8 +219,8 @@
 							class:duel__btn--holding={s.bid?.holder === id}
 							style:--accent={id === 0 ? 'var(--p1)' : 'var(--p2)'}
 							type="button"
-							disabled={!canBid(s, id, amount)}
-							onclick={() => game.dispatch({ type: 'bid', player: id, amount })}
+							disabled={!canBid(s, id, amount) || !controls(id)}
+							onclick={() => send({ type: 'bid', player: id, amount })}
 						>
 							{nameOf(id)}
 							<span class="btn__sub">{bidLabel(id)}</span>
@@ -207,7 +232,7 @@
 					class="btn btn--hot"
 					type="button"
 					disabled={!s.bid}
-					onclick={() => game.dispatch({ type: 'sold' })}
+					onclick={() => send({ type: 'sold' })}
 				>
 					{s.bid ? `Sold to ${nameOf(s.bid.holder)}` : 'Nobody has opened'}
 					<span class="btn__sub">
@@ -236,7 +261,7 @@
 					class="btn btn--hot"
 					type="button"
 					disabled={!canBuy(s, seller, amount)}
-					onclick={() => game.dispatch({ type: 'buy', player: seller, amount })}
+					onclick={() => send({ type: 'buy', player: seller, amount })}
 				>
 					{nameOf(seller)} takes it for ${amount}
 				</button>
@@ -244,7 +269,7 @@
 				<button
 					class="btn btn--ghost"
 					type="button"
-					onclick={() => game.dispatch({ type: 'decline', player: seller })}
+					onclick={() => send({ type: 'decline', player: seller })}
 				>
 					Pass
 					<span class="btn__sub">{nameOf(beggar)} gets it free</span>
@@ -265,7 +290,7 @@
 					class="btn btn--yellow"
 					type="button"
 					disabled={!item || !canReceive(s, heir, item)}
-					onclick={() => game.dispatch({ type: 'claim' })}
+					onclick={() => send({ type: 'claim' })}
 				>
 					{nameOf(heir)} takes it
 					<span class="btn__sub">free</span>

@@ -3,9 +3,21 @@
 	import { buildDeck } from '$lib/game/deck';
 	import { entryInSlot, totalSpent } from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
-	import type { Player } from '$lib/game/types';
+	import type { GameState, Player } from '$lib/game/types';
 
-	const s = $derived(game.state);
+	interface Props {
+		/** Remote play supplies the server's state; local play uses the store. */
+		view?: GameState;
+		/** Null hides the button — a remote room can't reshuffle from the client. */
+		onRunItBack?: (() => void) | null;
+		onLeave?: () => void;
+		leaveLabel?: string;
+	}
+
+	let { view, onRunItBack, onLeave, leaveLabel = 'New setup' }: Props = $props();
+
+	/* Named `view`, not `state`: a binding called `state` shadows the `$state` rune. */
+	const s = $derived(view ?? game.state);
 	const [p1, p2] = $derived(s.players);
 
 	const priciest = $derived(
@@ -109,12 +121,18 @@
 	<p class="verdict">No scores here — argue about who won.</p>
 
 	<div class="actions">
-		<button class="btn btn--hot" type="button" onclick={runItBack}>
-			Run it back
-			<span class="btn__sub">same players, fresh deck</span>
-		</button>
-		<button class="btn btn--ghost" type="button" onclick={() => game.dispatch({ type: 'reset' })}>
-			New setup
+		{#if onRunItBack !== null}
+			<button class="btn btn--hot" type="button" onclick={onRunItBack ?? runItBack}>
+				Run it back
+				<span class="btn__sub">same players, fresh deck</span>
+			</button>
+		{/if}
+		<button
+			class="btn btn--ghost"
+			type="button"
+			onclick={onLeave ?? (() => game.dispatch({ type: 'reset' }))}
+		>
+			{leaveLabel}
 		</button>
 	</div>
 </div>
