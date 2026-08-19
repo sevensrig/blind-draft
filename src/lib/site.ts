@@ -24,8 +24,9 @@ export const SITE_DESCRIPTION =
 	'$20 Blind Draft is a free two-player party game you play in a browser. Two players share one phone and bid against each other for items revealed one at a time, building a roster on a $20 budget without knowing what is coming next.';
 
 /** Short form for the social card, where long copy gets truncated anyway. */
-export const SITE_TAGLINE = 'A two-player blind bidding draft. One phone, $20, no idea what is next.';
+export const SITE_TAGLINE =
+	'A two-player blind bidding draft. One phone, $20, no idea what is next.';
 
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 export const OG_IMAGE_ALT =
-  '$20 Blind Draft — a two-player blind bidding party game played in a browser.';
+	'$20 Blind Draft — a two-player blind bidding party game played in a browser.';

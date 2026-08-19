@@ -56,7 +56,9 @@ describe('vendored engine', () => {
 		const pools = readdirSync(join(SRC, 'data')).filter(
 			(f: string) => f.endsWith('.ts') && !f.endsWith('.test.ts')
 		);
-		const vendoredPools = readdirSync(join(VENDOR, 'data')).filter((f: string) => f.endsWith('.ts'));
+		const vendoredPools = readdirSync(join(VENDOR, 'data')).filter((f: string) =>
+			f.endsWith('.ts')
+		);
 		expect(vendoredPools.sort()).toEqual(pools.sort());
 	});
 

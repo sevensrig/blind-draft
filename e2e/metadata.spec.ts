@@ -96,7 +96,9 @@ test('serves the tab icon in every form the browsers ask for', async ({ page, re
 	// path is the part worth pinning anyway.
 	const paths = await page
 		.locator('link[rel="icon"], link[rel="apple-touch-icon"]')
-		.evaluateAll((links) => links.map((l) => new URL(l.getAttribute('href') ?? '', location.href).pathname));
+		.evaluateAll((links) =>
+			links.map((l) => new URL(l.getAttribute('href') ?? '', location.href).pathname)
+		);
 	expect(paths).toEqual(['/favicon.svg', '/favicon-96.png', '/apple-touch-icon.png']);
 
 	for (const [path, type] of [
