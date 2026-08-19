@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
 		// Redaction happens here, in TypeScript, because it depends on the engine.
 		await db
 			.from('game_public')
-			.update({ payload: redact(state), updated_at: new Date().toISOString() })
+			.update({ payload: redact(state, 2), updated_at: new Date().toISOString() })
 			.eq('room_id', room.id);
 	}
 

@@ -18,6 +18,8 @@ export interface PublicGameState {
 	history: GameState['history'];
 	itemNumber: number;
 	deckSize: number;
+	/** 1 while waiting in the lobby, 2 once the game is on. */
+	seatsTaken: number;
 	/** Null while the card is face down. */
 	item: GameState['deck'][number] | null;
 }

@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
 		const results = await Promise.all([
 			db.from('room_players').insert({ room_id: room.id, seat: 0, name: hostName, token }),
 			db.from('games').insert({ room_id: room.id, state, version: 0 }),
-			db.from('game_public').insert({ room_id: room.id, payload: redact(state), version: 0 })
+			db.from('game_public').insert({ room_id: room.id, payload: redact(state, 1), version: 0 })
 		]);
 
 		const failure = results.find((result) => result.error !== null)?.error;

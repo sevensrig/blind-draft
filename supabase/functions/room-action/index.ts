@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 	// Behind already — don't even try the write.
 	if (game.version !== expected) {
 		return fail('stale', 'Someone got there first', {
-			state: redact(state),
+			state: redact(state, 2),
 			version: game.version
 		});
 	}
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 	// cheaper and more reliable check than re-deriving legality here.
 	if (next === state) {
 		return fail('illegal_action', 'That move is not legal right now', {
-			state: redact(state),
+			state: redact(state, 2),
 			version: game.version
 		});
 	}
@@ -120,13 +120,13 @@ Deno.serve(async (req) => {
 			.eq('room_id', roomId)
 			.maybeSingle();
 		return fail('stale', 'Someone got there first', {
-			state: fresh ? redact(fresh.state as GameState) : null,
+			state: fresh ? redact(fresh.state as GameState, 2) : null,
 			version: fresh?.version ?? null
 		});
 	}
 
 	// Only now is the redacted copy published — this is what clients subscribe to.
-	const publicState = redact(next);
+	const publicState = redact(next, 2);
 	await db
 		.from('game_public')
 		.update({ payload: publicState, version, updated_at: new Date().toISOString() })

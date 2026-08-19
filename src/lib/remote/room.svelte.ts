@@ -25,23 +25,48 @@ class RemoteRoom {
 	#state = $state<PublicGameState | null>(null);
 	#version = $state(0);
 	#status = $state<ConnectionStatus>('idle');
+	/* Room metadata, not game state — the server never puts it in game_public. */
+	#code = $state<string | null>(null);
 	#message = $state<string | null>(null);
 	/** Set when a move was refused, so the UI can say why without inventing state. */
 	#lastRejection = $state<string | null>(null);
 
 	#channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 
-	get roomId() { return this.#roomId; }
-	get seat() { return this.#seat; }
-	get state() { return this.#state; }
-	get version() { return this.#version; }
-	get status() { return this.#status; }
-	get message() { return this.#message; }
-	get lastRejection() { return this.#lastRejection; }
+	get roomId() {
+		return this.#roomId;
+	}
+	get seat() {
+		return this.#seat;
+	}
+	get state() {
+		return this.#state;
+	}
+	get version() {
+		return this.#version;
+	}
+	get status() {
+		return this.#status;
+	}
+	get code() {
+		return this.#code;
+	}
+	get message() {
+		return this.#message;
+	}
+	get lastRejection() {
+		return this.#lastRejection;
+	}
 
-	/** True once both seats are taken and the game is actually playable. */
+	/**
+	 * True once both seats are taken.
+	 *
+	 * Reads the server's count rather than inspecting names: a fresh game is seeded
+	 * with a placeholder name for player two, so a name-based check reported the
+	 * room full before anyone had joined and skipped the lobby entirely.
+	 */
 	get bothSeated() {
-		return !!this.#state && this.#state.players.every((player) => !!player.name);
+		return (this.#state?.seatsTaken ?? 0) >= 2;
 	}
 
 	async create(options: {
@@ -57,11 +82,16 @@ class RemoteRoom {
 			token: deviceToken()
 		});
 		rememberSeat(result.roomId, result.seat);
+		this.#code = result.code;
 		return result;
 	}
 
 	/** Join by id or code. Also the rejoin path — the token decides which. */
-	async join(target: { roomId?: string; code?: string; name?: string }): Promise<{ seat: 0 | 1 }> {
+	async join(target: {
+		roomId?: string;
+		code?: string;
+		name?: string;
+	}): Promise<{ roomId: string; seat: 0 | 1 }> {
 		const result = await callFunction<{ roomId: string; seat: 0 | 1 }>('join-room', {
 			...target,
 			token: deviceToken()
@@ -94,18 +124,25 @@ class RemoteRoom {
 		const client = supabase();
 		this.#channel = client
 			.channel(`room:${roomId}`, { config: { presence: { key: String(seat) } } })
-			.on(
-				'postgres_changes',
-				{ event: '*', schema: 'public', table: 'game_public', filter: `room_id=eq.${roomId}` },
-				(payload) => {
-					const row = payload.new as { payload?: PublicGameState; version?: number };
-					// Out-of-order delivery is possible; never move backwards.
-					if (row?.payload && typeof row.version === 'number' && row.version >= this.#version) {
-						this.#state = row.payload;
-						this.#version = row.version;
-					}
-				}
-			)
+			/*
+			 * Broadcast, not Postgres Changes.
+			 *
+			 * The read policy on `game_public` checks the `x-player-token` header,
+			 * which Realtime doesn't send — so row-level subscriptions were silently
+			 * denied and nobody was ever notified. A Postgres trigger broadcasts the
+			 * new version instead, and we re-fetch over REST where the token is
+			 * actually checked. The nudge carries no state, so nothing leaks.
+			 */
+			.on('broadcast', { event: 'state' }, () => {
+				/*
+				 * Always re-fetch. The nudge means "something changed", not "the
+				 * version went up" — a second player joining rewrites the payload
+				 * without advancing the version, since no game action happened. Gating
+				 * on a version increase left the host waiting in the lobby while their
+				 * opponent was already sitting in the room.
+				 */
+				void this.#pull();
+			})
 			.on('presence', { event: 'sync' }, () => {
 				const seats = Object.keys(this.#channel?.presenceState() ?? {});
 				const opponentHere = seats.some((key) => key !== String(seat));

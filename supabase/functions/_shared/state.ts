@@ -25,11 +25,19 @@ export interface PublicGameState {
 	/** 1-based position in the deck, for the "Item 3 of 10" readout. */
 	itemNumber: number;
 	deckSize: number;
+	/**
+	 * How many seats are filled, 1 or 2.
+	 *
+	 * Can't be inferred from the state: a new game is seeded with a placeholder
+	 * name for player two, so "has a name" is true before anyone has joined. The
+	 * client needs the real occupancy to know whether to show a lobby.
+	 */
+	seatsTaken: number;
 	/** Null while the card is face down. */
 	item: ReturnType<typeof currentItem>;
 }
 
-export function redact(state: GameState): PublicGameState {
+export function redact(state: GameState, seatsTaken: number): PublicGameState {
 	const faceDown = state.phase === 'reveal';
 	return {
 		phase: state.phase,
@@ -41,6 +49,7 @@ export function redact(state: GameState): PublicGameState {
 		history: state.history,
 		itemNumber: Math.min(state.index + 1, state.deck.length),
 		deckSize: state.deck.length,
+		seatsTaken,
 		item: faceDown ? null : currentItem(state)
 	};
 }
