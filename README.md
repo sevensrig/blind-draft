@@ -293,8 +293,8 @@ the system put ink straight onto colour with no light/dark variants:
 | `--yellow` | Vivid yellow  | Player 2, tags and badges                      |
 | `--violet` | Soft violet   | Player 1, face-down card, rule banners         |
 | `--green`  | Pastel green  | Money (aliased as `--money`)                   |
-| `--blue`   | Pastel blue   | The primary button, and nothing else           |
-| `--orange` | Vivid orange  | Sports categories, top-price stat, the signpost|
+| `--blue`   | Pastel blue   | Primary buttons and the play-online signpost   |
+| `--orange` | Vivid orange  | Sports categories, the top-price stat          |
 
 Three conventions worth keeping:
 
@@ -302,10 +302,12 @@ Three conventions worth keeping:
   the most important control on every screen the one players hesitated over. Red
   still carries the live progress tick, position tags and error banners — things
   that report rather than invite a tap. Don't put it back on a button.
-- **`--blue` is the button and nothing else.** It briefly accented the sports
-  categories and the top-price stat as well, which put pale blue on nearly every
-  screen and cost the button the contrast that makes it read as the thing to press.
-  `--orange` took those over. Don't spend blue on decoration.
+- **`--blue` is for things you tap, and nothing else.** It briefly accented the
+  sports categories and the top-price stat as well, which put pale blue on nearly
+  every screen and cost the button the contrast that makes it read as the thing to
+  press. `--orange` took those over. Blue still covers the play-online signpost,
+  since that's a control too — it just isn't a `.btn`. Don't spend blue on
+  decoration.
 
 - **Green means money, and only money.** It's aliased to `--money` and used for
   the standing bid and the amount dial. Yellow used to do this job as well as
