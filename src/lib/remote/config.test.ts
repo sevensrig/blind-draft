@@ -18,10 +18,9 @@ describe('remote configuration', () => {
 
 	it('reads env dynamically so an unset variable cannot break the build', () => {
 		expect(source).toContain("from '$env/dynamic/public'");
-		expect(
-			source,
-			'static env imports fail the build when a variable is missing'
-		).not.toContain("from '$env/static/public'");
+		expect(source, 'static env imports fail the build when a variable is missing').not.toContain(
+			"from '$env/static/public'"
+		);
 	});
 
 	it('still gates remote play on both variables being present', () => {
