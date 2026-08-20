@@ -1,0 +1,272 @@
+name: CI
+
+# The gate that `npm run check` was always meant to be, run where it can't be
+# skipped.
+#
+# This exists because it was missing. The component accessibility suite sat
+# broken on `main` for six days after remote play merged — `$env/dynamic/public`
+# stopped resolving under browser-mode vitest, every test file that reached
+# SetupScreen threw on import, and nothing noticed because nothing ran the suite
+# but a human remembering to. A11y violations are treated as bugs in this
+# project; that discipline was silently switched off for a week.
+#
+# Split into four jobs rather than one `npm run check`, because a red X should say
+# *what* broke without opening the log. They run in parallel, and the slow one
+# (e2e, which builds the app and boots Postgres) doesn't hold up the fast
+# feedback from typecheck and lint.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A second push to the same branch makes the first run irrelevant. Don't pay for
+# it. `main` is exempt: those runs are the record of what landed.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  # Quieter installs, and no interactive prompts from the Supabase CLI.
+  CI: true
+
+jobs:
+  static:
+    name: Typecheck, lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `deno check` on the Edge Functions. They aren't part of the Vite build, so
+      # nothing else typechecks them — and they run a *vendored* copy of the
+      # engine, which is the thing most likely to drift.
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Typecheck the Edge Functions
+        run: npm run check:functions
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format
+        run: npm run format:check
+
+      # The Edge Functions run a generated copy of the engine and content pools.
+      # `vendor.test.ts` covers drift, but re-running the generator here proves the
+      # committed copy is what the script actually produces rather than something
+      # hand-edited.
+      - name: Vendored engine is up to date
+        run: |
+          npm run vendor
+          if ! git diff --quiet -- supabase/functions/_shared/vendor; then
+            echo "::error::supabase/functions/_shared/vendor is stale. Run 'npm run vendor' and commit."
+            git diff --stat -- supabase/functions/_shared/vendor
+            exit 1
+          fi
+
+  unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Rulebook and fuzz suite
+        run: npm run test:unit
+
+      # Thresholds live in vitest.config.ts and are scoped to src/lib/game/**,
+      # deliberately not a repo-wide percentage. This fails if the rulebook's
+      # coverage slips below them.
+      - name: Coverage thresholds
+        run: npm run coverage
+
+  component:
+    name: Component and a11y tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      # Real Chromium, not jsdom — chosen so axe measures actual rendered
+      # contrast. That choice is the reason this job needs a browser at all.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Components in real Chromium
+        run: npm run test:component
+
+  e2e:
+    name: E2E, a11y and remote play
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      # A local Supabase stack, so the remote specs actually run.
+      #
+      # Without this they skip, and a green run would mean nothing for the
+      # two-device paths — server-authoritative bidding, RLS keeping the deck
+      # hidden, and quitting. `REQUIRE_SUPABASE` below turns a skip into a
+      # failure so this can never quietly stop working.
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase
+        run: supabase start
+
+      - name: Serve the Edge Functions
+        run: |
+          supabase functions serve --no-verify-jwt > /tmp/functions.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              -X POST http://127.0.0.1:54321/functions/v1/leave-room \
+              -H 'content-type: application/json' -d '{}' || true)
+            # 400 is the endpoint rejecting an empty body, i.e. it's alive.
+            if [ "$code" = "400" ]; then echo "functions ready"; exit 0; fi
+            sleep 2
+          done
+          echo "::error::Edge Functions did not come up"
+          cat /tmp/functions.log
+          exit 1
+
+      # The client reads these at runtime. Without them `remoteEnabled` is false,
+      # the online entry point hides itself, and the remote specs would have
+      # nothing to drive.
+      - name: Point the app at the local stack
+        run: |
+          {
+            echo "PUBLIC_SUPABASE_URL=http://127.0.0.1:54321"
+            echo "PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r .ANON_KEY)"
+          } >> .env
+
+      # Runs against `build` + `preview`, never `vite dev` — the worst bug this
+      # app has shipped was visible only in built output. playwright.config.ts
+      # starts the server itself.
+      - name: Playwright
+        env:
+          REQUIRE_SUPABASE: '1'
+        run: npm run test:e2e
+
+      - name: Edge Function logs
+        if: failure()
+        run: cat /tmp/functions.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  deploy:
+    name: Deploy Supabase (main only)
+    runs-on: ubuntu-latest
+    # The whole point of `needs`. Migrations and Edge Functions are the one part of
+    # this stack with no preview environment and no easy rollback — a bad function
+    # is live for everyone the moment it lands. Nothing deploys unless every test
+    # above passed.
+    #
+    # Deliberately `needs` rather than a `workflow_run` trigger: this is a hard,
+    # readable guarantee in one place, where the indirect version is easy to get
+    # subtly wrong.
+    needs: [static, unit, component, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Serialise deploys. Two merges landing together must not race `db push`.
+    concurrency:
+      group: deploy-supabase
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need the previous commit to tell whether anything server-side moved.
+          fetch-depth: 2
+
+      # The frontend is Vercel's job — it deploys `main` on its own. This workflow
+      # covers only what Vercel can't see: the database and the Edge Functions.
+      - name: Did anything server-side change?
+        id: changed
+        run: |
+          if git diff --quiet HEAD~1 HEAD -- supabase/; then
+            echo "result=false" >> "$GITHUB_OUTPUT"
+            echo "No changes under supabase/ — nothing to deploy."
+          else
+            echo "result=true" >> "$GITHUB_OUTPUT"
+            git diff --name-only HEAD~1 HEAD -- supabase/
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.changed.outputs.result == 'true'
+        with:
+          version: latest
+
+      - name: Check the secrets are present
+        if: steps.changed.outputs.result == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          missing=
+          [ -z "$SUPABASE_ACCESS_TOKEN" ] && missing="$missing SUPABASE_ACCESS_TOKEN"
+          [ -z "$SUPABASE_PROJECT_REF" ] && missing="$missing SUPABASE_PROJECT_REF"
+          [ -z "$SUPABASE_DB_PASSWORD" ] && missing="$missing SUPABASE_DB_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing"
+            exit 1
+          fi
+
+      # Migrations before functions, always. A function may read a column the
+      # migration adds; the other order ships code against a schema that isn't
+      # there yet.
+      - name: Push migrations
+        if: steps.changed.outputs.result == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      # All of them, not just the changed ones. They share `_shared/`, so a change
+      # to the vendored engine or the redaction helper affects functions whose own
+      # directory never moved. Deploying all of them is idempotent and about a
+      # minute; working out the real dependency graph is not worth the bugs.
+      - name: Deploy Edge Functions
+        if: steps.changed.outputs.result == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
+
+      - name: Confirm migrations are in sync
+        if: steps.changed.outputs.result == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase migration list --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
