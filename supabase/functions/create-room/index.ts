@@ -27,9 +27,22 @@ Deno.serve(async (req) => {
 
 	const db = serviceClient();
 
-	// Tight limit: rooms are the cheapest thing to spam and the most expensive
-	// to absorb, since each one is a row plus a stored deck.
-	if (!(await withinRateLimit(db, actorOf(req, token), 'create_room', 5, 60))) {
+	/*
+	 * Rooms are the cheapest thing to spam and the most expensive to absorb —
+	 * each one is a row plus a stored deck — so this stays the tightest limit in
+	 * the system. It was 5/minute, which turned out to be too tight for two
+	 * honest reasons:
+	 *
+	 * - `actorOf` buckets by IP, so everyone behind one NAT shares the budget.
+	 *   Two friends on the same WiFi, or a classroom, burn it between them.
+	 * - Now that quitting actually closes a room, create → quit → create is a
+	 *   normal thing to do rather than a dead end. Fumbling with the category and
+	 *   budget pickers reaches five rooms quickly.
+	 *
+	 * Matched to `join_room` at 20/minute. Still low enough that a real flood is
+	 * refused; high enough that ordinary play never sees it.
+	 */
+	if (!(await withinRateLimit(db, actorOf(req, token), 'create_room', 20, 60))) {
 		return fail('rate_limited', 'Too many rooms just now. Wait a minute and try again.');
 	}
 
