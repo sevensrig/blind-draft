@@ -1,11 +1,12 @@
 ---
 name: commit
-description: Commit the working tree using conventional-commit prefixes and very short, casual one-line subjects, grouping unstaged changes into one commit or splitting them into several when unrelated concerns are mixed together. Use this skill whenever the user says "commit", "commit this", "commit my changes", "let's commit", asks to save or check in work, or asks for the working tree to be tidied into commits — even if they don't mention conventional commits or messages at all.
+description: Write commit messages and pull request titles using conventional-commit prefixes and very short, casual lowercase subjects, grouping unstaged changes into one commit or splitting them into several when unrelated concerns are mixed together. Use this skill whenever the user says "commit", "commit this", "commit my changes", "let's commit", asks to save or check in work, or asks for the working tree to be tidied into commits — even if they don't mention conventional commits or messages at all. Also read it before opening, titling or retitling a pull request, since PR titles take the same prefix and voice as commit subjects and PR descriptions follow the opposite rule to commit bodies.
 ---
 
 # Commit
 
-Turn whatever is sitting in the working tree into a clean, readable history.
+Turn whatever is sitting in the working tree into a clean, readable history, and
+name the pull request that carries it the same way.
 
 Two things carry the whole skill: **grouping by concern** and **a message tone that
 sounds like a person typed it**. Everything else is mechanics.
@@ -123,6 +124,67 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 
 That's a footer, not part of the subject — the subject stays a short one-liner.
 
+## Pull request titles
+
+**A PR title is a commit subject.** Same format, same casing, same voice:
+
+```
+<type>(<optional scope>): <short casual subject>
+```
+
+Everything in "Message format" applies — lowercase after the prefix, no trailing
+period, no Title Case, no "implement" or "comprehensive". A PR called
+`Joiners can set their own name, however they got into the room` is the failure
+mode: accurate, readable, and still wrong, because it doesn't say at a glance
+whether the branch is a fix or a feature.
+
+Two things differ from a commit subject:
+
+- **The type describes the branch, not the biggest file.** A branch that fixes a
+  bug and sweeps up a styling nit on the way is a `fix:` — pick the concern
+  someone would go looking for, and let the rest ride.
+- **It can run a little longer**, up to roughly 70 characters. A PR title is read
+  in a list with no diff beside it, so it can afford to name the thing it changed
+  rather than gesture at it. Still one line, still short.
+
+**Good:**
+
+```
+fix(remote): invite links now ask the joiner their name
+feat(ui): green and blue category accents
+ci: run the full gate on every push
+refactor(engine): pull deck building out of the reducer
+```
+
+**Avoid:**
+
+```
+Fix player name bug
+Joiners can set their own name, however they got into the room
+feat: Various improvements to the online flow
+```
+
+### The description is the opposite of a commit body
+
+"Keep it to one line" governs commits only. **Do not carry it into a PR
+description** — that's the one place the long explanation belongs, because a
+reviewer is reading the change cold and a comment in the diff can't tell them
+what the bug looked like from outside.
+
+Write it as prose with headings, in the same voice as the subject:
+
+- **What was wrong** — the symptom as the reporter saw it, then the actual cause.
+- **The fix** — what changed and why that's the right seam, including anything
+  deliberately left alone.
+- **Anything else riding along** — drive-by changes, called out so they aren't a
+  surprise in the diff.
+- **Verified** — what was actually run, with numbers. Say plainly if something
+  was skipped or couldn't be checked.
+- `Fixes #N` when there's an issue, which links the two on both sides.
+
+Same failure mode to watch as everywhere else: the moment it starts sounding like
+a release note, it has drifted.
+
 ## Mechanics
 
 1. `git status --short` and `git diff` (plus `git diff --cached` if anything is
@@ -149,8 +211,10 @@ That's a footer, not part of the subject — the subject stays a short one-liner
   boundary most easily broken by good intentions.
 - **One line per commit.** See "Keep it to one line" — bodies are the other
   boundary that slips, usually right after doing something clever.
-- **Don't push.** Committing is local and easy to amend; pushing is outward-facing.
-  Offer it, wait to be asked.
+- **Don't push, and don't open a PR.** Committing is local and easy to amend;
+  pushing and opening a pull request are outward-facing. Offer, wait to be asked.
+  Retitling a PR that's already open is fair game when the title is wrong — say
+  what it was before.
 - **Don't commit secrets or junk.** If `.env`, credentials, large binaries, or
   build output show up as untracked, flag them and suggest `.gitignore` instead of
   committing them.

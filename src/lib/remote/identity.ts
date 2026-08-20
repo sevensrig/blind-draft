@@ -74,3 +74,34 @@ export function forgetSeat(roomId: string): void {
 		// Nothing to do.
 	}
 }
+
+/**
+ * The display name this device plays under.
+ *
+ * Not identity — the token is — but it belongs with it: a name is typed on
+ * `/online` and then needed again by every other way into a room. Without it
+ * the rooms browser and an invite link both had to join anonymously, and the
+ * server fell back to naming the joiner "Player 2".
+ *
+ * Per-device and cosmetic, like the saved seat: never sent anywhere but a join.
+ */
+const NAME_KEY = 'blind-draft:name:v1';
+
+export function rememberName(name: string): void {
+	try {
+		const trimmed = name.trim().slice(0, 14);
+		if (trimmed) localStorage.setItem(NAME_KEY, trimmed);
+		else localStorage.removeItem(NAME_KEY);
+	} catch {
+		// Storage off. The name still applies to this game, it just won't be
+		// remembered for the next one.
+	}
+}
+
+export function recallName(): string {
+	try {
+		return (localStorage.getItem(NAME_KEY) ?? '').trim().slice(0, 14);
+	} catch {
+		return '';
+	}
+}

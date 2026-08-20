@@ -2,6 +2,7 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { RemoteError, supabase } from '$lib/remote/client';
+	import { recallName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
 	import type { RoomListing } from '$lib/remote/types';
 
@@ -64,7 +65,9 @@
 		joining = listing.room_id;
 		error = null;
 		try {
-			const { roomId } = await room.join({ roomId: listing.room_id });
+			// No name field here — it was typed on `/online`. Joining without one
+			// used to land the player at the table called "Player 2".
+			const { roomId } = await room.join({ roomId: listing.room_id, name: recallName() });
 			await goto(`/online/room?id=${roomId}`);
 		} catch (failure) {
 			// Losing a race for the last seat is ordinary, not an error state.

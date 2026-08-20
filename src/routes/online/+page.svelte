@@ -1,10 +1,12 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
 	import { maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 	import Icon from '$lib/components/Icon.svelte';
 	import { RemoteError } from '$lib/remote/client';
+	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
 
 	const BUDGET_PRESETS = [10, 20, 50];
@@ -33,10 +35,17 @@
 	);
 	const effectiveSlots = $derived(template ? template.length : Math.min(slots, slotCap));
 
+	/* Typed once, then reused by the rooms browser and by an invite link, neither
+	   of which has a name field of its own. */
+	onMount(() => {
+		name = recallName();
+	});
+
 	async function create() {
 		if (!category || !activeVariant || busy) return;
 		busy = true;
 		error = null;
+		rememberName(name);
 		try {
 			const { roomId, code } = await room.create({
 				categoryId: category.id,
@@ -59,6 +68,7 @@
 		if (code.length < 4 || busy) return;
 		busy = true;
 		error = null;
+		rememberName(name);
 		try {
 			const { roomId } = await room.join({ code, name: name.trim() });
 			await goto(`/online/room?id=${roomId}`);
