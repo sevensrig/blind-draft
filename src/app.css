@@ -142,6 +142,10 @@ input {
 	letter-spacing: -0.01em;
 	text-transform: uppercase;
 	text-align: center;
+	/* Some of these are anchors — navigation, not an action. The UA link colour
+	   and underline have no business on a button face. */
+	color: var(--ink);
+	text-decoration: none;
 }
 
 .btn:active:not(:disabled) {

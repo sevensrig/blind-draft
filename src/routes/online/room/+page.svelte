@@ -6,7 +6,7 @@
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
 	import { toGameState } from '$lib/remote/adapt';
 	import { RemoteError } from '$lib/remote/client';
-	import { recallSeat } from '$lib/remote/identity';
+	import { recallName, recallSeat, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
 
 	/*
@@ -22,6 +22,14 @@
 	let joining = $state(true);
 	let error = $state<string | null>(null);
 	let copied = $state(false);
+	/*
+	 * An invite link is the one way into a room that never passed through the
+	 * name field on `/online`, so this page has to ask. It used to just take the
+	 * seat, which left the joiner permanently called "Player 2" with no way to
+	 * change it — the server names an unnamed seat and nothing edits it after.
+	 */
+	let asking = $state(false);
+	let name = $state('');
 
 	/** The invite URL is just this page — landing here joins you. */
 	const shareUrl = $derived(`${page.url.origin}/online/room?id=${roomId}`);
@@ -44,19 +52,46 @@
 	);
 
 	onMount(async () => {
+		// Already seated? Reuse it, and don't ask a returning player who they are.
+		// Everyone else arrived on an invite link and needs to be asked first.
+		const seat = recallSeat(roomId);
+		if (seat === null) {
+			name = recallName();
+			asking = true;
+			joining = false;
+			return;
+		}
+		await attach(seat);
+	});
+
+	async function attach(seat: 0 | 1): Promise<void> {
 		try {
-			// Already seated? Reuse it. Otherwise this URL is an invite, so take a seat.
-			const seat = recallSeat(roomId) ?? (await room.join({ roomId })).seat;
 			await room.connect(roomId, seat);
 		} catch (failure) {
-			error =
-				failure instanceof RemoteError
-					? failure.message
-					: 'Could not join that room';
+			error = failure instanceof RemoteError ? failure.message : 'Could not join that room';
 		} finally {
 			joining = false;
 		}
-	});
+	}
+
+	/** Take the second seat under the name just typed. */
+	async function joinAsGuest(): Promise<void> {
+		if (joining) return;
+		joining = true;
+		error = null;
+		try {
+			const chosen = name.trim();
+			rememberName(chosen);
+			const { seat } = await room.join({ roomId, name: chosen });
+			asking = false;
+			await attach(seat);
+		} catch (failure) {
+			// Back to the prompt rather than a dead end: a room that filled up in
+			// the meantime is the likeliest failure, and the name is still typed.
+			error = failure instanceof RemoteError ? failure.message : 'Could not join that room';
+			joining = false;
+		}
+	}
 
 	onDestroy(() => room.disconnect());
 
@@ -92,6 +127,39 @@
 
 {#if joining}
 	<div class="shell centre"><p class="status">Joining…</p></div>
+{:else if asking}
+	<!-- Invite-link landing. Nothing is claimed on the server until this is
+	     submitted, so a stray tap on a link doesn't fill someone's room. -->
+	<div class="shell ask">
+		<span class="eyebrow">You're invited</span>
+		<h1>Who's playing?</h1>
+		<p class="ask__sub">Your opponent sees this name on the board.</p>
+
+		{#if error}
+			<p class="status status--bad" role="alert">{error}</p>
+		{/if}
+
+		<form
+			class="ask__form"
+			onsubmit={(event) => {
+				event.preventDefault();
+				void joinAsGuest();
+			}}
+		>
+			<label class="ask__label" for="guest-name">Your name</label>
+			<input
+				id="guest-name"
+				class="field"
+				type="text"
+				bind:value={name}
+				placeholder="Player"
+				maxlength="14"
+				autocomplete="nickname"
+			/>
+			<button class="btn btn--hot" type="submit">Join the draft</button>
+		</form>
+		<a class="btn btn--ghost" href="/online">Back to online</a>
+	</div>
 {:else if error}
 	<div class="shell centre">
 		<p class="status status--bad" role="alert">{error}</p>
@@ -183,6 +251,51 @@
 		box-shadow: var(--shadow-sm);
 		text-transform: none;
 		letter-spacing: 0;
+	}
+
+	.ask {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		padding-top: 3rem;
+	}
+
+	.ask h1 {
+		font-size: 1.8rem;
+	}
+
+	.ask__sub {
+		margin: 0 0 0.4rem;
+		font-size: 0.85rem;
+		font-weight: 700;
+	}
+
+	.ask__form {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.ask__label {
+		font-size: 0.68rem;
+		font-weight: 900;
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+	}
+
+	.field {
+		width: 100%;
+		padding: 0.6rem 0.55rem;
+		background: var(--white);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+		font-size: 1rem;
+		font-weight: 900;
+	}
+
+	.field:focus {
+		outline: var(--bw-thin) solid var(--ink);
+		outline-offset: 2px;
 	}
 
 	.lobby {

@@ -169,6 +169,49 @@ test('quitting mid-draft leaves the room and ends it for the opponent', async ({
 	await expect(guest).toHaveURL(/\/online$/);
 });
 
+/*
+ * Issue #3: an invite link took a seat the instant it opened, with no name.
+ * The server names an unnamed joiner "Player 2" and nothing edits it after, so
+ * the guest played the whole draft as "Player 2" with no field anywhere to fix
+ * it. Joining by code looked fine only because that path goes through the name
+ * field on `/online`.
+ */
+test('an invite link asks the guest who they are before seating them', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	await expect(host.getByText('Waiting for your opponent')).toBeVisible();
+
+	// The shared link carries the id and nothing else — no code, and on a device
+	// with no token, no seat and no remembered name. That's a link recipient.
+	const invite = host.url().replace(/&code=\d+/, '');
+	const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+	const guest = await context.newPage();
+	await guest.goto(invite);
+
+	const field = guest.getByLabel('Your name');
+	await expect(field).toBeVisible({ timeout: 15_000 });
+
+	// Nothing is claimed until the name is submitted, so opening a link doesn't
+	// silently fill someone's room.
+	await expect(host.getByText('Waiting for your opponent')).toBeVisible();
+
+	// New screen, so it gets scanned like every other one.
+	await scan(guest, 'invite-link name prompt');
+
+	await field.fill('Alex');
+	await guest.getByRole('button', { name: /Join the draft/ }).click();
+
+	// Both are in, and the guest is Alex on both boards — not "Player 2".
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 20_000 });
+	await expect(host.getByText('Alex')).toBeVisible();
+	await expect(host.getByText('Player 2')).toHaveCount(0);
+	await expect(guest.getByText('Alex')).toBeVisible();
+});
+
 test('leaving a lobby drops it from the public rooms browser', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
