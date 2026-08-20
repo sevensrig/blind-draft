@@ -392,7 +392,7 @@
 		align-self: flex-start;
 		margin-top: 0.8rem;
 		padding: 0.4rem 0.6rem;
-		background: var(--blue);
+		background: var(--orange);
 		border: var(--bw-thin) solid var(--ink);
 		box-shadow: var(--shadow-sm);
 		font-size: 0.76rem;

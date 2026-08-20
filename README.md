@@ -284,25 +284,35 @@ from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-ski
 
 ### The accent palette
 
-Five accents, all pastel enough to carry black text at well over 4.5:1 — that's
-what lets the system put ink straight onto colour with no light/dark variants:
+Six accents, every one carrying black text at well over 4.5:1 — that's what lets
+the system put ink straight onto colour with no light/dark variants:
 
 | Token      | Colour        | Means                                          |
 | ---------- | ------------- | ---------------------------------------------- |
-| `--red`    | Hot red       | Primary action, live progress tick, positions  |
+| `--red`    | Hot red       | Live progress tick, positions, alerts          |
 | `--yellow` | Vivid yellow  | Player 2, tags and badges                      |
 | `--violet` | Soft violet   | Player 1, face-down card, rule banners         |
 | `--green`  | Pastel green  | Money (aliased as `--money`)                   |
-| `--blue`   | Pastel blue   | Sports categories, the top-price stat          |
+| `--blue`   | Pastel blue   | The primary button, and nothing else           |
+| `--orange` | Vivid orange  | Sports categories, top-price stat, the signpost|
 
-Two conventions worth keeping:
+Three conventions worth keeping:
+
+- **Primary buttons are blue, never red.** Red reads as stop or delete, which made
+  the most important control on every screen the one players hesitated over. Red
+  still carries the live progress tick, position tags and error banners — things
+  that report rather than invite a tap. Don't put it back on a button.
+- **`--blue` is the button and nothing else.** It briefly accented the sports
+  categories and the top-price stat as well, which put pale blue on nearly every
+  screen and cost the button the contrast that makes it read as the thing to press.
+  `--orange` took those over. Don't spend blue on decoration.
 
 - **Green means money, and only money.** It's aliased to `--money` and used for
   the standing bid and the amount dial. Yellow used to do this job as well as
   being Player 2's identity, which made the bid screen ambiguous — the same
   colour meant both "Alex" and "dollars".
 - **Categories carry their own accent**, set as a required `accent` field on each
-  entry in `src/lib/data/index.ts` and grouped by theme (sports blue, childhood
+  entry in `src/lib/data/index.ts` and grouped by theme (sports orange, childhood
   violet, screen and people red, food and drink green, abstract yellow). Tiles
   stay white with a coloured icon chip and flood with their own accent when
   selected. The field is required, so a new category can't ship colourless.
