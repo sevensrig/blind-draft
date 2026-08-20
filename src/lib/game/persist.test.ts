@@ -1,13 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openRoster } from '$lib/data/types';
 import { defaultConfig, initialState } from './engine';
-import {
-	clearState,
-	loadCustomDraft,
-	loadState,
-	saveCustomDraft,
-	saveState
-} from './persist';
+import { clearState, loadCustomDraft, loadState, saveCustomDraft, saveState } from './persist';
 import type { GameState } from './types';
 
 const KEY = 'blind-draft:state:v2';
