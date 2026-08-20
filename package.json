@@ -19,7 +19,7 @@
 		"test:e2e": "playwright test",
 		"test:a11y": "vitest run --project component src/lib/components/a11y.component.test.ts && playwright test e2e/a11y.spec.ts",
 		"coverage": "vitest run --project unit --coverage",
-		"check:functions": "deno check --config supabase/functions/deno.json supabase/functions/create-room/index.ts supabase/functions/join-room/index.ts supabase/functions/room-action/index.ts",
+		"check:functions": "deno check --config supabase/functions/deno.json supabase/functions/create-room/index.ts supabase/functions/join-room/index.ts supabase/functions/room-action/index.ts supabase/functions/leave-room/index.ts",
 		"vendor": "node scripts/vendor-engine.mjs"
 	},
 	"devDependencies": {

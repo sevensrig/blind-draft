@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import type { Action } from '$lib/game/types';
 import { game } from '$lib/game/store.svelte';
 import {
 	bothBrokeFallback,
@@ -122,6 +123,51 @@ describe('BidScreen', () => {
 		expect(game.state.lastAward).toMatchObject({ playerId: 0, free: true, price: 0 });
 		// Alternation pointer moves to the other player.
 		expect(game.state.freeTurn).toBe(1);
+	});
+
+	/*
+	 * The quit button is shared between local and remote play, and the two modes
+	 * mean different things by it. Locally it resets; remotely `reset` is a legal
+	 * engine action, so sending it through the remote transport wrote a blank
+	 * `initialState()` to the server — leaving the quitter on a dead board and
+	 * wiping the opponent's game with them.
+	 */
+	describe('quitting', () => {
+		it('resets the local game once the quit is confirmed', async () => {
+			game.replace(contested({ names: ['Sri', 'Alex'] }));
+			render(BidScreen);
+
+			// First tap only arms it — a stray tap must not end a live draft.
+			await page.getByRole('button', { name: 'Quit', exact: true }).click();
+			expect(game.state.phase).not.toBe('setup');
+
+			await page.getByRole('button', { name: /End it\?/ }).click();
+			expect(game.state.phase).toBe('setup');
+		});
+
+		it('calls onQuit instead of dispatching when a handler is given', async () => {
+			const dispatched: Action[] = [];
+			let quits = 0;
+
+			game.replace(contested({ names: ['Sri', 'Alex'] }));
+			render(BidScreen, {
+				view: contested({ names: ['Sri', 'Alex'] }),
+				seat: 0,
+				dispatch: (action: Action) => dispatched.push(action),
+				onQuit: () => (quits += 1)
+			});
+
+			await page.getByRole('button', { name: 'Quit', exact: true }).click();
+			expect(quits).toBe(0);
+
+			await page.getByRole('button', { name: /End it\?/ }).click();
+
+			expect(quits).toBe(1);
+			// The bug: `reset` reaching the server as an authoritative state write.
+			expect(dispatched).toEqual([]);
+			// And the local store is untouched, since remote play doesn't own it.
+			expect(game.state.phase).not.toBe('setup');
+		});
 	});
 
 	it('lets the winner re-slot a positional pick', async () => {

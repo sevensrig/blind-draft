@@ -30,6 +30,8 @@ class RemoteRoom {
 	#message = $state<string | null>(null);
 	/** Set when a move was refused, so the UI can say why without inventing state. */
 	#lastRejection = $state<string | null>(null);
+	/** Seat that quit, once the server says one did. Null while the game is live. */
+	#abandonedBy = $state<0 | 1 | null>(null);
 
 	#channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 
@@ -56,6 +58,20 @@ class RemoteRoom {
 	}
 	get lastRejection() {
 		return this.#lastRejection;
+	}
+	get abandonedBy() {
+		return this.#abandonedBy;
+	}
+
+	/**
+	 * True when the *other* player quit.
+	 *
+	 * Distinct from `opponent-away`, which is a presence blip and clears itself.
+	 * This one is a server fact and never clears, so the UI can stop offering to
+	 * wait and say the game is over.
+	 */
+	get opponentLeft() {
+		return this.#abandonedBy !== null && this.#abandonedBy !== this.#seat;
 	}
 
 	/**
@@ -112,6 +128,7 @@ class RemoteRoom {
 		this.#seat = seat;
 		this.#status = 'connecting';
 		this.#message = null;
+		this.#abandonedBy = null;
 
 		try {
 			await this.#pull();
@@ -151,12 +168,18 @@ class RemoteRoom {
 				if (this.#status === 'live' || this.#status === 'opponent-away') {
 					this.#status = opponentHere ? 'live' : 'opponent-away';
 				}
+				// 'ended' is deliberately not in that list. A player who quits also
+				// drops presence, so the two arrive together and the presence handler
+				// would otherwise downgrade a closed game to "maybe reconnecting".
 			});
 
 		await this.#channel.subscribe(async (status) => {
 			if (status === 'SUBSCRIBED') {
 				await this.#channel?.track({ seat, at: Date.now() });
-				this.#status = this.bothSeated ? 'live' : 'waiting';
+				// The pull above may already have found a closed room; don't undo it.
+				if (this.#status !== 'ended') {
+					this.#status = this.bothSeated ? 'live' : 'waiting';
+				}
 			}
 		});
 	}
@@ -201,28 +224,74 @@ class RemoteRoom {
 		this.#status = 'idle';
 	}
 
-	/** Leaves for good, so a stale seat isn't recalled on the next visit. */
-	leave(): void {
-		if (this.#roomId) forgetSeat(this.#roomId);
+	/**
+	 * Quits for real: closes the room on the server, then clears this device.
+	 *
+	 * This used to be local-only — forget the seat, drop the channel — which is
+	 * why quitting appeared to do nothing. The room stayed `open`/`playing`, a
+	 * public lobby stayed in the browser for strangers to join into an empty
+	 * room, and the opponent was never told. Nothing but the 24h cleanup cron
+	 * ever actually closed a room.
+	 *
+	 * The server call is awaited but never allowed to fail the leave. A player
+	 * who taps quit is walking away; stranding them in a room because the network
+	 * dropped would be a worse bug than the one this fixes. The room still closes
+	 * eventually via cleanup, and `room-action` refuses moves on a closed room, so
+	 * the failure mode is a stale listing rather than a playable ghost game.
+	 */
+	async leave(): Promise<void> {
+		const roomId = this.#roomId;
+		if (roomId) {
+			try {
+				await callFunction('leave-room', { roomId, token: deviceToken() });
+			} catch (error) {
+				console.error('leave-room failed', error);
+			}
+			forgetSeat(roomId);
+		}
 		this.disconnect();
 		this.#roomId = null;
 		this.#seat = null;
 		this.#state = null;
 		this.#version = 0;
+		this.#abandonedBy = null;
+		this.#lastRejection = null;
 	}
 
 	async #pull(): Promise<void> {
+		/*
+		 * Pinned to the room this fetch was started for. Broadcast handlers fire
+		 * `#pull` without awaiting it, so a nudge that lands just before `leave()`
+		 * can resolve after the store has been cleared and repopulate a room the
+		 * player has already walked out of.
+		 */
+		const roomId = this.#roomId;
+		if (!roomId) return;
+
 		const { data, error } = await supabase()
 			.from('game_public')
-			.select('payload, version')
-			.eq('room_id', this.#roomId!)
+			.select('payload, version, abandoned_by')
+			.eq('room_id', roomId)
 			.maybeSingle();
 
+		if (this.#roomId !== roomId) return;
 		if (error) throw new Error(error.message);
 		// Empty means RLS refused us: the token doesn't hold a seat in this room.
 		if (!data) throw new Error('That room is not available to this device');
 
 		this.#apply(data.payload as PublicGameState, data.version as number);
+
+		/*
+		 * Read after `#apply`, and outside its version guard.
+		 *
+		 * Quitting bumps no version — it isn't a game action — so a guarded update
+		 * would drop it. This is also why the broadcast has to be a nudge to
+		 * re-fetch rather than a version comparison: the row changed and the number
+		 * didn't.
+		 */
+		const abandonedBy = data.abandoned_by as number | null;
+		this.#abandonedBy = abandonedBy === 0 || abandonedBy === 1 ? abandonedBy : null;
+		if (this.#abandonedBy !== null) this.#status = 'ended';
 	}
 
 	#apply(state: PublicGameState, version: number): void {

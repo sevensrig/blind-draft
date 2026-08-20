@@ -100,7 +100,10 @@
 	{:else}
 		<ul class="list">
 			{#each rooms as listing (listing.room_id)}
-				<li>
+				<!-- Test hook, same idea as `data-hydrated`: the visible row shows
+				     only category and budget, so a spec asserting that one specific
+				     room dropped off the list has nothing else to grab. -->
+				<li data-room-id={listing.room_id}>
 					<button
 						class="row"
 						type="button"
