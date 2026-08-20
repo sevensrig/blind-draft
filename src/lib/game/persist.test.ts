@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openRoster } from '$lib/data/types';
 import { defaultConfig, initialState } from './engine';
-import { clearState, loadState, saveState } from './persist';
+import { clearState, loadCustomDraft, loadState, saveCustomDraft, saveState } from './persist';
 import type { GameState } from './types';
 
 const KEY = 'blind-draft:state:v2';
@@ -166,5 +166,78 @@ describe('persistence', () => {
 		expect(loadState()).toBeNull();
 		expect(() => saveState(playableState())).not.toThrow();
 		expect(() => clearState()).not.toThrow();
+	});
+});
+
+/*
+ * The typed-category draft, kept under its own key.
+ *
+ * Untested until CI started enforcing the coverage thresholds this file already
+ * declared. It matters for the same reason the save format does: this is
+ * unvalidated data coming back out of localStorage, and the worst bug this
+ * project has shipped was a stored blob being trusted into a shape that no
+ * longer matched.
+ */
+describe('custom draft persistence', () => {
+	const CUSTOM_KEY = 'blind-draft:custom:v1';
+	let store: Map<string, string>;
+
+	beforeEach(() => {
+		store = installStorage();
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('round-trips a draft verbatim', () => {
+		// Trailing newline and blank line kept deliberately: the textarea's caret
+		// behaviour depends on the text surviving unedited.
+		const draft = { name: 'Cereals', text: 'Weetabix\n\nCoco Pops\n' };
+		saveCustomDraft(draft);
+
+		expect(store.has(CUSTOM_KEY)).toBe(true);
+		expect(loadCustomDraft()).toEqual(draft);
+	});
+
+	it('is null when nothing was ever saved', () => {
+		expect(loadCustomDraft()).toBeNull();
+	});
+
+	it('rejects anything that is not a name and a text', () => {
+		for (const junk of [
+			'{ not json',
+			'null',
+			'42',
+			'"a string"',
+			'{}',
+			'{"name":"Cereals"}',
+			'{"text":"Weetabix"}',
+			'{"name":123,"text":"Weetabix"}',
+			'{"name":"Cereals","text":null}'
+		]) {
+			store.set(CUSTOM_KEY, junk);
+			expect(loadCustomDraft(), junk).toBeNull();
+		}
+	});
+
+	it('ignores extra fields rather than passing them through', () => {
+		store.set(CUSTOM_KEY, '{"name":"Cereals","text":"Weetabix","evil":true}');
+		expect(loadCustomDraft()).toEqual({ name: 'Cereals', text: 'Weetabix' });
+	});
+
+	it('survives unwritable storage', () => {
+		vi.stubGlobal('localStorage', {
+			getItem: () => {
+				throw new Error('blocked');
+			},
+			setItem: () => {
+				throw new Error('blocked');
+			}
+		});
+
+		// Losing a typed list is a shame; throwing mid-setup is a broken game.
+		expect(() => saveCustomDraft({ name: 'Cereals', text: 'Weetabix' })).not.toThrow();
+		expect(loadCustomDraft()).toBeNull();
 	});
 });

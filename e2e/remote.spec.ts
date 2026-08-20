@@ -32,8 +32,26 @@ async function device(browser: Browser, name: string): Promise<Page> {
 	return page;
 }
 
+/*
+ * Skipping is right locally and wrong in CI.
+ *
+ * Someone who only cares about local play shouldn't need Docker to run the
+ * suite, so these skip when nothing answers. But a CI run that skips them is
+ * worse than one that fails: it goes green having tested none of the remote
+ * paths, which is exactly where this project's real bugs have been. So CI sets
+ * `REQUIRE_SUPABASE=1` and an unreachable stack becomes a hard failure.
+ */
+const REQUIRE_SUPABASE = !!process.env.REQUIRE_SUPABASE;
+
 test.beforeEach(async () => {
-	test.skip(!(await supabaseUp()), 'needs a running Supabase stack');
+	const up = await supabaseUp();
+	if (!up && REQUIRE_SUPABASE) {
+		throw new Error(
+			`REQUIRE_SUPABASE is set but no Supabase stack answered at ${SUPABASE}. ` +
+				'These specs must not be skipped in CI.'
+		);
+	}
+	test.skip(!up, 'needs a running Supabase stack');
 });
 
 /*
