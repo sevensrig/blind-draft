@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 /**
@@ -34,6 +35,22 @@ async function device(browser: Browser, name: string): Promise<Page> {
 test.beforeEach(async () => {
 	test.skip(!(await supabaseUp()), 'needs a running Supabase stack');
 });
+
+/*
+ * Axe lives here rather than in `a11y.spec.ts` because these screens only exist
+ * with two live devices and a server behind them — there is no way to reach them
+ * from a single page. `a11y.spec.ts` covers every local route; the online routes
+ * were not covered at all before this.
+ */
+const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
+
+async function scan(page: Page, label: string): Promise<void> {
+	const results = await new AxeBuilder({ page }).withTags(TAGS).analyze();
+	const detail = results.violations
+		.map((violation) => `  ${violation.id} (${violation.impact}): ${violation.help}`)
+		.join('\n');
+	expect(results.violations, `${label} has accessibility violations:\n${detail}`).toEqual([]);
+}
 
 test('two devices play a remote round through the server', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
@@ -81,6 +98,79 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	// Reconnecting mid-bid resyncs to the live bid, not a cached one.
 	await guest.reload();
 	await expect(guest.locator('.standing__amount')).toHaveText(standing ?? '', { timeout: 20_000 });
+});
+
+/*
+ * Quitting, which used to do nothing that mattered.
+ *
+ * The Quit button sent `{ type: 'reset' }`, and remotely that is a legal engine
+ * action — so the server wrote a blank `initialState()` as authoritative state.
+ * The quitter stayed on the room page looking at an empty deck, and the
+ * opponent's live game was silently wiped along with it. Meanwhile nothing ever
+ * closed the room: it stayed `playing`, a public lobby stayed in the browser,
+ * and only the 24h cleanup cron eventually reaped it.
+ */
+test('quitting mid-draft leaves the room and ends it for the opponent', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await guest.waitForURL(/\/online\/room\?id=/);
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+
+	// Get a card on the table so this is a genuinely live game, not a lobby.
+	await host.getByRole('button', { name: /Tap to reveal/ }).click();
+	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
+
+	// The guest quits. Two taps: the first only arms the button.
+	await guest.getByRole('button', { name: 'Quit', exact: true }).click();
+	await guest.getByRole('button', { name: /End it\?/ }).click();
+
+	// Symptom one: it has to actually leave the page.
+	await guest.waitForURL(/\/online$/, { timeout: 20_000 });
+
+	// Symptom two: the host is told, definitively, rather than being left on a
+	// board that quietly reset itself to an empty deck.
+	await expect(host.getByText(/Alex left the draft/)).toBeVisible({ timeout: 20_000 });
+	await expect(host.getByText('Game over')).toBeVisible();
+
+	// New screen, so it gets scanned like every other one.
+	await scan(host, 'opponent-left screen');
+
+	// And the room is closed server-side: the code no longer joins.
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await expect(guest.locator('.error')).toBeVisible({ timeout: 15_000 });
+	await expect(guest).toHaveURL(/\/online$/);
+});
+
+test('leaving a lobby drops it from the public rooms browser', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+
+	// Public is the default, so the lobby is listed while it waits.
+	const browser2 = await (await browser.newContext()).newPage();
+	await browser2.goto('/online/rooms');
+	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toBeVisible({ timeout: 15_000 });
+
+	await host.getByRole('button', { name: /Leave room/ }).click();
+	await host.waitForURL(/\/online$/, { timeout: 20_000 });
+
+	// The trigger on `rooms.status` pulls the listing, so a stranger can no longer
+	// walk into a room nobody is sitting in.
+	await browser2.reload();
+	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toHaveCount(0, { timeout: 15_000 });
 });
 
 test('the deck never reaches a client', async ({ browser }) => {

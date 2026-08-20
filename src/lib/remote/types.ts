@@ -38,5 +38,8 @@ export type ConnectionStatus =
 	| 'connecting'
 	| 'waiting'
 	| 'live'
+	/** Presence dropped: probably a tunnel, possibly a quit. Recoverable. */
 	| 'opponent-away'
+	/** Someone pressed quit. Terminal — the server has closed the room. */
+	| 'ended'
 	| 'error';

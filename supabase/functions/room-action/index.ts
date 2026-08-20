@@ -59,6 +59,23 @@ Deno.serve(async (req) => {
 	if (!player) return fail('forbidden', 'You are not a player in this room');
 	const seat = player.seat as PlayerId;
 
+	/*
+	 * A closed room takes no more moves.
+	 *
+	 * Its own query rather than an embedded resource on the lookup above: getting
+	 * that join wrong returns no row, which reads as "not a player in this room"
+	 * and would lock both players out of every action. A second round trip is the
+	 * cheaper mistake.
+	 *
+	 * This is what stops a client that quit — or one still holding the room open
+	 * in a background tab — from playing on after the game ended. The engine
+	 * can't catch it: abandonment lives on the room, not in `GameState`.
+	 */
+	const { data: room } = await db.from('rooms').select('status').eq('id', roomId).maybeSingle();
+
+	if (!room) return fail('not_found', 'No game in that room');
+	if (room.status === 'abandoned') return fail('forbidden', 'That game has ended.');
+
 	if (actorMismatch(action, seat)) {
 		return fail('forbidden', 'You can only act for your own seat');
 	}

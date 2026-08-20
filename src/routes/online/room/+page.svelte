@@ -32,6 +32,16 @@
 	const view = $derived(room.state ? toGameState(room.state) : null);
 	const waiting = $derived(room.status === 'waiting');
 	const away = $derived(room.status === 'opponent-away');
+	/*
+	 * The opponent quit, as opposed to `away`, which is a presence blip that
+	 * clears itself. This one is a server fact, so it outranks every other branch
+	 * below — including `waiting`, since a host whose guest quit in the lobby is
+	 * not waiting for anybody.
+	 */
+	const ended = $derived(room.opponentLeft);
+	const opponentName = $derived(
+		room.state && room.seat !== null ? room.state.players[room.seat === 0 ? 1 : 0].name : 'They'
+	);
 
 	onMount(async () => {
 		try {
@@ -60,9 +70,21 @@
 		}
 	}
 
-	function leave() {
-		room.leave();
-		void goto('/online');
+	/**
+	 * Quit: close the room, then get out.
+	 *
+	 * Navigation waits on the server call so the room is really shut before the
+	 * page unmounts — `onDestroy` only drops the channel, and firing them
+	 * concurrently raced the request against teardown. `room.leave()` swallows its
+	 * own failures, so this cannot strand anyone on a dead screen.
+	 */
+	let leaving = $state(false);
+
+	async function leave() {
+		if (leaving) return;
+		leaving = true;
+		await room.leave();
+		await goto('/online');
 	}
 </script>
 
@@ -74,6 +96,16 @@
 	<div class="shell centre">
 		<p class="status status--bad" role="alert">{error}</p>
 		<a class="btn" href="/online">Back to online</a>
+	</div>
+{:else if ended}
+	<!-- Terminal. No wait-it-out option, and deliberately no results sheet: the
+	     draft didn't finish, so there is no honest winner to declare. -->
+	<div class="shell centre">
+		<span class="eyebrow">Game over</span>
+		<p class="status status--bad" role="alert">{opponentName} left the draft.</p>
+		<button class="btn btn--hot" type="button" onclick={leave} disabled={leaving}>
+			Back to online
+		</button>
 	</div>
 {:else if waiting}
 	<!-- Lobby: one seat filled. Both join methods are shown because a code is
@@ -92,13 +124,15 @@
 		<button class="btn btn--hot" type="button" onclick={copyLink}>
 			{copied ? 'Link copied' : 'Copy invite link'}
 		</button>
-		<button class="btn btn--ghost" type="button" onclick={leave}>Leave room</button>
+		<button class="btn btn--ghost" type="button" onclick={leave} disabled={leaving}>
+			{leaving ? 'Leaving…' : 'Leave room'}
+		</button>
 	</div>
 {:else if view}
 	{#if away}
 		<p class="away" role="status">
 			Your opponent dropped out. They may be reconnecting — you can wait, or end it.
-			<button type="button" onclick={leave}>End the game</button>
+			<button type="button" onclick={leave} disabled={leaving}>End the game</button>
 		</p>
 	{/if}
 
@@ -110,7 +144,13 @@
 			leaveLabel="Leave room"
 		/>
 	{:else}
-		<BidScreen {view} seat={room.seat} dispatch={(action) => void room.dispatch(action)} />
+		<!-- `onQuit` is what stops the Quit button dispatching `reset` at the server. -->
+		<BidScreen
+			{view}
+			seat={room.seat}
+			dispatch={(action) => void room.dispatch(action)}
+			onQuit={leave}
+		/>
 	{/if}
 
 	{#if room.lastRejection}

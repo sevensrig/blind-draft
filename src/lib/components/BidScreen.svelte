@@ -30,9 +30,20 @@
 		dispatch?: (action: Action) => void;
 		/** The seat this device controls, or null when one device drives both. */
 		seat?: 0 | 1 | null;
+		/**
+		 * What quitting means here.
+		 *
+		 * Locally it means `reset` — drop back to the setup screen, which is the
+		 * default below. Remotely it cannot: `reset` is a legal engine action, so
+		 * sending it through the remote transport wrote `initialState()` to the
+		 * server as the authoritative state. That left the quitter on the same page
+		 * staring at an empty deck, and silently wiped the opponent's live game with
+		 * them. Remote play passes a handler that closes the room and navigates out.
+		 */
+		onQuit?: () => void;
 	}
 
-	let { view, dispatch, seat = null }: Props = $props();
+	let { view, dispatch, seat = null, onQuit }: Props = $props();
 
 	const s = $derived(view ?? game.state);
 	/*
@@ -112,8 +123,9 @@
 			class="quit"
 			type="button"
 			onclick={() => {
-				if (confirmQuit) send({ type: 'reset' });
-				else confirmQuit = true;
+				if (!confirmQuit) confirmQuit = true;
+				else if (onQuit) onQuit();
+				else send({ type: 'reset' });
 			}}
 			onblur={() => (confirmQuit = false)}
 		>
