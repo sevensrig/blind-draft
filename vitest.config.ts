@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite';
 import { playwright } from '@vitest/browser-playwright';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 /**
@@ -41,6 +42,24 @@ export default defineConfig({
 						headless: true,
 						instances: [{ browser: 'chromium' }]
 					}
+				},
+				/*
+				 * `$env/dynamic/public` can't resolve here.
+				 *
+				 * SvelteKit compiles it to `export const env = __sveltekit_<hash>.env`
+				 * for the browser and relies on the server-rendered shell to define
+				 * that global. There is no SvelteKit server in browser-mode vitest, so
+				 * the import threw and took every file that reaches `SetupScreen` with
+				 * it — the component a11y suite included. An alias rather than a
+				 * defined global because the global's name is a build hash.
+				 */
+				resolve: {
+					alias: [
+						{
+							find: '$env/dynamic/public',
+							replacement: fileURLToPath(new URL('./src/lib/testing/env.ts', import.meta.url))
+						}
+					]
 				}
 			}
 		],
