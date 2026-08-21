@@ -123,7 +123,7 @@
 		     create/join, so a player who typed their name here and then browsed
 		     arrived at the room list with nothing remembered — the very case the
 		     saved name exists for. -->
-		<a class="btn browse" href="/online/rooms" onclick={() => rememberName(name)}>
+		<a class="btn btn--yellow browse" href="/online/rooms" onclick={() => rememberName(name)}>
 			Browse open rooms
 		</a>
 	</section>
@@ -329,8 +329,6 @@
 		padding-inline: 1.3rem;
 	}
 
-	/* Plain `.btn` white on purpose — yellow is Player 2's colour and green is
-	   money, and neither is what this control means. */
 	.browse {
 		min-height: 3rem;
 		margin-top: 0.1rem;
