@@ -31,19 +31,32 @@
 	--red: #ff6b6b;
 	--yellow: #ffd93d;
 	--violet: #c4b5fd;
-	--green: #77dd88;
+	--green: #6bcf7d;
+	/*
+	 * Money, and the sports categories. It was the primary button for a while, and
+	 * the categories moved to orange and back again — if pale blue ever spreads far
+	 * enough to dull the money surfaces, that's the thing to pull back on.
+	 */
 	--blue: #8ecae6;
+	/*
+	 * The top-price stat, and currently nothing else. Saturated on purpose — it has
+	 * to stay clearly apart from both the red tick and the yellow badges, and it's
+	 * the companion orange to the blue above.
+	 */
+	--orange: #fb8500;
 
 	/* Player identities. Both are light, so text on them stays black. */
 	--p1: var(--violet);
 	--p2: var(--yellow);
 
 	/*
-	 * Money on the table. Deliberately not yellow: yellow is Player 2's identity,
-	 * and having the same colour mean both "Alex" and "dollars" muddled the bid
-	 * screen. Green reads as money and nothing else.
+	 * Money on the table — the standing bid and the amount dial, and nothing else.
+	 * Deliberately not yellow: yellow is Player 2's identity, and having the same
+	 * colour mean both "Alex" and "dollars" muddled the bid screen. It was green
+	 * until the buttons took green, at which point the dial and the primary button
+	 * stacked two greens on the bid screen.
 	 */
-	--money: var(--green);
+	--money: var(--blue);
 
 	--bw: 4px;
 	--bw-thin: 2px;
@@ -162,8 +175,16 @@ input {
 	opacity: 0.45;
 }
 
+/*
+ * The primary control. Green, and never red: the style carried a red button fine
+ * and players didn't — red reads as stop or delete, so the main action on every
+ * screen was the one people hesitated over. Red stays in the palette for the
+ * things that are genuinely alarming (an error, an opponent walking out) and for
+ * the tags and ticks that aren't controls at all. Green swapped in for blue, which
+ * moved to the money surfaces.
+ */
 .btn--hot {
-	background: var(--red);
+	background: var(--green);
 	min-height: 4rem;
 	font-size: 1.15rem;
 }
