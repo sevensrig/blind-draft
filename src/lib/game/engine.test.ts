@@ -6,6 +6,7 @@ import { buildDeck } from './deck';
 import {
 	applyAction,
 	canReceive,
+	canSell,
 	defaultConfig,
 	defaultSlotFor,
 	initialState,
@@ -92,7 +93,7 @@ const reveal = (state: GameState) => applyAction(state, { type: 'reveal' });
 function winItem(state: GameState, player: PlayerId, amount = 1): GameState {
 	let next = reveal(state);
 	next = applyAction(next, { type: 'bid', player, amount });
-	next = applyAction(next, { type: 'sold' });
+	next = applyAction(next, { type: 'sold', player: other(player) });
 	return applyAction(next, { type: 'next' });
 }
 
@@ -102,13 +103,51 @@ describe('bidding (rule 4, 5, 6)', () => {
 		expect(itemMode(open)).toBe('contest');
 
 		// No standing bid, so "sold" is a no-op: every item must find an owner.
-		expect(applyAction(open, { type: 'sold' })).toBe(open);
+		expect(applyAction(open, { type: 'sold', player: 0 })).toBe(open);
 
 		const bid = applyAction(open, { type: 'bid', player: 1, amount: 3 });
-		const done = applyAction(bid, { type: 'sold' });
+		const done = applyAction(bid, { type: 'sold', player: 0 });
 		expect(done.phase).toBe('award');
 		expect(done.players[1].roster).toHaveLength(1);
 		expect(done.players[1].money).toBe(17);
+	});
+
+	/*
+	 * Issue #11. `sold` used to take no player, so the bidder could accept their
+	 * own bid. On one device that is harmless — a human hand taps it on behalf of
+	 * whoever gave up — but across two devices it made the button a self-serve
+	 * win: open at $1, tap sold, take the card before the opponent could raise.
+	 * Conceding is the other player's move, so the action names who is conceding
+	 * and the server checks it against the caller's seat like every other action
+	 * that names a player.
+	 */
+	it('will not let the standing bidder accept their own bid', () => {
+		const open = reveal(startGame(items(4)));
+		const bid = applyAction(open, { type: 'bid', player: 1, amount: 3 });
+
+		expect(canSell(bid, 1)).toBe(false);
+		expect(applyAction(bid, { type: 'sold', player: 1 })).toBe(bid);
+		// Still on the table, still theirs to lose.
+		expect(bid.phase).toBe('resolve');
+
+		// The other player conceding is what ends it.
+		expect(canSell(bid, 0)).toBe(true);
+		expect(applyAction(bid, { type: 'sold', player: 0 }).phase).toBe('award');
+	});
+
+	it('has nothing to concede before anyone opens, or outside a contest', () => {
+		const open = reveal(startGame(items(4)));
+		// No standing bid: neither seat can end an auction that never started.
+		expect(canSell(open, 0)).toBe(false);
+		expect(canSell(open, 1)).toBe(false);
+
+		// Face-down, so the wrong phase entirely.
+		expect(canSell(startGame(items(4)), 0)).toBe(false);
+
+		// A broke opponent means `solo`, which resolves with buy/decline instead.
+		const solo = reveal(withMoney(startGame(items(4)), [20, 0]));
+		expect(itemMode(solo)).toBe('solo');
+		expect(canSell(solo, 0)).toBe(false);
 	});
 
 	it('lets either player open — there is no turn order', () => {
@@ -138,7 +177,7 @@ describe('bidding (rule 4, 5, 6)', () => {
 		expect(maxBid(state, 0)).toBe(20);
 
 		state = applyAction(state, { type: 'bid', player: 0, amount: 20 });
-		state = applyAction(state, { type: 'sold' });
+		state = applyAction(state, { type: 'sold', player: 1 });
 
 		expect(state.players[0].money).toBe(0);
 		expect(state.players[0].roster).toHaveLength(1);
@@ -238,7 +277,7 @@ describe('positional rosters', () => {
 		const deck = deckOf(['C', 'PG', 'SG', 'SF', 'PF', 'C', 'PG', 'SG', 'SF', 'PF']);
 		let state = reveal(startGame(deck, NBA_ROSTER));
 		state = applyAction(state, { type: 'bid', player: 0, amount: 4 });
-		state = applyAction(state, { type: 'sold' });
+		state = applyAction(state, { type: 'sold', player: 1 });
 		// Lands at centre by default...
 		expect(state.lastAward?.slotId).toBe('c');
 
@@ -258,13 +297,13 @@ describe('positional rosters', () => {
 		// Ann puts the first centre at PG, then wins the second centre.
 		let state = reveal(startGame(deck, NBA_ROSTER));
 		state = applyAction(state, { type: 'bid', player: 0, amount: 1 });
-		state = applyAction(state, { type: 'sold' });
+		state = applyAction(state, { type: 'sold', player: 1 });
 		state = applyAction(state, { type: 'assign', slotId: 'pg' });
 		state = applyAction(state, { type: 'next' });
 
 		state = reveal(state);
 		state = applyAction(state, { type: 'bid', player: 0, amount: 1 });
-		state = applyAction(state, { type: 'sold' });
+		state = applyAction(state, { type: 'sold', player: 1 });
 		// PG is taken, so the second centre defaults to the centre slot.
 		expect(state.lastAward?.slotId).toBe('c');
 		// And it cannot be shoved into the occupied slot.
@@ -323,7 +362,8 @@ function autoPlay(start: GameState, rng: () => number, aggression: number): Game
 				const amount = floor + Math.floor(rng() * (ceiling - floor + 1));
 				state = applyAction(state, { type: 'bid', player: challenger, amount });
 			} else if (state.bid) {
-				state = applyAction(state, { type: 'sold' });
+				// `challenger` is the non-holder, which is exactly who may concede.
+				state = applyAction(state, { type: 'sold', player: challenger });
 			} else {
 				// Opening is mandatory, so the other player has to step up.
 				const opener = other(challenger);

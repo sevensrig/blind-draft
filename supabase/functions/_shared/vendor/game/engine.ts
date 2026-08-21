@@ -147,6 +147,21 @@ export function canBid(state: GameState, id: PlayerId, amount: number): boolean 
 	return amount >= minBid(state) && amount <= maxBid(state, id);
 }
 
+/**
+ * Whether `id` may declare the standing bid sold.
+ *
+ * The holder of a bid can't accept it themselves — letting them do that made
+ * "sold" a self-serve win button, which is nonsense with two devices: you'd bid
+ * a dollar and immediately award yourself the card before your opponent's thumb
+ * moved. Conceding is the other player's move. Locally it costs nothing, since
+ * one device speaks for both seats and the screen sends the non-holder.
+ */
+export function canSell(state: GameState, id: PlayerId): boolean {
+	if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return false;
+	if (!state.bid) return false;
+	return state.bid.holder !== id;
+}
+
 export function canBuy(state: GameState, id: PlayerId, amount: number): boolean {
 	if (state.phase !== 'resolve' || itemMode(state) !== 'solo') return false;
 	if (id !== solventPlayer(state)) return false;
@@ -264,9 +279,11 @@ export function applyAction(state: GameState, action: Action): GameState {
 		case 'sold': {
 			// Requires a standing bid, which is what makes opening mandatory:
 			// with 2xN items and N slots each, every item has to find an owner.
-			if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return state;
-			if (!state.bid) return state;
-			return awardCurrent(state, state.bid.holder, state.bid.amount, { free: false });
+			// And it requires the *other* player to send it — see `canSell`.
+			const bid = state.bid;
+			// `canSell` already requires a bid; the second test is what narrows it.
+			if (!canSell(state, action.player) || !bid) return state;
+			return awardCurrent(state, bid.holder, bid.amount, { free: false });
 		}
 
 		case 'buy': {
