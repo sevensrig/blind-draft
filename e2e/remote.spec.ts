@@ -123,7 +123,7 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	 * can hand it over.
 	 */
 	await expect(guest.getByRole('button', { name: /^Waiting on Sri/ })).toBeDisabled();
-	await expect(guest.getByRole('button', { name: /^Sold to/ })).toHaveCount(0);
+	await expect(guest.getByRole('button', { name: /^Sell to/ })).toHaveCount(0);
 
 	/*
 	 * And the server doesn't take the client's word for it.
@@ -167,7 +167,7 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	// And nothing landed: the card is still on the table, unsold.
 	await expect(guest.locator('.stamp__to')).toHaveCount(0);
 
-	const sell = host.getByRole('button', { name: /^Sold to Alex/ });
+	const sell = host.getByRole('button', { name: /^Sell to Alex/ });
 	await expect(sell).toBeEnabled();
 	await sell.click();
 

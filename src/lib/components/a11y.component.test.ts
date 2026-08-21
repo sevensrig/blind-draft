@@ -101,7 +101,7 @@ describe('accessibility', () => {
 		game.replace(withStandingBid(contested({ roster, deck }), 0, 3));
 		render(BidScreen);
 
-		await page.getByRole('button', { name: /Sold to/ }).click();
+		await page.getByRole('button', { name: /Sell to/ }).click();
 		await expect.element(page.getByText(/pick at/)).toBeVisible();
 		await expectNoViolations();
 	});

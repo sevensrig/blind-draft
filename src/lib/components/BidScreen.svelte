@@ -118,7 +118,7 @@
 	function soldLabel(): string {
 		if (!s.bid) return 'Nobody has opened';
 		if (!yours) return `Waiting on ${nameOf(conceder)}`;
-		return `Sold to ${nameOf(s.bid.holder)}`;
+		return `Sell to ${nameOf(s.bid.holder)}`;
 	}
 
 	function soldHint(): string {

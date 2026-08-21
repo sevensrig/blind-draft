@@ -79,7 +79,7 @@ test('award screen is accessible', async ({ page }) => {
 
 	await page.getByRole('button', { name: /Tap to reveal/ }).click();
 	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/ }).click();
-	await page.getByRole('button', { name: /^Sold to/ }).click();
+	await page.getByRole('button', { name: /^Sell to/ }).click();
 
 	await expect(page.locator('.stamp')).toBeVisible();
 	await scan(page, 'award screen');
@@ -115,7 +115,7 @@ test('positional roster and slot picker are accessible', async ({ page }) => {
 	await scan(page, 'positional bid screen');
 
 	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/ }).click();
-	await page.getByRole('button', { name: /^Sold to/ }).click();
+	await page.getByRole('button', { name: /^Sell to/ }).click();
 	await expect(page.getByText(/pick at/)).toBeVisible();
 	await scan(page, 'positional award screen with slot picker');
 });

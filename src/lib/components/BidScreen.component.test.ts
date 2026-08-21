@@ -68,7 +68,7 @@ describe('BidScreen', () => {
 		game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 1, 6));
 		render(BidScreen);
 
-		await page.getByRole('button', { name: /Sold to Alex/ }).click();
+		await page.getByRole('button', { name: /Sell to Alex/ }).click();
 
 		await expect.element(page.getByText('to Alex')).toBeVisible();
 		expect(game.state.phase).toBe('award');
@@ -89,7 +89,7 @@ describe('BidScreen', () => {
 			render(BidScreen);
 
 			// No seat, so the button is live even though Sri is the one leading.
-			const sell = page.getByRole('button', { name: /Sold to Sri/ });
+			const sell = page.getByRole('button', { name: /Sell to Sri/ });
 			await expect.element(sell).toBeEnabled();
 			await sell.click();
 
@@ -106,7 +106,7 @@ describe('BidScreen', () => {
 
 			const waiting = page.getByRole('button', { name: /Waiting on Alex/ });
 			await expect.element(waiting).toBeDisabled();
-			expect(page.getByRole('button', { name: /Sold to/ }).elements()).toHaveLength(0);
+			expect(page.getByRole('button', { name: /Sell to/ }).elements()).toHaveLength(0);
 
 			// A disabled button dispatches nothing even if something taps it.
 			await waiting.click({ force: true });
@@ -120,7 +120,7 @@ describe('BidScreen', () => {
 			// Alex's device: Alex is the one who has to let it go.
 			render(BidScreen, { view, seat: 1, dispatch: (a: Action) => dispatched.push(a) });
 
-			await page.getByRole('button', { name: /Sold to Sri/ }).click();
+			await page.getByRole('button', { name: /Sell to Sri/ }).click();
 
 			// Seat 1 concedes; the server hands the item to the holder, seat 0.
 			expect(dispatched).toEqual([{ type: 'sold', player: 1 }]);
@@ -234,7 +234,7 @@ describe('BidScreen', () => {
 		game.replace(withStandingBid(contested({ roster, deck, names: ['Sri', 'Alex'] }), 0, 3));
 		render(BidScreen);
 
-		await page.getByRole('button', { name: /Sold to Sri/ }).click();
+		await page.getByRole('button', { name: /Sell to Sri/ }).click();
 		// Lands at centre, the slot Shaq suits.
 		expect(game.state.lastAward?.slotLabel).toBe('C');
 
