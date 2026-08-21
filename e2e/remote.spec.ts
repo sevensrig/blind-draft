@@ -116,6 +116,64 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	// Reconnecting mid-bid resyncs to the live bid, not a cached one.
 	await guest.reload();
 	await expect(guest.locator('.standing__amount')).toHaveText(standing ?? '', { timeout: 20_000 });
+
+	/*
+	 * Issue #11: accepting a bid used to be a self-serve win button. Alex holds
+	 * the standing bid, so Alex cannot end the auction — only Sri, by giving up,
+	 * can hand it over.
+	 */
+	await expect(guest.getByRole('button', { name: /^Waiting on Sri/ })).toBeDisabled();
+	await expect(guest.getByRole('button', { name: /^Sell to/ })).toHaveCount(0);
+
+	/*
+	 * And the server doesn't take the client's word for it.
+	 *
+	 * The seat check used to be `'player' in action`, which asked the payload
+	 * whether it should be checked — so a bare `{ type: 'sold' }`, which is
+	 * exactly what a cached pre-fix bundle still sends, skipped the check and
+	 * self-awarded the card. Hitting the function directly is the only way to
+	 * send that, since this build's screen can't produce it.
+	 *
+	 * The token key is duplicated from `identity.ts` on purpose: this is meant to
+	 * be a hostile client, not one built out of the app's own helpers.
+	 */
+	const roomId = new URL(guest.url()).searchParams.get('id') ?? '';
+	const refusals = await guest.evaluate(
+		async ([url, id]) => {
+			const token = localStorage.getItem('blind-draft:device:v1');
+			const codes: string[] = [];
+			/*
+			 * Every version, not the right one. A client has no grant on `games`,
+			 * so a hostile one can't read the number it needs — but it can guess,
+			 * and the version check sits *after* the seat check. Sweeping means one
+			 * of these carries the live version, so a guard that lets the payload
+			 * opt out of being checked doesn't get to hide behind a `stale`.
+			 */
+			for (let version = 0; version <= 12; version++) {
+				const res = await fetch(`${url}/functions/v1/room-action`, {
+					method: 'POST',
+					headers: { 'content-type': 'application/json', apikey: 'anon-placeholder' },
+					body: JSON.stringify({ roomId: id, token, version, action: { type: 'sold' } })
+				});
+				codes.push(((await res.json()) as { error?: string }).error ?? 'accepted');
+			}
+			return codes;
+		},
+		[SUPABASE, roomId]
+	);
+
+	// Refused for being the wrong seat every time — never `stale`, never accepted.
+	expect(new Set(refusals)).toEqual(new Set(['forbidden']));
+	// And nothing landed: the card is still on the table, unsold.
+	await expect(guest.locator('.stamp__to')).toHaveCount(0);
+
+	const sell = host.getByRole('button', { name: /^Sell to Alex/ });
+	await expect(sell).toBeEnabled();
+	await sell.click();
+
+	// The item lands with the bidder, not with whoever tapped the button.
+	await expect(host.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
+	await expect(guest.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
 });
 
 /*

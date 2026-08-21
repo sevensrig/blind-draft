@@ -6,6 +6,7 @@
 		canBid,
 		canBuy,
 		canReceive,
+		canSell,
 		currentItem,
 		freeRecipient,
 		itemMode,
@@ -102,6 +103,29 @@
 		if (s.bid?.holder === id) return `holding $${s.bid.amount}`;
 		if (amount > s.players[id].money) return `only $${s.players[id].money} left`;
 		return `bid $${amount}`;
+	}
+
+	/**
+	 * Who gets to end the bidding. Whoever isn't holding the bid — accepting it is
+	 * giving up, so it can't be the leader's call. With no bid on the table there
+	 * is nothing to concede and the button is dead anyway, so seat 0 is a
+	 * placeholder the reducer would reject regardless.
+	 */
+	const conceder = $derived(s.bid ? other(s.bid.holder) : 0);
+	/** True when this device is the one that has to let the item go. */
+	const yours = $derived(controls(conceder));
+
+	function soldLabel(): string {
+		if (!s.bid) return 'Nobody has opened';
+		if (!yours) return `Waiting on ${nameOf(conceder)}`;
+		return `Sell to ${nameOf(s.bid.holder)}`;
+	}
+
+	function soldHint(): string {
+		if (!s.bid) return 'every item gets claimed — someone has to bid';
+		if (!yours) return 'only they can hand it over';
+		// One device speaks for both seats, so nobody in particular is conceding.
+		return seat === null ? 'nobody else is raising' : 'stop raising and hand it over';
 	}
 
 	/** Why the uncontested player is the only one who can take this. */
@@ -242,14 +266,13 @@
 
 				<button
 					class="btn btn--hot"
+					class:sold--waiting={!!s.bid && !yours}
 					type="button"
-					disabled={!s.bid}
-					onclick={() => send({ type: 'sold' })}
+					disabled={!canSell(s, conceder) || !yours}
+					onclick={() => send({ type: 'sold', player: conceder })}
 				>
-					{s.bid ? `Sold to ${nameOf(s.bid.holder)}` : 'Nobody has opened'}
-					<span class="btn__sub">
-						{s.bid ? 'nobody else is raising' : 'every item gets claimed — someone has to bid'}
-					</span>
+					{soldLabel()}
+					<span class="btn__sub">{soldHint()}</span>
 				</button>
 			</div>
 		{:else if mode === 'solo'}
@@ -544,6 +567,18 @@
 	.duel__btn--holding:disabled {
 		background: var(--ink);
 		color: var(--cream);
+		opacity: 1;
+	}
+
+	/*
+	 * Waiting on the opponent is not a broken control — this device is holding the
+	 * winning bid and the message is the whole point. Same reasoning as
+	 * `.duel__btn--holding` above: the washed-out disabled face would read as
+	 * something having gone wrong, and it's the one line telling the leader why
+	 * the item hasn't landed yet.
+	 */
+	.sold--waiting:disabled {
+		background: var(--white);
 		opacity: 1;
 	}
 

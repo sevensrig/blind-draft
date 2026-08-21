@@ -98,8 +98,16 @@ export type Action =
 	| { type: 'reveal' }
 	/** Opens the bidding, or raises a standing bid. */
 	| { type: 'bid'; player: PlayerId; amount: number }
-	/** Nobody raises — the standing bid wins. */
-	| { type: 'sold' }
+	/**
+	 * Nobody raises — the standing bid wins.
+	 *
+	 * `player` is whoever is giving up, not whoever wins: the standing bidder
+	 * can't declare their own bid sold. Locally one device drives both seats, so
+	 * the screen sends the non-holder and any pair of hands can tap it. Remotely
+	 * the server checks `player` against the caller's seat like every other
+	 * action that names one, which is what makes conceding the opponent's call.
+	 */
+	| { type: 'sold'; player: PlayerId }
 	/** `solo` mode: the solvent player names a price and takes it. */
 	| { type: 'buy'; player: PlayerId; amount: number }
 	/** `solo` mode: the solvent player passes, broke player gets it free. */

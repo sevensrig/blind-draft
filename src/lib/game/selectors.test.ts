@@ -12,6 +12,7 @@ import {
 	itemMode,
 	itemNumber,
 	minBid,
+	other,
 	rosterFull,
 	slotsLeft,
 	solventPlayer,
@@ -36,7 +37,8 @@ function startGame(deck: Item[], budget = 20): GameState {
 function win(state: GameState, player: PlayerId, amount = 1): GameState {
 	let next = applyAction(state, { type: 'reveal' });
 	next = applyAction(next, { type: 'bid', player, amount });
-	next = applyAction(next, { type: 'sold' });
+	// Conceding is the other player's move — the bidder can't sell to themselves.
+	next = applyAction(next, { type: 'sold', player: other(player) });
 	return applyAction(next, { type: 'next' });
 }
 
@@ -53,7 +55,7 @@ function playToEnd(state: GameState, opener: PlayerId = 0): GameState {
 			current = applyAction(current, { type: 'next' });
 		} else if (itemMode(current) === 'contest') {
 			current = applyAction(current, { type: 'bid', player: opener, amount: 1 });
-			current = applyAction(current, { type: 'sold' });
+			current = applyAction(current, { type: 'sold', player: other(opener) });
 		} else if (itemMode(current) === 'solo') {
 			current = applyAction(current, { type: 'decline', player: solventPlayer(current) });
 		} else {
@@ -145,7 +147,7 @@ describe('reducer guards', () => {
 	it('ignores actions fired in the wrong phase', () => {
 		const state = startGame(items(4));
 		// Still face-down: nothing to bid on or advance past yet.
-		expect(applyAction(state, { type: 'sold' })).toBe(state);
+		expect(applyAction(state, { type: 'sold', player: 1 })).toBe(state);
 		expect(applyAction(state, { type: 'next' })).toBe(state);
 		expect(applyAction(state, { type: 'claim' })).toBe(state);
 		expect(applyAction(state, { type: 'assign', slotId: 'slot-1' })).toBe(state);
@@ -158,7 +160,7 @@ describe('reducer guards', () => {
 	it('ignores an assign that names a slot the template does not have', () => {
 		let state = applyAction(startGame(items(4)), { type: 'reveal' });
 		state = applyAction(state, { type: 'bid', player: 0, amount: 2 });
-		state = applyAction(state, { type: 'sold' });
+		state = applyAction(state, { type: 'sold', player: 1 });
 
 		expect(state.phase).toBe('award');
 		expect(applyAction(state, { type: 'assign', slotId: 'nonsense' })).toBe(state);

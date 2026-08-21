@@ -68,13 +68,63 @@ describe('BidScreen', () => {
 		game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 1, 6));
 		render(BidScreen);
 
-		await page.getByRole('button', { name: /Sold to Alex/ }).click();
+		await page.getByRole('button', { name: /Sell to Alex/ }).click();
 
 		await expect.element(page.getByText('to Alex')).toBeVisible();
 		expect(game.state.phase).toBe('award');
 		expect(game.state.players[1].money).toBe(14);
 		expect(game.state.players[1].roster).toHaveLength(1);
 		expect(game.state.players[0].money).toBe(20);
+	});
+
+	/*
+	 * Issue #11: the standing bidder used to be able to accept their own bid.
+	 * Locally that's fine — one device speaks for both seats, so whoever gave up
+	 * says so with the same thumb — but remotely it let the leader award
+	 * themselves the item before the opponent could raise.
+	 */
+	describe('accepting a bid', () => {
+		it('lets one device end the bidding for either player', async () => {
+			game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 3));
+			render(BidScreen);
+
+			// No seat, so the button is live even though Sri is the one leading.
+			const sell = page.getByRole('button', { name: /Sell to Sri/ });
+			await expect.element(sell).toBeEnabled();
+			await sell.click();
+
+			expect(game.state.phase).toBe('award');
+			expect(game.state.lastAward).toMatchObject({ playerId: 0, price: 3 });
+		});
+
+		it('makes the opponent accept it in remote play', async () => {
+			const dispatched: Action[] = [];
+			const view = withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 3);
+
+			// Sri's device: Sri is holding the bid, so accepting is not theirs.
+			render(BidScreen, { view, seat: 0, dispatch: (a: Action) => dispatched.push(a) });
+
+			const waiting = page.getByRole('button', { name: /Waiting on Alex/ });
+			await expect.element(waiting).toBeDisabled();
+			expect(page.getByRole('button', { name: /Sell to/ }).elements()).toHaveLength(0);
+
+			// A disabled button dispatches nothing even if something taps it.
+			await waiting.click({ force: true });
+			expect(dispatched).toEqual([]);
+		});
+
+		it('sends the conceding seat, not the winning one', async () => {
+			const dispatched: Action[] = [];
+			const view = withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 3);
+
+			// Alex's device: Alex is the one who has to let it go.
+			render(BidScreen, { view, seat: 1, dispatch: (a: Action) => dispatched.push(a) });
+
+			await page.getByRole('button', { name: /Sell to Sri/ }).click();
+
+			// Seat 1 concedes; the server hands the item to the holder, seat 0.
+			expect(dispatched).toEqual([{ type: 'sold', player: 1 }]);
+		});
 	});
 
 	it('cannot be sold before anyone opens', async () => {
@@ -184,7 +234,7 @@ describe('BidScreen', () => {
 		game.replace(withStandingBid(contested({ roster, deck, names: ['Sri', 'Alex'] }), 0, 3));
 		render(BidScreen);
 
-		await page.getByRole('button', { name: /Sold to Sri/ }).click();
+		await page.getByRole('button', { name: /Sell to Sri/ }).click();
 		// Lands at centre, the slot Shaq suits.
 		expect(game.state.lastAward?.slotLabel).toBe('C');
 

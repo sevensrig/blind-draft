@@ -15,9 +15,27 @@ import { redact } from '../_shared/state.ts';
  * the loser's screen corrects itself instead of showing a bid that never landed.
  */
 
-/** Actions that name a player must name the caller's own seat. */
+/** Every action that speaks for one seat, and so must speak for the caller's. */
+const SEATED = new Set<Action['type']>(['bid', 'sold', 'buy', 'decline']);
+
+/**
+ * Actions that name a player must name the caller's own seat.
+ *
+ * This is what enforces issue #11's fix: `sold` names the player who is
+ * conceding, so a client can only ever concede for itself, and the engine
+ * separately refuses a concession from whoever holds the standing bid. Between
+ * the two, nobody can award themselves the item they are winning.
+ *
+ * Keyed off the action type rather than `'player' in action`, which is the
+ * version this replaced. That test asked the payload whether it should be
+ * checked, so omitting the field skipped the check entirely — a stale bundle
+ * still sending a bare `{ type: 'sold' }` would sail through, and
+ * `canSell(state, undefined)` says yes to the holder. A whitelist can't be
+ * opted out of by leaving something off the wire.
+ */
 function actorMismatch(action: Action, seat: PlayerId): boolean {
-	return 'player' in action && (action as { player: PlayerId }).player !== seat;
+	if (!SEATED.has(action.type)) return false;
+	return (action as { player?: PlayerId }).player !== seat;
 }
 
 Deno.serve(async (req) => {

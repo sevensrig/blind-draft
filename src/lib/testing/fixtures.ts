@@ -118,7 +118,7 @@ export function finishedGame(options?: GameOptions): GameState {
 			// Alternate winners at differing prices so totals are worth asserting on.
 			const bidder = canReceive(state, turn, currentItem(state)!) ? turn : other(turn);
 			state = applyAction(state, { type: 'bid', player: bidder, amount: bidder === 0 ? 3 : 2 });
-			state = applyAction(state, { type: 'sold' });
+			state = applyAction(state, { type: 'sold', player: other(bidder) });
 			turn = other(bidder);
 		} else if (mode === 'solo') {
 			// Buy some, pass on others, so the sheet shows both paid and free picks.
