@@ -309,7 +309,7 @@
 		flex-direction: column;
 		gap: 0.05rem;
 		padding: 0.55rem 0.6rem;
-		background: var(--blue);
+		background: var(--orange);
 		border: var(--bw-thin) solid var(--ink);
 	}
 

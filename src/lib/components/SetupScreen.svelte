@@ -133,9 +133,7 @@
 			never offers something that can't work.
 		-->
 		{#if remoteEnabled}
-			<a class="online" href="/online">
-				Playing apart? <b>Play online</b>
-			</a>
+			<a class="online" href="/online">Play with others online</a>
 		{/if}
 	</header>
 
@@ -386,24 +384,21 @@
 		line-height: 1.3;
 	}
 
-	/* Reads as a signpost rather than a second primary action. */
+	/* A signpost, not a second primary action: it's smaller, thinner-bordered and
+	   sits above the fold rather than in the dock. */
 	.online {
 		display: inline-block;
 		align-self: flex-start;
 		margin-top: 0.8rem;
 		padding: 0.4rem 0.6rem;
-		background: var(--blue);
+		background: var(--red);
 		border: var(--bw-thin) solid var(--ink);
 		box-shadow: var(--shadow-sm);
 		font-size: 0.76rem;
-		font-weight: 700;
-		color: var(--ink);
-		text-decoration: none;
-	}
-
-	.online b {
 		font-weight: 900;
 		text-transform: uppercase;
+		color: var(--ink);
+		text-decoration: none;
 	}
 
 	.block {
