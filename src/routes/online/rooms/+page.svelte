@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import { RemoteError, supabase } from '$lib/remote/client';
-	import { recallName } from '$lib/remote/identity';
+	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
 	import type { RoomListing } from '$lib/remote/types';
 
@@ -18,6 +19,16 @@
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let joining = $state<string | null>(null);
+	/*
+	 * The room a nameless player tapped, held while they're asked who they are.
+	 *
+	 * `/online` has the only name field, one page back, and it's easy to walk
+	 * straight past it on the way here — at which point the server's fallback
+	 * named the joiner "Player 2" for the whole draft, with nothing to edit it
+	 * after. Same fix as an invite link, same prompt.
+	 */
+	let pending = $state<RoomListing | null>(null);
+	let name = $state('');
 
 	let channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 
@@ -60,17 +71,42 @@
 		if (channel) void supabase().removeChannel(channel);
 	});
 
-	async function join(listing: RoomListing) {
+	/** A remembered name goes straight in; anyone else gets asked for one first. */
+	function start(listing: RoomListing) {
+		if (joining) return;
+		const remembered = recallName();
+		if (!remembered) {
+			name = '';
+			error = null;
+			pending = listing;
+			return;
+		}
+		void join(listing, remembered);
+	}
+
+	function confirmName() {
+		const listing = pending;
+		if (!listing) return;
+		void join(listing, name.trim());
+	}
+
+	function cancel() {
+		pending = null;
+		error = null;
+	}
+
+	async function join(listing: RoomListing, playerName: string) {
 		if (joining) return;
 		joining = listing.room_id;
 		error = null;
 		try {
-			// No name field here — it was typed on `/online`. Joining without one
-			// used to land the player at the table called "Player 2".
-			const { roomId } = await room.join({ roomId: listing.room_id, name: recallName() });
+			rememberName(playerName);
+			const { roomId } = await room.join({ roomId: listing.room_id, name: playerName });
 			await goto(`/online/room?id=${roomId}`);
 		} catch (failure) {
-			// Losing a race for the last seat is ordinary, not an error state.
+			// Losing a race for the last seat is ordinary, not an error state. The
+			// prompt stays up on a failure with the name still typed, so a lost race
+			// costs a tap rather than the whole flow.
 			error =
 				failure instanceof RemoteError && failure.code === 'room_full'
 					? 'Someone took that seat first.'
@@ -84,46 +120,66 @@
 
 <svelte:head><title>Open rooms — $20 Blind Draft</title></svelte:head>
 
-<div class="shell browse">
-	<header class="head">
-		<a class="back" href="/online">Back</a>
-		<h1>Open rooms</h1>
-		<p class="sub">Updates as rooms open and fill.</p>
-	</header>
+{#if pending}
+	<!-- Nothing is claimed on the server until this is submitted, so the seat is
+	     still up for grabs and a lost race lands back here. -->
+	<NamePrompt
+		eyebrow={`${pending.category_label}${pending.variant_label ? ` · ${pending.variant_label}` : ''} · $${pending.budget} · ${pending.slots} slots`}
+		heading="Who's playing?"
+		sub="Your opponent sees this name on the board."
+		bind:value={name}
+		busy={joining !== null}
+		{error}
+		submit={confirmName}
+	>
+		{#snippet secondary()}
+			<button class="btn btn--ghost" type="button" onclick={cancel} disabled={joining !== null}>
+				Back to rooms
+			</button>
+		{/snippet}
+	</NamePrompt>
+{:else}
+	<div class="shell browse">
+		<header class="head">
+			<a class="back" href="/online">Back</a>
+			<h1>Open rooms</h1>
+			<p class="sub">Updates as rooms open and fill.</p>
+		</header>
 
-	{#if error}
-		<p class="error" role="alert">{error}</p>
-	{/if}
+		{#if error}
+			<p class="error" role="alert">{error}</p>
+		{/if}
 
-	{#if loading}
-		<p class="empty">Looking…</p>
-	{:else if rooms.length === 0}
-		<p class="empty">Nothing open right now. Start one and share the link.</p>
-		<a class="btn btn--hot" href="/online">Start a room</a>
-	{:else}
-		<ul class="list">
-			{#each rooms as listing (listing.room_id)}
-				<!-- Test hook, same idea as `data-hydrated`: the visible row shows
-				     only category and budget, so a spec asserting that one specific
-				     room dropped off the list has nothing else to grab. -->
-				<li data-room-id={listing.room_id}>
-					<button
-						class="row"
-						type="button"
-						disabled={joining !== null}
-						onclick={() => join(listing)}
-					>
-						<span class="row__cat">
-							{listing.category_label}{listing.variant_label ? ` · ${listing.variant_label}` : ''}
-						</span>
-						<span class="row__meta">${listing.budget} · {listing.slots} slots</span>
-						<span class="row__go">{joining === listing.room_id ? '…' : 'Join'}</span>
-					</button>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-</div>
+		{#if loading}
+			<p class="empty">Looking…</p>
+		{:else if rooms.length === 0}
+			<p class="empty">Nothing open right now. Start one and share the link.</p>
+			<a class="btn btn--hot" href="/online">Start a room</a>
+		{:else}
+			<ul class="list">
+				{#each rooms as listing (listing.room_id)}
+					<!-- Test hook, same idea as `data-hydrated`: the visible row shows
+					     only category and budget, so a spec asserting that one specific
+					     room dropped off the list has nothing else to grab. -->
+					<li data-room-id={listing.room_id}>
+						<button
+							class="row"
+							type="button"
+							disabled={joining !== null}
+							onclick={() => start(listing)}
+						>
+							<span class="row__cat">
+								{listing.category_label}{listing.variant_label ? ` · ${listing.variant_label}` : ''}
+							</span>
+							<span class="row__meta">${listing.budget} · {listing.slots} slots</span>
+							<span class="row__go">{joining === listing.room_id ? '…' : 'Join'}</span>
+						</button>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	</div>
+{/if}
 
 <style>
 	.browse {

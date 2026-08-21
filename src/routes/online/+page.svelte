@@ -116,7 +116,16 @@
 				onclick={join}>Join</button
 			>
 		</div>
-		<a class="browse" href="/online/rooms">Or browse open rooms</a>
+		<!-- A button, not a footnote link: this is the second real way in, and as a
+		     link under the code field it read as fine print.
+
+		     It banks the name on the way out. `rememberName` otherwise only ran on
+		     create/join, so a player who typed their name here and then browsed
+		     arrived at the room list with nothing remembered — the very case the
+		     saved name exists for. -->
+		<a class="btn browse" href="/online/rooms" onclick={() => rememberName(name)}>
+			Browse open rooms
+		</a>
 	</section>
 
 	<hr class="rule" />
@@ -320,13 +329,12 @@
 		padding-inline: 1.3rem;
 	}
 
+	/* Plain `.btn` white on purpose — yellow is Player 2's colour and green is
+	   money, and neither is what this control means. */
 	.browse {
-		align-self: flex-start;
-		font-size: 0.74rem;
-		font-weight: 900;
-		text-transform: uppercase;
-		letter-spacing: 0.06em;
-		color: var(--ink);
+		min-height: 3rem;
+		margin-top: 0.1rem;
+		font-size: 0.85rem;
 	}
 
 	.rule {

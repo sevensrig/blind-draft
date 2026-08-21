@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import BidScreen from '$lib/components/BidScreen.svelte';
+	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
 	import { toGameState } from '$lib/remote/adapt';
 	import { RemoteError } from '$lib/remote/client';
@@ -129,37 +130,21 @@
 	<div class="shell centre"><p class="status">Joining…</p></div>
 {:else if asking}
 	<!-- Invite-link landing. Nothing is claimed on the server until this is
-	     submitted, so a stray tap on a link doesn't fill someone's room. -->
-	<div class="shell ask">
-		<span class="eyebrow">You're invited</span>
-		<h1>Who's playing?</h1>
-		<p class="ask__sub">Your opponent sees this name on the board.</p>
-
-		{#if error}
-			<p class="status status--bad" role="alert">{error}</p>
-		{/if}
-
-		<form
-			class="ask__form"
-			onsubmit={(event) => {
-				event.preventDefault();
-				void joinAsGuest();
-			}}
-		>
-			<label class="ask__label" for="guest-name">Your name</label>
-			<input
-				id="guest-name"
-				class="field"
-				type="text"
-				bind:value={name}
-				placeholder="Player"
-				maxlength="14"
-				autocomplete="nickname"
-			/>
-			<button class="btn btn--hot" type="submit">Join the draft</button>
-		</form>
-		<a class="btn btn--ghost" href="/online">Back to online</a>
-	</div>
+	     submitted, so a stray tap on a link doesn't fill someone's room. The same
+	     prompt runs in the rooms browser, which has no name field either. -->
+	<NamePrompt
+		eyebrow="You're invited"
+		heading="Who's playing?"
+		sub="Your opponent sees this name on the board."
+		bind:value={name}
+		busy={joining}
+		{error}
+		submit={() => void joinAsGuest()}
+	>
+		{#snippet secondary()}
+			<a class="btn btn--ghost" href="/online">Back to online</a>
+		{/snippet}
+	</NamePrompt>
 {:else if error}
 	<div class="shell centre">
 		<p class="status status--bad" role="alert">{error}</p>
@@ -251,51 +236,6 @@
 		box-shadow: var(--shadow-sm);
 		text-transform: none;
 		letter-spacing: 0;
-	}
-
-	.ask {
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
-		padding-top: 3rem;
-	}
-
-	.ask h1 {
-		font-size: 1.8rem;
-	}
-
-	.ask__sub {
-		margin: 0 0 0.4rem;
-		font-size: 0.85rem;
-		font-weight: 700;
-	}
-
-	.ask__form {
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
-	}
-
-	.ask__label {
-		font-size: 0.68rem;
-		font-weight: 900;
-		letter-spacing: 0.14em;
-		text-transform: uppercase;
-	}
-
-	.field {
-		width: 100%;
-		padding: 0.6rem 0.55rem;
-		background: var(--white);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-		font-size: 1rem;
-		font-weight: 900;
-	}
-
-	.field:focus {
-		outline: var(--bw-thin) solid var(--ink);
-		outline-offset: 2px;
 	}
 
 	.lobby {

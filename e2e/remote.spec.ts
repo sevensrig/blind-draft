@@ -270,6 +270,62 @@ test('an invite link asks the guest who they are before seating them', async ({ 
 	await expect(guest.getByText('Alex')).toBeVisible();
 });
 
+test('the rooms browser asks a nameless player who they are', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+
+	// A device that walked straight past the name field on `/online` — which is
+	// the common case, since the field is a page back from the room list.
+	const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+	const guest = await context.newPage();
+	await guest.goto('/online/rooms');
+	await guest.locator(`[data-room-id="${roomId}"] button`).click({ timeout: 15_000 });
+
+	// Prompted rather than seated, and nothing is claimed until it's submitted.
+	const field = guest.getByLabel('Your name');
+	await expect(field).toBeVisible({ timeout: 15_000 });
+	await expect(guest.getByRole('button', { name: /Join the draft/ })).toBeDisabled();
+	await expect(host.getByText('Waiting for your opponent')).toBeVisible();
+
+	// New screen on a route the single-page a11y suite can't reach.
+	await scan(guest, 'rooms browser name prompt');
+
+	await field.fill('Alex');
+	await guest.getByRole('button', { name: /Join the draft/ }).click();
+
+	// Both boards say Alex, not "Player 2".
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 20_000 });
+	await expect(host.getByText('Alex')).toBeVisible();
+	await expect(host.getByText('Player 2')).toHaveCount(0);
+	await expect(guest.getByText('Alex')).toBeVisible();
+});
+
+test('a name typed on /online carries into a rooms browser join', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+
+	// `device` types the name on `/online`; the browse button banks it on the way
+	// out, so this player is not asked again.
+	const guest = await device(browser, 'Alex');
+	await guest.getByRole('link', { name: /Browse open rooms/ }).click();
+	await guest.locator(`[data-room-id="${roomId}"] button`).click({ timeout: 15_000 });
+
+	await guest.waitForURL(/\/online\/room\?id=/, { timeout: 20_000 });
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 20_000 });
+	await expect(host.getByText('Alex')).toBeVisible();
+	await expect(host.getByText('Player 2')).toHaveCount(0);
+});
+
 test('leaving a lobby drops it from the public rooms browser', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
