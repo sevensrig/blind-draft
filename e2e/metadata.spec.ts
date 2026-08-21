@@ -15,8 +15,11 @@ test('serves the social card and canonical metadata', async ({ page }) => {
 	const content = async (selector: string) =>
 		await page.locator(selector).first().getAttribute('content');
 
-	await expect(page).toHaveTitle(/Blind Draft/);
+	// "$20 budget draft" is the phrase people search for, so it's what the title
+	// and description lead with. The "Blind Draft" wordmark stays on screen only.
+	await expect(page).toHaveTitle(/Budget Draft/);
 	expect(await content('meta[name="description"]')).toMatch(/two-player party game/i);
+	expect(await content('meta[name="description"]')).toMatch(/budget/i);
 	expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toBe(ORIGIN);
 
 	// Open Graph — what iMessage, Discord and Slack unfurl.
@@ -50,6 +53,10 @@ test('exposes valid structured data for answer engines', async ({ page }) => {
 
 	const schema = JSON.parse(raw ?? '{}');
 	expect(schema['@type']).toBe('VideoGame');
+	// Both names, so the searched-for one and the screenshotted one resolve to a
+	// single entity rather than two competing ones.
+	expect(schema.name).toBe('$20 Budget Draft');
+	expect(schema.alternateName).toBe('$20 Blind Draft');
 	expect(schema.url).toBe(ORIGIN);
 	expect(schema.isAccessibleForFree).toBe(true);
 	expect(schema.offers.price).toBe('0');
@@ -80,7 +87,11 @@ test('the page ships real text for crawlers that do not run javascript', async (
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/\s+/g, ' ');
 
+	// Both names have to survive into the static HTML: the wordmark because it's
+	// what a player sees, and the search phrase because a crawler needs the two
+	// on one page to connect them.
 	expect(text).toContain('Blind Draft');
+	expect(text).toMatch(/budget draft/i);
 	expect(text).toMatch(/free two-player party game/i);
 	// Category names are the bulk of the indexable copy.
 	for (const name of ['NBA Players', 'Childhood Nostalgia', 'Pizza Toppings']) {

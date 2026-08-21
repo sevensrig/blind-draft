@@ -23,7 +23,7 @@
 </script>
 
 <svelte:head>
-	<title>$20 Blind Draft — two-player blind bidding party game</title>
+	<title>$20 Budget Draft — two-player blind bidding party game</title>
 	<meta name="description" content={SITE_DESCRIPTION} />
 </svelte:head>
 

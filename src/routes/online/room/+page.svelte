@@ -8,6 +8,7 @@
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, recallSeat, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
+	import { SITE_NAME } from '$lib/site';
 
 	/*
 	 * The room id is a query parameter, not a path segment.
@@ -123,7 +124,7 @@
 	}
 </script>
 
-<svelte:head><title>Room — $20 Blind Draft</title></svelte:head>
+<svelte:head><title>Room — {SITE_NAME}</title></svelte:head>
 
 {#if joining}
 	<div class="shell centre"><p class="status">Joining…</p></div>
