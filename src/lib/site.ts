@@ -11,7 +11,19 @@
  */
 export const SITE_URL = 'https://blind-draft.vercel.app';
 
-export const SITE_NAME = '$20 Blind Draft';
+/**
+ * The searched-for name, not the on-screen one.
+ *
+ * The wordmark in the hero and on the results stamp still reads "$20 Blind
+ * Draft" — that's the brand players screenshot and share, and it stays. But the
+ * phrase people actually type is "$20 budget draft", so that's what goes in
+ * titles, Open Graph and structured data. Both names are declared, so a crawler
+ * reading either one lands on the same game rather than treating them as two.
+ */
+export const SITE_NAME = '$20 Budget Draft';
+
+/** The on-screen wordmark. Emitted as `alternateName` so the two names link up. */
+export const SITE_ALT_NAME = '$20 Blind Draft';
 
 /**
  * Written to be quotable rather than clever.
@@ -21,12 +33,12 @@ export const SITE_NAME = '$20 Blind Draft';
  * itself, where it does its actual job.
  */
 export const SITE_DESCRIPTION =
-	'$20 Blind Draft is a free two-player party game you play in a browser. Two players share one phone and bid against each other for items revealed one at a time, building a roster on a $20 budget without knowing what is coming next.';
+	'$20 Budget Draft is a free two-player party game you play in a browser. It is a blind draft: two players share one phone, each get a $20 budget, and bid against each other for items revealed one at a time, with no idea what is coming next.';
 
 /** Short form for the social card, where long copy gets truncated anyway. */
 export const SITE_TAGLINE =
-	'A two-player blind bidding draft. One phone, $20, no idea what is next.';
+	'A two-player $20 budget draft. One phone, blind bidding, no idea what is next.';
 
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 export const OG_IMAGE_ALT =
-	'$20 Blind Draft — a two-player blind bidding party game played in a browser.';
+	'$20 Budget Draft — a two-player blind bidding party game played in a browser.';
