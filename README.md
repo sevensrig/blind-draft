@@ -1,8 +1,14 @@
-# $20 Blind Draft
+# $20 Budget Draft
 
-A two-player blind bidding draft. One phone, one shuffled deck of items nobody
-has seen, and a budget you can absolutely set on fire chasing the first thing
-you like.
+A two-player $20 budget draft. One phone, one shuffled deck of items nobody has
+seen, and a budget you can absolutely set on fire chasing the first thing you
+like.
+
+Two names, one game. **$20 Blind Draft** is the wordmark on screen and on the
+results card, because the blind reveal is the mechanic that makes it fun.
+**$20 budget draft** is what people call it, so that's the name in page titles,
+Open Graph and structured data. Both are declared, and `SITE_NAME` /
+`SITE_ALT_NAME` in `src/lib/site.ts` are the only place either is defined.
 
 Pass-and-play, or one person holds the phone as game master and taps in bids for
 two people arguing out loud. Same mode either way.

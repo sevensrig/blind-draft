@@ -6,6 +6,7 @@
 	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
 	import type { RoomListing } from '$lib/remote/types';
+	import { SITE_NAME } from '$lib/site';
 
 	/**
 	 * Live list of open public rooms.
@@ -118,7 +119,7 @@
 	}
 </script>
 
-<svelte:head><title>Open rooms — $20 Blind Draft</title></svelte:head>
+<svelte:head><title>Open rooms — {SITE_NAME}</title></svelte:head>
 
 {#if pending}
 	<!-- Nothing is claimed on the server until this is submitted, so the seat is

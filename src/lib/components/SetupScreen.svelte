@@ -119,7 +119,7 @@
 
 <div class="shell setup">
 	<header class="hero">
-		<span class="eyebrow">Two players · one phone</span>
+		<span class="eyebrow">Two players · one phone · $20 budget</span>
 		<h1>
 			<span class="hero__dollar">$20</span>
 			<span class="hero__rest">Blind<br />Draft</span>
@@ -301,10 +301,17 @@
 			"X is a Y that does Z", and the hero tagline is deliberately not that.
 			Inside the collapsed block it's still in the prerendered HTML, so it's
 			indexable without competing with the copy on screen.
+
+			It names the game both ways on purpose. The wordmark above says "Blind
+			Draft"; what people search for is "$20 budget draft". A player who found
+			this by searching the second one needs to see it here to know they're in
+			the right place, and a crawler needs both phrases on the page to connect
+			them.
 		-->
 		<p class="rules__what">
-			$20 Blind Draft is a free two-player party game played in a browser. Two players share one
-			phone, each get a $20 budget, and bid against each other for items revealed one at a time.
+			$20 Blind Draft is a free two-player party game played in a browser — the $20 budget draft
+			you've seen going around. Two players share one phone, each get a $20 budget, and bid against
+			each other for items revealed one at a time.
 		</p>
 		<ol>
 			<li>An item is revealed. Neither of you knew it was coming.</li>

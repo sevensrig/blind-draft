@@ -8,6 +8,7 @@
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
+	import { SITE_NAME } from '$lib/site';
 
 	const BUDGET_PRESETS = [10, 20, 50];
 	const SLOT_PRESETS = [3, 4, 5, 6, 7, 8];
@@ -79,7 +80,7 @@
 	}
 </script>
 
-<svelte:head><title>Play online — $20 Blind Draft</title></svelte:head>
+<svelte:head><title>Play online — {SITE_NAME}</title></svelte:head>
 
 <div class="shell online">
 	<header class="head">

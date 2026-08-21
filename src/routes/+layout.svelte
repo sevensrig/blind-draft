@@ -3,6 +3,7 @@
 	import {
 		OG_IMAGE,
 		OG_IMAGE_ALT,
+		SITE_ALT_NAME,
 		SITE_DESCRIPTION,
 		SITE_NAME,
 		SITE_TAGLINE,
@@ -23,6 +24,9 @@
 		'@context': 'https://schema.org',
 		'@type': 'VideoGame',
 		name: SITE_NAME,
+		// The on-screen wordmark. Declared so the name people search for and the
+		// name people screenshot resolve to one entity instead of two.
+		alternateName: SITE_ALT_NAME,
 		url: SITE_URL,
 		description: SITE_DESCRIPTION,
 		image: OG_IMAGE,
