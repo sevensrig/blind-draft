@@ -62,7 +62,7 @@ export const CATEGORIES: Category[] = [
 		label: 'NBA Players',
 		icon: 'basketball',
 		blurb: 'Build a starting five.',
-		accent: 'orange',
+		accent: 'blue',
 		roster: NBA_ROSTER,
 		variants: [
 			variant('nba-current', 'Current', NBA_CURRENT),
@@ -74,7 +74,7 @@ export const CATEGORIES: Category[] = [
 		label: 'NFL Players',
 		icon: 'football',
 		blurb: 'QB, RB, two WR, flex.',
-		accent: 'orange',
+		accent: 'blue',
 		roster: NFL_ROSTER,
 		variants: [
 			variant('nfl-current', 'Current', NFL_CURRENT),
@@ -86,7 +86,7 @@ export const CATEGORIES: Category[] = [
 		label: 'MLB Players',
 		icon: 'baseball-bat-ball',
 		blurb: 'Nine innings of regret.',
-		accent: 'orange',
+		accent: 'blue',
 		variants: [
 			variant('mlb-current', 'Current', MLB_CURRENT),
 			variant('mlb-all-time', 'All-Time', MLB_ALL_TIME)
@@ -97,7 +97,7 @@ export const CATEGORIES: Category[] = [
 		label: 'NHL Players',
 		icon: 'hockey-puck',
 		blurb: 'Drop the puck.',
-		accent: 'orange',
+		accent: 'blue',
 		variants: [
 			variant('nhl-current', 'Current', NHL_CURRENT),
 			variant('nhl-all-time', 'All-Time', NHL_ALL_TIME)

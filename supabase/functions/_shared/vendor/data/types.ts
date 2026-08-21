@@ -15,7 +15,7 @@ export type Tier = 'bad' | 'mid' | 'good' | 'great';
  * Which accent token a category is themed with. Maps to `--<accent>` in
  * `app.css`; every value there carries black text at over 4.5:1.
  */
-export type Accent = 'red' | 'yellow' | 'violet' | 'green' | 'orange';
+export type Accent = 'red' | 'yellow' | 'violet' | 'green' | 'blue';
 
 /** Positions used by categories with a positional roster (NBA, NFL). */
 export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C' | 'QB' | 'RB' | 'WR' | 'TE';
