@@ -35,6 +35,26 @@ database, no runtime network calls of any kind. Building locally prints
 "Could not detect a supported production environment", which is just
 adapter-auto saying your laptop isn't Vercel; the build itself is fine.
 
+### Keeping Supabase awake
+
+A free-tier Supabase project pauses after roughly a week idle, and a paused
+project means remote play is simply broken for whoever tries it next.
+`.github/workflows/supabase-keepalive.yml` runs daily and touches
+`public_room_listings` over PostgREST — public by design, returns almost nothing,
+and exercises Postgres rather than just the edge, which is what actually counts
+as activity. Reviving a project that has already paused is a button in the
+Supabase dashboard; the workflow only prevents the pause, it can't undo one.
+
+It needs two repository secrets, `PUBLIC_SUPABASE_URL` and
+`PUBLIC_SUPABASE_ANON_KEY`, and **both have to be created by hand.** The
+Supabase/Vercel integration syncs its own unprefixed pair into Vercel's
+environment variables; nothing syncs into GitHub Actions secrets. Without them
+the job exits at its own guard before sending anything and every run goes red in
+seconds, which is exactly how the project came to be asleep once already
+(issue #17). The two failure messages are deliberately different: "Not
+configured" means the secrets are missing and no ping happened, while "Ping
+failed" means Supabase itself didn't answer 200 across three attempts.
+
 ## How a game plays
 
 1. **Setup** — names, budget (default $20), roster slots each (default 5), and a
