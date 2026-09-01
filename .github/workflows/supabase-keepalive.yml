@@ -1,20 +1,14 @@
 name: Supabase keep-alive
 
-# Free-tier Supabase projects pause after roughly a week idle, and a paused
-# project means remote play is simply broken for whoever tries it next. This does
-# nothing functional: it touches a public endpoint often enough that the project
-# never counts as inactive.
-#
-# The rooms list is the right target — it is public by design, returns almost
-# nothing, and exercises Postgres rather than just the edge, which is what
-# actually counts as activity.
+# free tier pauses a project after ~7 days idle and remote play breaks.
+# hits the public rooms list so postgres does real work, not just the edge.
+# needs PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY as repo secrets, added
+# by hand — nothing syncs them into actions (issue #17).
 
 on:
   schedule:
-    # Every third day, 06:12 UTC. Off the hour because cron minute 0 is a
-    # stampede across all of GitHub.
+    # every 3 days, off the hour. worst gap is 3 days across a month boundary.
     - cron: '12 6 */3 * *'
-  # So it can be proven to work without waiting three days.
   workflow_dispatch:
 
 jobs:
@@ -23,25 +17,41 @@ jobs:
     steps:
       - name: Touch the public rooms endpoint
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
         run: |
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
-            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY must be set as repository secrets"
+            echo "::error::Not configured — create repository secrets PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY. No ping was sent."
             exit 1
           fi
 
-          status=$(curl -s -o /tmp/body -w '%{http_code}' \
-            -H "apikey: $SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/public_room_listings?select=room_id&limit=1")
+          # retry because a restoring project 5xxes for a few seconds.
+          # `|| true` not `|| echo 000` — curl prints 000 itself and they'd concatenate.
+          for attempt in 1 2 3; do
+            rm -f /tmp/body
+            status=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
+              -H "apikey: $SUPABASE_ANON_KEY" \
+              -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+              "$SUPABASE_URL/rest/v1/public_room_listings?select=room_id&limit=1" || true)
 
-          echo "status=$status"
-          head -c 200 /tmp/body
+            echo "attempt $attempt: status=$status"
 
-          # 200 is a live project. Anything else means it is paused, the keys
-          # rotated, or the table is gone — all worth a red run.
+            if [ "$status" = "200" ]; then
+              break
+            fi
+
+            if [ "$attempt" != "3" ]; then
+              sleep 15
+            fi
+          done
+
+          # absent if the connection never opened
+          if [ -s /tmp/body ]; then
+            head -c 200 /tmp/body
+            echo
+          fi
+
           if [ "$status" != "200" ]; then
-            echo "::error::Expected 200, got $status"
+            echo "::error::Ping failed — expected 200, got $status after 3 attempts"
             exit 1
           fi
