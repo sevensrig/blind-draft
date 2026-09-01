@@ -1,31 +1,14 @@
 name: Supabase keep-alive
 
-# Free-tier Supabase projects pause after roughly a week idle, and a paused
-# project means remote play is simply broken for whoever tries it next. This does
-# nothing functional: it touches a public endpoint often enough that the project
-# never counts as inactive.
-#
-# The rooms list is the right target — it is public by design, returns almost
-# nothing, and exercises Postgres rather than just the edge, which is what
-# actually counts as activity.
-#
-# The two secrets below have to be created by hand, and nothing in the repo can
-# do it. The note in .env.example about the Supabase/Vercel integration syncing
-# an unprefixed SUPABASE_URL pair is about Vercel's own environment variables —
-# nothing syncs into GitHub Actions secrets. The first version of this workflow
-# assumed otherwise and read two secrets that had never existed, so it exited at
-# the guard below on every single run and never sent one ping (issue #17). The
-# names match .env.example and ci.yml so there is one spelling to remember,
-# even though PUBLIC_ is a SvelteKit idea that means nothing to Actions.
+# free tier pauses a project after ~7 days idle and remote play breaks.
+# hits the public rooms list so postgres does real work, not just the edge.
+# needs PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY as repo secrets, added
+# by hand — nothing syncs them into actions (issue #17).
 
 on:
   schedule:
-    # Every third day, 06:12 UTC. Off the hour because cron minute 0 is a
-    # stampede across all of GitHub. `*/3` on day-of-month tops out at a 3 day
-    # gap even across a month boundary — the 28th to the 31st is the widest it
-    # ever gets — so it sits comfortably inside the ~7 day pause window.
+    # every 3 days, off the hour. worst gap is 3 days across a month boundary.
     - cron: '12 6 */3 * *'
-  # So it can be proven to work without waiting for the schedule.
   workflow_dispatch:
 
 jobs:
@@ -37,21 +20,15 @@ jobs:
           SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
         run: |
-          # Worth distinguishing from a failed ping below: this one means the
-          # workflow is misconfigured, not that Supabase is unwell.
           if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
             echo "::error::Not configured — create repository secrets PUBLIC_SUPABASE_URL and PUBLIC_SUPABASE_ANON_KEY. No ping was sent."
             exit 1
           fi
 
-          # A project that has already paused answers 5xx for a few seconds while
-          # it wakes, which is exactly the situation this job exists for, so one
-          # bare request is not enough. The `|| true` matters as much: the step
-          # runs under `bash -e`, and without it the assignment inherits curl's
-          # exit code on a connection failure and kills the step before any
-          # status is printed. It must not be `|| echo 000` — curl already writes
-          # 000 itself on failure, so that concatenates into "000000".
+          # retry because a restoring project 5xxes for a few seconds.
+          # `|| true` not `|| echo 000` — curl prints 000 itself and they'd concatenate.
           for attempt in 1 2 3; do
+            rm -f /tmp/body
             status=$(curl -s -o /tmp/body -w '%{http_code}' --max-time 30 \
               -H "apikey: $SUPABASE_ANON_KEY" \
               -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
@@ -68,14 +45,12 @@ jobs:
             fi
           done
 
-          # Absent entirely if the connection never opened, hence the guard.
+          # absent if the connection never opened
           if [ -s /tmp/body ]; then
             head -c 200 /tmp/body
             echo
           fi
 
-          # 200 is a live project. Anything else means it is paused and did not
-          # wake, the keys rotated, or the table is gone — all worth a red run.
           if [ "$status" != "200" ]; then
             echo "::error::Ping failed — expected 200, got $status after 3 attempts"
             exit 1
