@@ -39,7 +39,7 @@ adapter-auto saying your laptop isn't Vercel; the build itself is fine.
 
 A free-tier Supabase project pauses after roughly a week idle, and a paused
 project means remote play is simply broken for whoever tries it next.
-`.github/workflows/supabase-keepalive.yml` runs daily and touches
+`.github/workflows/supabase-keepalive.yml` runs every third day and touches
 `public_room_listings` over PostgREST — public by design, returns almost nothing,
 and exercises Postgres rather than just the edge, which is what actually counts
 as activity. Reviving a project that has already paused is a button in the

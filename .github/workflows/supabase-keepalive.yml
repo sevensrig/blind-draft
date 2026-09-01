@@ -20,10 +20,11 @@ name: Supabase keep-alive
 
 on:
   schedule:
-    # Daily, 06:12 UTC. Off the hour because cron minute 0 is a stampede across
-    # all of GitHub. Daily rather than every third day so one dropped or failed
-    # run still leaves days of margin against the pause window.
-    - cron: '12 6 * * *'
+    # Every third day, 06:12 UTC. Off the hour because cron minute 0 is a
+    # stampede across all of GitHub. `*/3` on day-of-month tops out at a 3 day
+    # gap even across a month boundary — the 28th to the 31st is the widest it
+    # ever gets — so it sits comfortably inside the ~7 day pause window.
+    - cron: '12 6 */3 * *'
   # So it can be proven to work without waiting for the schedule.
   workflow_dispatch:
 
