@@ -3,28 +3,18 @@ import { env } from '$env/dynamic/public';
 import { deviceToken } from './identity';
 
 /**
- * Browser Supabase client.
- *
- * Two things worth knowing:
- *
- * 1. The device token rides on every request as `x-player-token`. The RLS policy
- *    on `game_public` reads that header, so this is how a client is allowed to
- *    see its own room's state and nothing else.
- * 2. This client can only ever read the two projection tables. Writes go through
- *    Edge Functions, because the server owns the deck and therefore owns the
- *    rules. There is deliberately no path from here to `games`.
+ * Browser Supabase client. Reads the two projection tables and nothing else —
+ * every write goes through an Edge Function, because the server owns the deck.
+ * The device token rides along as `x-player-token`, which is what `game_public`'s
+ * RLS policy checks.
  */
 
 let cached: SupabaseClient | null = null;
 
 /*
- * Dynamic, not static.
- *
- * `$env/static/public` turns each variable into a named export, so a build where
- * one is unset fails outright with "not exported" — which is exactly what
- * happened on Vercel. That defeats the point: remote play is meant to switch
- * itself off when unconfigured, not take the whole build down with it. The
- * dynamic module hands back a plain object, so a missing key is just undefined.
+ * Dynamic, not static: `$env/static/public` makes each variable a named export,
+ * so an unset one fails the whole build. Remote play is meant to switch itself
+ * off when unconfigured, not take the deploy down with it.
  */
 const SUPABASE_URL = env.PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = env.PUBLIC_SUPABASE_ANON_KEY;
@@ -69,11 +59,9 @@ export class RemoteError extends Error {
 }
 
 /**
- * Calls an Edge Function and normalises failures into `RemoteError`.
- *
- * `functions.invoke` reports a non-2xx as a generic FunctionsHttpError with the
- * body unread, which would throw away the `stale` code and the corrected state —
- * the two things the caller actually needs. So the body is always parsed.
+ * Calls an Edge Function, normalising failures into `RemoteError`. The body is
+ * always parsed: `functions.invoke` leaves it unread, which would discard the
+ * `stale` code and the corrected state.
  */
 export async function callFunction<T>(name: string, body: Record<string, unknown>): Promise<T> {
 	const { data, error } = await supabase().functions.invoke(name, { body });

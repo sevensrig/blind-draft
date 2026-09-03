@@ -2,11 +2,8 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Browser, type Page } from '@playwright/test';
 
 /**
- * Two-device remote play, driven as two independent browser contexts.
- *
- * Skipped unless a Supabase stack is reachable, so `npm run test:e2e` still
- * works for someone who only cares about local play. Start one with
- * `npx supabase start && npx supabase functions serve`.
+ * Two-device remote play, driven as two independent browser contexts. Needs a
+ * stack: `npx supabase start && npx supabase functions serve`.
  */
 
 const SUPABASE = process.env.PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
@@ -33,13 +30,9 @@ async function device(browser: Browser, name: string): Promise<Page> {
 }
 
 /*
- * Skipping is right locally and wrong in CI.
- *
- * Someone who only cares about local play shouldn't need Docker to run the
- * suite, so these skip when nothing answers. But a CI run that skips them is
- * worse than one that fails: it goes green having tested none of the remote
- * paths, which is exactly where this project's real bugs have been. So CI sets
- * `REQUIRE_SUPABASE=1` and an unreachable stack becomes a hard failure.
+ * Skipping is right locally — nobody needs Docker to test local play — and wrong
+ * in CI, where a green run would have tested none of the remote paths. Hence
+ * `REQUIRE_SUPABASE=1`, which turns the skip into a hard failure.
  */
 const REQUIRE_SUPABASE = !!process.env.REQUIRE_SUPABASE;
 
@@ -55,10 +48,8 @@ test.beforeEach(async () => {
 });
 
 /*
- * Axe lives here rather than in `a11y.spec.ts` because these screens only exist
- * with two live devices and a server behind them — there is no way to reach them
- * from a single page. `a11y.spec.ts` covers every local route; the online routes
- * were not covered at all before this.
+ * Axe lives here, not in `a11y.spec.ts`: these screens only exist with two live
+ * devices and a server, so a single page can't reach them.
  */
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
@@ -117,38 +108,28 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	await guest.reload();
 	await expect(guest.locator('.standing__amount')).toHaveText(standing ?? '', { timeout: 20_000 });
 
-	/*
-	 * Issue #11: accepting a bid used to be a self-serve win button. Alex holds
-	 * the standing bid, so Alex cannot end the auction — only Sri, by giving up,
-	 * can hand it over.
-	 */
+	// Accepting a bid is not a self-serve win button: Alex holds the standing bid,
+	// so only Sri, by giving up, can end the auction.
 	await expect(guest.getByRole('button', { name: /^Waiting on Sri/ })).toBeDisabled();
 	await expect(guest.getByRole('button', { name: /^Sell to/ })).toHaveCount(0);
 
 	/*
-	 * And the server doesn't take the client's word for it.
+	 * And the server doesn't take the client's word for it. A seat check of
+	 * `'player' in action` let a bare `{ type: 'sold' }` — what a cached pre-fix
+	 * bundle still sends — skip the check and self-award the card. Hitting the
+	 * function directly is the only way to send that.
 	 *
-	 * The seat check used to be `'player' in action`, which asked the payload
-	 * whether it should be checked — so a bare `{ type: 'sold' }`, which is
-	 * exactly what a cached pre-fix bundle still sends, skipped the check and
-	 * self-awarded the card. Hitting the function directly is the only way to
-	 * send that, since this build's screen can't produce it.
-	 *
-	 * The token key is duplicated from `identity.ts` on purpose: this is meant to
-	 * be a hostile client, not one built out of the app's own helpers.
+	 * The token key is duplicated from `identity.ts` on purpose: a hostile client
+	 * wouldn't be built out of the app's own helpers.
 	 */
 	const roomId = new URL(guest.url()).searchParams.get('id') ?? '';
 	const refusals = await guest.evaluate(
 		async ([url, id]) => {
 			const token = localStorage.getItem('blind-draft:device:v1');
 			const codes: string[] = [];
-			/*
-			 * Every version, not the right one. A client has no grant on `games`,
-			 * so a hostile one can't read the number it needs — but it can guess,
-			 * and the version check sits *after* the seat check. Sweeping means one
-			 * of these carries the live version, so a guard that lets the payload
-			 * opt out of being checked doesn't get to hide behind a `stale`.
-			 */
+			// Every version, not the right one. The version check sits after the
+			// seat check, so sweeping guarantees one call carries the live version
+			// and a skipped seat check can't hide behind a `stale`.
 			for (let version = 0; version <= 12; version++) {
 				const res = await fetch(`${url}/functions/v1/room-action`, {
 					method: 'POST',
@@ -177,14 +158,10 @@ test('two devices play a remote round through the server', async ({ browser }) =
 });
 
 /*
- * Quitting, which used to do nothing that mattered.
- *
- * The Quit button sent `{ type: 'reset' }`, and remotely that is a legal engine
- * action — so the server wrote a blank `initialState()` as authoritative state.
- * The quitter stayed on the room page looking at an empty deck, and the
- * opponent's live game was silently wiped along with it. Meanwhile nothing ever
- * closed the room: it stayed `playing`, a public lobby stayed in the browser,
- * and only the 24h cleanup cron eventually reaped it.
+ * Quitting used to do nothing that mattered: the Quit button sent
+ * `{ type: 'reset' }`, a legal engine action, so the server wrote a blank
+ * `initialState()` and wiped the opponent's live game too — while the room
+ * itself stayed `playing` until the cleanup cron reaped it.
  */
 test('quitting mid-draft leaves the room and ends it for the opponent', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
@@ -212,8 +189,8 @@ test('quitting mid-draft leaves the room and ends it for the opponent', async ({
 	// Symptom one: it has to actually leave the page.
 	await guest.waitForURL(/\/online$/, { timeout: 20_000 });
 
-	// Symptom two: the host is told, definitively, rather than being left on a
-	// board that quietly reset itself to an empty deck.
+	// Symptom two: the host is told, rather than left on a board that quietly
+	// reset itself to an empty deck.
 	await expect(host.getByText(/Alex left the draft/)).toBeVisible({ timeout: 20_000 });
 	await expect(host.getByText('Game over')).toBeVisible();
 
@@ -228,11 +205,9 @@ test('quitting mid-draft leaves the room and ends it for the opponent', async ({
 });
 
 /*
- * Issue #3: an invite link took a seat the instant it opened, with no name.
- * The server names an unnamed joiner "Player 2" and nothing edits it after, so
- * the guest played the whole draft as "Player 2" with no field anywhere to fix
- * it. Joining by code looked fine only because that path goes through the name
- * field on `/online`.
+ * An invite link used to take a seat the instant it opened, with no name — and
+ * the server's "Player 2" fallback stuck for the whole draft. Joining by code
+ * looked fine only because that path goes through the name field on `/online`.
  */
 test('an invite link asks the guest who they are before seating them', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
@@ -243,8 +218,8 @@ test('an invite link asks the guest who they are before seating them', async ({ 
 	await host.waitForURL(/\/online\/room\?id=/);
 	await expect(host.getByText('Waiting for your opponent')).toBeVisible();
 
-	// The shared link carries the id and nothing else — no code, and on a device
-	// with no token, no seat and no remembered name. That's a link recipient.
+	// The shared link carries the id and nothing else, on a device with no token,
+	// no seat and no remembered name. That's a link recipient.
 	const invite = host.url().replace(/&code=\d+/, '');
 	const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
 	const guest = await context.newPage();
@@ -253,8 +228,7 @@ test('an invite link asks the guest who they are before seating them', async ({ 
 	const field = guest.getByLabel('Your name');
 	await expect(field).toBeVisible({ timeout: 15_000 });
 
-	// Nothing is claimed until the name is submitted, so opening a link doesn't
-	// silently fill someone's room.
+	// Nothing is claimed until the name is submitted.
 	await expect(host.getByText('Waiting for your opponent')).toBeVisible();
 
 	// New screen, so it gets scanned like every other one.
@@ -279,8 +253,8 @@ test('the rooms browser asks a nameless player who they are', async ({ browser }
 	await host.waitForURL(/\/online\/room\?id=/);
 	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
 
-	// A device that walked straight past the name field on `/online` — which is
-	// the common case, since the field is a page back from the room list.
+	// A device that walked past the name field on `/online` — the common case,
+	// since it's a page back from the room list.
 	const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
 	const guest = await context.newPage();
 	await guest.goto('/online/rooms');
@@ -314,8 +288,8 @@ test('a name typed on /online carries into a rooms browser join', async ({ brows
 	await host.waitForURL(/\/online\/room\?id=/);
 	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
 
-	// `device` types the name on `/online`; the browse button banks it on the way
-	// out, so this player is not asked again.
+	// `device` types the name on `/online` and the browse button banks it, so this
+	// player is not asked again.
 	const guest = await device(browser, 'Alex');
 	await guest.getByRole('link', { name: /Browse open rooms/ }).click();
 	await guest.locator(`[data-room-id="${roomId}"] button`).click({ timeout: 15_000 });
@@ -342,8 +316,8 @@ test('leaving a lobby drops it from the public rooms browser', async ({ browser 
 	await host.getByRole('button', { name: /Leave room/ }).click();
 	await host.waitForURL(/\/online$/, { timeout: 20_000 });
 
-	// The trigger on `rooms.status` pulls the listing, so a stranger can no longer
-	// walk into a room nobody is sitting in.
+	// The trigger on `rooms.status` pulls the listing, so nobody can walk into a
+	// room that's been left.
 	await browser2.reload();
 	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toHaveCount(0, { timeout: 15_000 });
 });
@@ -354,8 +328,7 @@ test('the deck never reaches a client', async ({ browser }) => {
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 
-	// Nothing the browser holds should contain a deck: not storage, not the DOM,
-	// not any response body it received.
+	// Nothing the browser holds should contain a deck: not storage, not the DOM.
 	const exposed = await host.evaluate(() => {
 		const storage = JSON.stringify(Object.entries(localStorage));
 		return /"deck"\s*:\s*\[/.test(storage + document.documentElement.innerHTML);

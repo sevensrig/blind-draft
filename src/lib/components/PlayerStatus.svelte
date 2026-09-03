@@ -158,8 +158,8 @@
 		text-align: center;
 	}
 
-	/* Filled slots go solid. Open slots stay neutral — any of them will take
-	   any player, so highlighting one would imply a restriction. */
+	/* Open slots stay neutral: any takes any player, so highlighting one
+	   would imply a restriction. */
 	.slot.on {
 		background: var(--ink);
 		color: var(--cream);

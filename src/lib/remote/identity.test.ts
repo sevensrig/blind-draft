@@ -2,12 +2,9 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { recallName, rememberName } from './identity';
 
 /**
- * The remembered display name.
- *
- * It exists because two ways into a room have no name field of their own — the
- * rooms browser and an invite link — and joining without one had the server
- * fall back to calling the player "Player 2" with nothing able to change it
- * afterwards.
+ * The remembered display name. It exists because the rooms browser and invite
+ * links have no name field of their own, and joining without one left the
+ * server's "Player 2" fallback stuck for the whole draft.
  */
 function fakeStorage(): Storage {
 	const map = new Map<string, string>();
@@ -56,8 +53,7 @@ describe('remembered name', () => {
 	});
 
 	it('survives storage being unavailable', () => {
-		// Private mode, or a full quota. Not being able to remember a name must
-		// never stop someone joining a game.
+		// Private mode or full quota. Never a reason to block a join.
 		Object.defineProperty(globalThis, 'localStorage', {
 			get() {
 				throw new Error('storage disabled');

@@ -9,13 +9,9 @@
 	onMount(() => {
 		// Picks a game back up if the phone reloaded mid-draft.
 		game.hydrate();
-		/*
-		 * Marks the client bundle as alive. The page is prerendered, so if hydration
-		 * ever dies the HTML still renders perfectly while every control does
-		 * nothing — a failure mode this app has actually shipped. The E2E suite waits
-		 * on this before its first tap, which both removes a click race and turns a
-		 * broken hydration into an immediate, obvious test failure.
-		 */
+		// Marks the client bundle as alive. The page is prerendered, so a dead
+		// hydration still renders perfectly with every control inert — a failure
+		// this app has shipped. The E2E suite waits on this before its first tap.
 		document.documentElement.dataset.hydrated = 'true';
 	});
 

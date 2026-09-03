@@ -36,8 +36,7 @@
 	);
 	const effectiveSlots = $derived(template ? template.length : Math.min(slots, slotCap));
 
-	/* Typed once, then reused by the rooms browser and by an invite link, neither
-	   of which has a name field of its own. */
+	/* Typed once, then reused by the rooms browser and by invite links. */
 	onMount(() => {
 		name = recallName();
 	});
@@ -117,13 +116,9 @@
 				onclick={join}>Join</button
 			>
 		</div>
-		<!-- A button, not a footnote link: this is the second real way in, and as a
-		     link under the code field it read as fine print.
-
-		     It banks the name on the way out. `rememberName` otherwise only ran on
-		     create/join, so a player who typed their name here and then browsed
-		     arrived at the room list with nothing remembered — the very case the
-		     saved name exists for. -->
+		<!-- A button, not a footnote link: this is the second real way in. It banks
+		     the name on the way out, or a player who typed one and then browsed
+		     arrives at the room list with nothing remembered. -->
 		<a class="btn btn--yellow browse" href="/online/rooms" onclick={() => rememberName(name)}>
 			Browse open rooms
 		</a>

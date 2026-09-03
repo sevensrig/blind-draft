@@ -1,47 +1,34 @@
 /*
- * Neo-brutalism, mobile-first.
+ * Neo-brutalism, mobile-first: cream canvas, 4px black borders, hard offset
+ * shadows with no blur, a press that slides an element onto its own shadow,
+ * zero radius, no gradients, bold weights only.
  *
- * Palette and rules follow the "Neo Brutalism (Mobile)" spec from
- * nextlevelbuilder/ui-ux-pro-max-skill: cream canvas, 4px black borders,
- * hard offset shadows with no blur, mechanical press that translates an
- * element onto its own shadow, zero radius, no gradients, no blur, bold
- * weights only.
- *
- * One deliberate deviation: that spec calls for Space Grotesk, but a web font
- * would mean a network request at runtime, which this build forbids. Space
- * Grotesk is listed first so it's used when locally installed, otherwise the
- * heavy system face carries it.
+ * No web font — that would be a runtime network request, which this build
+ * forbids. Space Grotesk is listed first and used only if locally installed.
  */
 :root {
 	--cream: #fffdf5;
 	--ink: #000000;
-	/*
-	 * De-emphasised text. Use this instead of dropping opacity on --ink: at the
-	 * sizes this app uses, `opacity: 0.5` lands around 3.9:1 on cream, which fails
-	 * WCAG AA. This sits near 5:1 while still reading as secondary.
-	 */
+	/* De-emphasised text. Never mute --ink with opacity instead: that measures
+	   around 3.9:1 on cream and fails WCAG AA. This sits near 5:1. */
 	--ink-muted: #6b6b66;
 	--white: #ffffff;
-	/*
-	 * The accent set. Every one of these is light enough to carry black text at
-	 * well over 4.5:1, which is what lets the whole system put ink straight onto
-	 * colour. Add a new accent only if it clears that bar — the axe suites will
-	 * fail loudly if it doesn't.
-	 */
+	/* Every accent carries black text at well over 4.5:1, which is what lets the
+	   system put ink straight onto colour. A new one must clear that bar; the axe
+	   suites fail loudly if it doesn't. */
 	--red: #ff6b6b;
 	--yellow: #ffd93d;
 	--violet: #c4b5fd;
 	--green: #6bcf7d;
 	--blue: #8ecae6;
-	/* Saturated rather than pastel, so it still needs black text checked on it. */
+	/* Saturated rather than pastel, so black text still needs checking on it. */
 	--orange: #fb8500;
 
 	/* Player identities. Both are light, so text on them stays black. */
 	--p1: var(--violet);
 	--p2: var(--yellow);
 
-	/* The standing bid and the amount dial. An alias, not a reservation — no
-	   accent in this palette is spoken for. */
+	/* The standing bid and the amount dial. */
 	--money: var(--blue);
 
 	--bw: 4px;
@@ -120,10 +107,7 @@ input {
 	text-transform: uppercase;
 }
 
-/*
- * The workhorse block: hard border, solid offset shadow, and a press that
- * slides it onto the shadow so the button physically bottoms out.
- */
+/* The workhorse block: a press slides it onto its shadow so it bottoms out. */
 .btn {
 	display: flex;
 	flex-direction: column;
@@ -141,8 +125,7 @@ input {
 	letter-spacing: -0.01em;
 	text-transform: uppercase;
 	text-align: center;
-	/* Some of these are anchors — navigation, not an action. The UA link colour
-	   and underline have no business on a button face. */
+	/* Some of these are anchors, and the UA link styling has no business here. */
 	color: var(--ink);
 	text-decoration: none;
 }
@@ -161,7 +144,7 @@ input {
 	opacity: 0.45;
 }
 
-/* The primary control. Currently green; nothing but taste says it has to be. */
+/* The primary control. */
 .btn--hot {
 	background: var(--green);
 	min-height: 4rem;

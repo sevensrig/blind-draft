@@ -28,11 +28,8 @@
 		secondary
 	}: Props = $props();
 
-	/*
-	 * An empty name defeats the point of asking. The server names an unnamed seat
-	 * "Player 2" and nothing edits it afterwards, so a prompt that accepts nothing
-	 * lands the player exactly where not being asked did.
-	 */
+	// An empty name defeats the point: the server would name the seat "Player 2"
+	// and nothing edits it afterwards.
 	const ready = $derived(value.trim().length > 0);
 
 	/** Unique per instance, so the label still points at its own input. */

@@ -13,19 +13,14 @@
 	let { children } = $props();
 
 	/**
-	 * Structured data, for search rich results and for answer engines that parse
-	 * JSON-LD rather than guessing from markup.
-	 *
-	 * Everything here is a build-time constant. Nothing player-entered goes in —
-	 * a custom category name is arbitrary text and has no business in the page
-	 * head.
+	 * Structured data for rich results and answer engines. Build-time constants
+	 * only — nothing player-entered belongs in the page head.
 	 */
 	const schema = {
 		'@context': 'https://schema.org',
 		'@type': 'VideoGame',
 		name: SITE_NAME,
-		// The on-screen wordmark. Declared so the name people search for and the
-		// name people screenshot resolve to one entity instead of two.
+		// Declared so the searched name and the screenshotted one are one entity.
 		alternateName: SITE_ALT_NAME,
 		url: SITE_URL,
 		description: SITE_DESCRIPTION,

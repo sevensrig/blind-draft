@@ -1,18 +1,13 @@
--- Realtime for game state, done as Broadcast rather than Postgres Changes.
+-- Realtime for game state, as Broadcast rather than Postgres Changes.
 --
--- The `game_public` policy authorises a device by reading `x-player-token` from
--- `request.headers`. That works for REST, because PostgREST populates it — but
--- Realtime's Postgres Changes evaluates RLS outside any HTTP request, where the
--- setting is NULL. The policy therefore denied every row and subscribers were
--- never told anything: a host sat in the lobby forever while their opponent was
--- already in the room.
+-- `game_public`'s policy reads `x-player-token` from `request.headers`, which
+-- PostgREST populates and Realtime does not — so Postgres Changes evaluated RLS
+-- with a NULL setting, denied every row, and told subscribers nothing.
 --
--- Options were to weaken the policy so any holder of a room id could read state,
--- or to stop depending on RLS for delivery. This does the latter. A trigger
--- broadcasts only the new version number on a per-room topic; clients treat it as
--- "something changed" and re-fetch over REST, where the token is checked properly.
--- The broadcast itself carries nothing worth protecting, so the channel is public
--- and the strict read policy stays exactly as it is.
+-- Rather than weaken the policy so any holder of a room id could read state,
+-- this stops depending on RLS for delivery: a trigger broadcasts the new version
+-- on a per-room topic, and clients re-fetch over REST where the token is checked.
+-- The nudge carries nothing worth protecting, so the strict policy stays.
 
 create or replace function broadcast_game_version()
 returns trigger
@@ -38,6 +33,6 @@ create trigger game_public_broadcast
 	after insert or update on game_public
 	for each row execute function broadcast_game_version();
 
--- Postgres Changes on this table can never reach a client, for the reason above.
--- Leaving it published would imply a delivery path that doesn't exist.
+-- Postgres Changes here can never reach a client, so leaving it published would
+-- imply a delivery path that doesn't exist.
 alter publication supabase_realtime drop table game_public;

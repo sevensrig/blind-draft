@@ -1,20 +1,14 @@
 import { expect, type Page } from '@playwright/test';
 
 /**
- * Shared driving helpers for the E2E journeys.
- *
- * These deliberately work through visible controls only — no reaching into
- * localStorage or the store. The point of this layer is to prove the assembled
- * app is playable, so if a journey needs a shortcut to pass, that's a finding.
+ * Shared driving helpers. Visible controls only — no reaching into localStorage
+ * or the store; if a journey needs a shortcut to pass, that's a finding.
  */
 
 /**
- * Blocks until the client bundle has taken over.
- *
- * The page is prerendered, so buttons are present and clickable in the HTML well
- * before Svelte attaches handlers — a tap in that window is silently swallowed.
- * Waiting on the marker set in `+page.svelte` removes the race, and doubles as an
- * assertion that hydration happened at all.
+ * Blocks until the client bundle has taken over. The page is prerendered, so
+ * buttons are clickable well before Svelte attaches handlers and a tap in that
+ * window is silently swallowed.
  */
 export async function waitForHydration(page: Page): Promise<void> {
 	await page.waitForSelector('html[data-hydrated="true"]', { timeout: 15_000 });
@@ -62,7 +56,7 @@ export async function setUpGame(page: Page, options: SetupOptions = {}): Promise
 /** Which rule is governing the item currently on screen. */
 export type Mode = 'contest' | 'solo' | 'alternate' | 'forced';
 
-export async function currentMode(page: Page): Promise<Mode> {
+async function currentMode(page: Page): Promise<Mode> {
 	if (await page.getByText(/Both wallets are empty/).isVisible()) return 'alternate';
 	if (await page.getByText(/names the price/).isVisible()) return 'solo';
 	if (await page.getByText(/Nobody to bid against/).isVisible()) return 'forced';
@@ -78,10 +72,7 @@ export interface RoundOptions {
 	pass?: boolean;
 }
 
-/**
- * Reveals and resolves exactly one item, whichever rule applies, then advances.
- * Returns the mode it resolved under so tests can assert the path they took.
- */
+/** Resolves exactly one item, whichever rule applies, then advances. */
 export async function playRound(page: Page, options: RoundOptions = {}): Promise<Mode> {
 	const { winner, allIn = false, pass = false } = options;
 

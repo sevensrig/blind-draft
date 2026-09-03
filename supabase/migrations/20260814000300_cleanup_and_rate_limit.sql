@@ -1,11 +1,8 @@
 -- Housekeeping: room cleanup and the rate-limit check.
 
 -- ---------------------------------------------------------------------------
--- Cleanup
---
--- Free-tier tidiness. Two different clocks, because an abandoned lobby is
--- rubbish much sooner than a finished game someone might still be looking at.
--- Cascades handle room_players, games, game_public and public_room_listings.
+-- Cleanup. Different clocks, because an abandoned lobby is rubbish sooner than
+-- a finished game someone may still be looking at. Cascades do the rest.
 -- ---------------------------------------------------------------------------
 
 create or replace function cleanup_stale_rooms()
@@ -20,8 +17,8 @@ begin
 	with gone as (
 		delete from rooms
 		where
-			-- Finished or given up on: keep a day and a half so a results screen
-			-- survives being left open overnight.
+			-- Keep a day and a half, so a results screen survives being left
+			-- open overnight.
 			(status in ('finished', 'abandoned') and last_active_at < now() - interval '36 hours')
 			-- Never filled: a lobby nobody joined is worthless after a day.
 			or (status = 'open' and last_active_at < now() - interval '24 hours')
@@ -31,8 +28,7 @@ begin
 	)
 	select count(*)::integer into removed from gone;
 
-	-- The rate-limit log only matters for the last few minutes; anything older
-	-- is dead weight.
+	-- The rate-limit log only matters for the last few minutes.
 	delete from request_log where created_at < now() - interval '1 day';
 
 	return query select removed;
@@ -43,11 +39,8 @@ comment on function cleanup_stale_rooms is
 	'Deletes finished/abandoned rooms after 36h and unfinished ones after 24h. Invoked on a cron schedule.';
 
 -- ---------------------------------------------------------------------------
--- Rate limiting
---
--- Records the attempt and reports whether the caller has blown the limit, in one
--- round trip. Deliberately crude: the goal is stopping one actor spinning up
--- thousands of rooms a minute, not production abuse infrastructure.
+-- Rate limiting: records the attempt and reports whether the caller blew the
+-- limit, in one round trip. Crude on purpose.
 -- ---------------------------------------------------------------------------
 
 create or replace function check_rate_limit(
@@ -85,16 +78,12 @@ comment on function check_rate_limit is
 -- ---------------------------------------------------------------------------
 -- Schedule
 --
--- pg_cron puts its functions in a `cron` schema, not under `extensions` — naming
--- it `extensions.cron.schedule` parses as database.schema.function and Postgres
--- rejects it as a cross-database reference.
+-- pg_cron lives in a `cron` schema, not under `extensions` — the latter parses
+-- as database.schema.function and is rejected as a cross-database reference.
 --
--- Everything is wrapped in EXECUTE and guarded twice: pg_cron may not be
--- available at all (some environments), and on hosted Supabase it may need
--- enabling from the dashboard first. A project without it still gets a working
--- `cleanup_stale_rooms()` that can be called by hand or from a scheduled
--- function — it just won't self-schedule. The migration must stay safe to re-run
--- against the shared project either way.
+-- Wrapped in EXECUTE and guarded twice, because pg_cron may be unavailable or
+-- need enabling from the dashboard first. Without it `cleanup_stale_rooms()`
+-- still works by hand, it just won't self-schedule. Stays safe to re-run.
 -- ---------------------------------------------------------------------------
 
 do $$

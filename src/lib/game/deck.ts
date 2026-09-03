@@ -2,22 +2,13 @@ import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
 import { between, sample, shuffle, type Rng, defaultRng } from './rng';
 
 /**
- * Deck curation.
+ * Deck curation. Exactly `2 x slots` items, so the two rosters consume it
+ * precisely. Tiers never surface in the UI — they only shape the curve:
+ * ~15-20% great, ~60-70% mid+good (mid dominant), ~15-20% bad, re-rolled inside
+ * those bands every game so repeat decks don't feel stamped from one mould.
  *
- * A deck is exactly `2 x slots` items so the two rosters consume it precisely.
- * Tiers never surface in the UI — they only shape the curve below.
- *
- * Curve, per the design spec:
- *   great          ~15-20%
- *   mid + good     ~60-70%   (mid dominates; `good` takes a minority of the band)
- *   bad            ~15-20%
- *
- * The exact split is re-rolled every game inside those bands so repeated decks
- * in one category don't feel stamped from the same mould.
- *
- * Positional categories (NBA, NFL) take a second pass: the deck must contain a
- * position multiset that exactly satisfies both rosters, so positions are
- * satisfied first and the tier curve is honoured as closely as that allows.
+ * Positional categories satisfy their position multiset first, then honour the
+ * curve as closely as that allows.
  */
 
 /** `good`'s share of the mid+good band. Mid keeps the majority either way. */
@@ -66,10 +57,8 @@ function targetCounts(size: number, rng: Rng): Record<Tier, number> {
 }
 
 /**
- * Moves a polarised (or, when `wantPolarised` is false, an ordinary) item into
- * `target` by swapping. No-ops when the position already qualifies or when no
- * donor exists outside `locked`. Swapping preserves the deck's position
- * multiset, so this is safe for positional decks.
+ * Swaps a polarised (or, when `wantPolarised` is false, ordinary) item into
+ * `target`. Swapping preserves the position multiset, so positional decks are safe.
  */
 function swapInto(
 	deck: Item[],
@@ -92,9 +81,8 @@ function swapInto(
 }
 
 /**
- * Weights the tail of the draw order. Roughly two thirds of decks end on
- * something polarising; the rest end on an ordinary item. Deliberately
- * probabilistic — a guaranteed big finish would be readable across plays.
+ * Weights the tail of the draw order. Probabilistic on purpose — a guaranteed
+ * big finish would be readable across plays.
  */
 function weightFinale(deck: Item[], rng: Rng): void {
 	const last = deck.length - 1;
@@ -144,12 +132,9 @@ function countByPosition(pool: readonly Item[]): Map<Position, number> {
 }
 
 /**
- * Decides which positions the deck will contain: one item per slot, per player.
- *
- * This only shapes the deck so a starting-five draft offers a realistic spread —
- * players can still slot anyone anywhere. Single-position slots are forced;
- * multi-position slots (the NFL flex) pick whichever position the pool can best
- * afford, so a thin position never gets over-committed.
+ * Which positions the deck will contain: one item per slot, per player. Shapes
+ * the deck only — players can still slot anyone anywhere. A flex slot picks
+ * whichever position the pool can best afford, so a thin one isn't over-committed.
  */
 function positionDemand(roster: SlotSpec[], pool: readonly Item[], rng: Rng): Position[] {
 	const supply = countByPosition(pool);
@@ -183,11 +168,7 @@ function positionDemand(roster: SlotSpec[], pool: readonly Item[], rng: Rng): Po
 	return demand;
 }
 
-/**
- * Positional decks: satisfy the position multiset exactly, then get as close to
- * the tier curve as the remaining candidates allow. Scarce positions pick first
- * so they aren't left with whatever is unused.
- */
+/** Positions exactly, then the tier curve. Scarce positions pick first. */
 function buildPositionalDeck(
 	pool: readonly Item[],
 	roster: SlotSpec[],
@@ -244,11 +225,7 @@ export function poolSupportsRoster(pool: readonly Item[], roster: SlotSpec[]): b
 	}
 }
 
-/**
- * Samples `2 x roster.length` items and returns them in blind draw order.
- * Throws if the pool can't cover both rosters — the setup screen only offers
- * categories that pass `poolSupportsRoster`.
- */
+/** Samples `2 x roster.length` items in blind draw order. Throws on a pool too thin. */
 export function buildDeck(
 	pool: readonly Item[],
 	roster: SlotSpec[],

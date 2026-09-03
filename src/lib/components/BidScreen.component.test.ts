@@ -12,10 +12,7 @@ import {
 } from '$lib/testing/fixtures';
 import BidScreen from './BidScreen.svelte';
 
-/**
- * BidScreen reads the shared store, so each test seeds a state through
- * `game.replace` — the same seam Tier 2 would use for server-pushed state.
- */
+/** BidScreen reads the shared store, so each test seeds state via `game.replace`. */
 describe('BidScreen', () => {
 	beforeEach(() => {
 		localStorage.clear();
@@ -77,12 +74,8 @@ describe('BidScreen', () => {
 		expect(game.state.players[0].money).toBe(20);
 	});
 
-	/*
-	 * Issue #11: the standing bidder used to be able to accept their own bid.
-	 * Locally that's fine — one device speaks for both seats, so whoever gave up
-	 * says so with the same thumb — but remotely it let the leader award
-	 * themselves the item before the opponent could raise.
-	 */
+	// The standing bidder used to be able to accept their own bid. Fine locally,
+	// where one device speaks for both seats; remotely it was a self-serve win.
 	describe('accepting a bid', () => {
 		it('lets one device end the bidding for either player', async () => {
 			game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 3));
@@ -175,13 +168,9 @@ describe('BidScreen', () => {
 		expect(game.state.freeTurn).toBe(1);
 	});
 
-	/*
-	 * The quit button is shared between local and remote play, and the two modes
-	 * mean different things by it. Locally it resets; remotely `reset` is a legal
-	 * engine action, so sending it through the remote transport wrote a blank
-	 * `initialState()` to the server — leaving the quitter on a dead board and
-	 * wiping the opponent's game with them.
-	 */
+	// Quit is shared, and the two modes mean different things by it. Locally it
+	// resets; remotely `reset` is a legal engine action, so it wrote a blank
+	// `initialState()` to the server and wiped the opponent's game too.
 	describe('quitting', () => {
 		it('resets the local game once the quit is confirmed', async () => {
 			game.replace(contested({ names: ['Sri', 'Alex'] }));

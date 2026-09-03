@@ -4,10 +4,8 @@
 	interface Props {
 		name: IconName;
 		/**
-		 * Only pass this when the icon is the sole carrier of meaning. Every current
-		 * use sits next to a visible text label, so the default is decorative —
-		 * announcing "basketball" before "NBA Players" is just noise for a screen
-		 * reader, and axe flags an unlabelled graphic either way.
+		 * Only when the icon is the sole carrier of meaning. Every current use sits
+		 * beside a visible label, so the default is decorative.
 		 */
 		label?: string;
 	}

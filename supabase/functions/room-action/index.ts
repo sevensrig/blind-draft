@@ -7,31 +7,21 @@ import { redact } from '../_shared/state.ts';
 /**
  * Applies one game action, authoritatively.
  *
- * The interesting part is the race. Either player may raise at any moment, so
- * two bids can be in flight together. Each caller sends the version it was
- * looking at; the write is a single UPDATE conditional on that version, which
- * Postgres settles atomically. Exactly one wins and bumps the version — the
- * other matches zero rows and is told `stale`, with the real state attached so
- * the loser's screen corrects itself instead of showing a bid that never landed.
+ * Either player may raise at any moment, so two bids can be in flight. Each
+ * caller sends the version it read and the write is conditional on it: one wins,
+ * the other matches zero rows and gets `stale` with the real state attached.
  */
 
 /** Every action that speaks for one seat, and so must speak for the caller's. */
 const SEATED = new Set<Action['type']>(['bid', 'sold', 'buy', 'decline']);
 
 /**
- * Actions that name a player must name the caller's own seat.
+ * Actions that name a player must name the caller's own seat. With the engine
+ * refusing a concession from the bid holder, that stops anyone awarding
+ * themselves the item they're winning.
  *
- * This is what enforces issue #11's fix: `sold` names the player who is
- * conceding, so a client can only ever concede for itself, and the engine
- * separately refuses a concession from whoever holds the standing bid. Between
- * the two, nobody can award themselves the item they are winning.
- *
- * Keyed off the action type rather than `'player' in action`, which is the
- * version this replaced. That test asked the payload whether it should be
- * checked, so omitting the field skipped the check entirely — a stale bundle
- * still sending a bare `{ type: 'sold' }` would sail through, and
- * `canSell(state, undefined)` says yes to the holder. A whitelist can't be
- * opted out of by leaving something off the wire.
+ * Keyed off the action type, never `'player' in action` — that asked the payload
+ * whether to check it, so a bare `{ type: 'sold' }` skipped the check entirely.
  */
 function actorMismatch(action: Action, seat: PlayerId): boolean {
 	if (!SEATED.has(action.type)) return false;
@@ -60,8 +50,7 @@ Deno.serve(async (req) => {
 
 	const db = serviceClient();
 
-	// Looser than room creation: this is the hot path of a live game, and a
-	// fast back-and-forth bidding war is normal play, not abuse.
+	// Looser than room creation: a fast bidding war is normal play, not abuse.
 	if (!(await withinRateLimit(db, actorOf(req, token), 'room_action', 120, 60))) {
 		return fail('rate_limited', 'Slow down a moment.');
 	}
@@ -78,16 +67,11 @@ Deno.serve(async (req) => {
 	const seat = player.seat as PlayerId;
 
 	/*
-	 * A closed room takes no more moves.
+	 * A closed room takes no more moves. The engine can't catch this —
+	 * abandonment lives on the room, not in `GameState`.
 	 *
-	 * Its own query rather than an embedded resource on the lookup above: getting
-	 * that join wrong returns no row, which reads as "not a player in this room"
-	 * and would lock both players out of every action. A second round trip is the
-	 * cheaper mistake.
-	 *
-	 * This is what stops a client that quit — or one still holding the room open
-	 * in a background tab — from playing on after the game ended. The engine
-	 * can't catch it: abandonment lives on the room, not in `GameState`.
+	 * Its own query, not an embedded resource above: a botched join returns no
+	 * row, which reads as "not a player here" and locks both players out.
 	 */
 	const { data: room } = await db.from('rooms').select('status').eq('id', roomId).maybeSingle();
 
@@ -123,8 +107,8 @@ Deno.serve(async (req) => {
 
 	const next = applyAction(state, action);
 
-	// The engine returns the same object for anything illegal, which is a
-	// cheaper and more reliable check than re-deriving legality here.
+	// The engine returns the same object for anything illegal, which beats
+	// re-deriving legality here.
 	if (next === state) {
 		return fail('illegal_action', 'That move is not legal right now', {
 			state: redact(state, 2),
@@ -160,7 +144,7 @@ Deno.serve(async (req) => {
 		});
 	}
 
-	// Only now is the redacted copy published — this is what clients subscribe to.
+	// Only now is the redacted copy published — this is what clients read.
 	const publicState = redact(next, 2);
 	await db
 		.from('game_public')

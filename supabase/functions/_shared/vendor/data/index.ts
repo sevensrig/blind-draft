@@ -21,7 +21,7 @@ const NFL_ROSTER: SlotSpec[] = [
 	{ id: 'flex', label: 'FLEX', drafts: ['RB', 'WR', 'TE'] }
 ];
 
-export { openRoster, slotSuits } from './types.ts';
+export { openRoster } from './types.ts';
 
 import { NBA_CURRENT, NBA_ALL_TIME } from './nba.ts';
 import { NFL_CURRENT, NFL_ALL_TIME } from './nfl.ts';
@@ -40,12 +40,7 @@ import { PIZZA_TOPPINGS } from './pizza-toppings.ts';
 import { PERFECT_LIFE } from './perfect-life.ts';
 import { SUMMER_DAY } from './summer-day.ts';
 
-/**
- * The content registry. Everything ships in the bundle — no runtime fetches.
- *
- * Sports categories carry two variants and render a Current / All-Time toggle;
- * a single-variant category renders no toggle at all.
- */
+/** The content registry. Everything ships in the bundle — no runtime fetches. */
 export const CATEGORIES: Category[] = [
 	{
 		id: 'custom',
@@ -211,5 +206,3 @@ export function getVariant(category: Category, variantId: string): Variant {
 }
 
 export const hasVariants = (category: Category): boolean => category.variants.length > 1;
-
-export type { Accent, Category, Item, ItemSeed, Position, SlotSpec, Tier, Variant } from './types.ts';

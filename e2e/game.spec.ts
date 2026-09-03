@@ -2,11 +2,9 @@ import { expect, test } from '@playwright/test';
 import { playRound, playToResults, setUpGame } from './helpers';
 
 /**
- * Full journeys through the assembled app, driven only through visible controls.
- *
- * These run against `build` + `preview`, so they also stand in as the guard
- * against the hydration failure this app has shipped before: if the client bundle
- * dies, every one of these fails at the first tap.
+ * Full journeys through the assembled app, via visible controls only. They run
+ * against `build` + `preview`, so they also guard the hydration failure this app
+ * has shipped: a dead client bundle fails every one of these at the first tap.
  */
 
 test('plays a complete two-player draft through to the results sheet', async ({ page }) => {

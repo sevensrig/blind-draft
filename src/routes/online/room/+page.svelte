@@ -11,51 +11,35 @@
 	import { room } from '$lib/remote/room.svelte';
 	import { SITE_NAME } from '$lib/site';
 
-	/*
-	 * The room id is a query parameter, not a path segment.
-	 *
-	 * A dynamic `[roomId]` route can't be prerendered — the ids don't exist at
-	 * build time — so it would have to be served by a function, and this app is a
-	 * static shell by design. A query param keeps the whole deploy static and the
-	 * link just as shareable.
-	 */
+	// A query param, not a path segment: a dynamic `[roomId]` route can't be
+	// prerendered, so it would need a function and this deploy stays static.
 	const roomId = $derived(page.url.searchParams.get('id') ?? '');
 
 	let joining = $state(true);
 	let error = $state<string | null>(null);
 	let copied = $state(false);
-	/*
-	 * An invite link is the one way into a room that never passed through the
-	 * name field on `/online`, so this page has to ask. It used to just take the
-	 * seat, which left the joiner permanently called "Player 2" with no way to
-	 * change it — the server names an unnamed seat and nothing edits it after.
-	 */
+	// An invite link never passed the name field on `/online`, so this page has to
+	// ask — otherwise the server names the guest "Player 2" for the whole draft.
 	let asking = $state(false);
 	let name = $state('');
 
 	/** The invite URL is just this page — landing here joins you. */
 	const shareUrl = $derived(`${page.url.origin}/online/room?id=${roomId}`);
-	/* From the store after creating, or the URL after a refresh. Joiners have
-	   no need for it — they are already in. */
+	/* From the store after creating, or the URL after a refresh. */
 	const code = $derived(room.code ?? page.url.searchParams.get('code'));
 
 	const view = $derived(room.state ? toGameState(room.state) : null);
 	const waiting = $derived(room.status === 'waiting');
 	const away = $derived(room.status === 'opponent-away');
-	/*
-	 * The opponent quit, as opposed to `away`, which is a presence blip that
-	 * clears itself. This one is a server fact, so it outranks every other branch
-	 * below — including `waiting`, since a host whose guest quit in the lobby is
-	 * not waiting for anybody.
-	 */
+	// A server fact, unlike `away`, so it outranks every branch below — including
+	// `waiting`, since a host whose guest quit isn't waiting for anybody.
 	const ended = $derived(room.opponentLeft);
 	const opponentName = $derived(
 		room.state && room.seat !== null ? room.state.players[room.seat === 0 ? 1 : 0].name : 'They'
 	);
 
 	onMount(async () => {
-		// Already seated? Reuse it, and don't ask a returning player who they are.
-		// Everyone else arrived on an invite link and needs to be asked first.
+		// Already seated? Reuse it. Everyone else arrived on an invite link.
 		const seat = recallSeat(roomId);
 		if (seat === null) {
 			name = recallName();
@@ -88,8 +72,8 @@
 			asking = false;
 			await attach(seat);
 		} catch (failure) {
-			// Back to the prompt rather than a dead end: a room that filled up in
-			// the meantime is the likeliest failure, and the name is still typed.
+			// Back to the prompt, name still typed — a room that filled in the
+			// meantime is the likeliest failure.
 			error = failure instanceof RemoteError ? failure.message : 'Could not join that room';
 			joining = false;
 		}
@@ -108,12 +92,9 @@
 	}
 
 	/**
-	 * Quit: close the room, then get out.
-	 *
 	 * Navigation waits on the server call so the room is really shut before the
-	 * page unmounts — `onDestroy` only drops the channel, and firing them
-	 * concurrently raced the request against teardown. `room.leave()` swallows its
-	 * own failures, so this cannot strand anyone on a dead screen.
+	 * page unmounts; firing them concurrently raced teardown. `room.leave()`
+	 * swallows its own failures, so nobody gets stranded.
 	 */
 	let leaving = $state(false);
 
@@ -130,9 +111,8 @@
 {#if joining}
 	<div class="shell centre"><p class="status">Joining…</p></div>
 {:else if asking}
-	<!-- Invite-link landing. Nothing is claimed on the server until this is
-	     submitted, so a stray tap on a link doesn't fill someone's room. The same
-	     prompt runs in the rooms browser, which has no name field either. -->
+	<!-- Nothing is claimed on the server until this is submitted, so a stray tap
+	     on a link doesn't fill someone's room. -->
 	<NamePrompt
 		eyebrow="You're invited"
 		heading="Who's playing?"
@@ -152,8 +132,8 @@
 		<a class="btn" href="/online">Back to online</a>
 	</div>
 {:else if ended}
-	<!-- Terminal. No wait-it-out option, and deliberately no results sheet: the
-	     draft didn't finish, so there is no honest winner to declare. -->
+	<!-- No results sheet on purpose: the draft didn't finish, so there is no
+	     honest winner to declare. -->
 	<div class="shell centre">
 		<span class="eyebrow">Game over</span>
 		<p class="status status--bad" role="alert">{opponentName} left the draft.</p>
@@ -162,8 +142,7 @@
 		</button>
 	</div>
 {:else if waiting}
-	<!-- Lobby: one seat filled. Both join methods are shown because a code is
-	     easier to read out loud and a link is easier to send. -->
+	<!-- Both join methods: a code reads out loud, a link sends. -->
 	<div class="shell lobby">
 		<h1>Waiting for your opponent</h1>
 		<p class="lobby__sub">They join, the draft starts. Nobody sees the deck.</p>

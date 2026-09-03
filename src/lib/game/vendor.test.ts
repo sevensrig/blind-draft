@@ -3,14 +3,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The Edge Functions run a copy of the engine, because the Supabase Edge Runtime
- * cannot resolve this project's extensionless imports or the `$lib` alias.
- * `scripts/vendor-engine.mjs` derives that copy.
- *
- * A copy is only safe if it cannot drift. These tests compare everything except
- * the import lines — which are rewritten on purpose — so any change to the rules
- * or the content pools that hasn't been re-vendored fails here rather than
- * silently giving remote players a different game from local ones.
+ * The Edge Functions run a vendored copy of the engine. A copy is only safe if
+ * it can't drift, so these compare everything except the rewritten import lines
+ * — an un-vendored rule change fails here rather than quietly giving remote
+ * players a different game.
  */
 
 const SRC = join(process.cwd(), 'src', 'lib');

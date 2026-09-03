@@ -60,11 +60,8 @@ describe('persistence', () => {
 		expect(loadState()).toBeNull();
 	});
 
-	/**
-	 * The bug this guards: a save written before roster slots existed was restored
-	 * into a build that expected them, which threw during hydration and left the
-	 * page rendered but completely unresponsive.
-	 */
+	// The bug this guards: a save written before roster slots existed, restored
+	// into a build that expected them, threw during hydration.
 	it('rejects a save from an older schema instead of handing it back', () => {
 		const stale = {
 			phase: 'resolve',
@@ -170,13 +167,8 @@ describe('persistence', () => {
 });
 
 /*
- * The typed-category draft, kept under its own key.
- *
- * Untested until CI started enforcing the coverage thresholds this file already
- * declared. It matters for the same reason the save format does: this is
- * unvalidated data coming back out of localStorage, and the worst bug this
- * project has shipped was a stored blob being trusted into a shape that no
- * longer matched.
+ * The typed-category draft, under its own key. Matters for the same reason the
+ * save format does: unvalidated data coming back out of localStorage.
  */
 describe('custom draft persistence', () => {
 	const CUSTOM_KEY = 'blind-draft:custom:v1';
@@ -191,8 +183,8 @@ describe('custom draft persistence', () => {
 	});
 
 	it('round-trips a draft verbatim', () => {
-		// Trailing newline and blank line kept deliberately: the textarea's caret
-		// behaviour depends on the text surviving unedited.
+		// Trailing newline kept: the caret's behaviour depends on the text
+		// surviving unedited.
 		const draft = { name: 'Cereals', text: 'Weetabix\n\nCoco Pops\n' };
 		saveCustomDraft(draft);
 

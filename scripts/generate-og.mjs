@@ -1,11 +1,9 @@
 /**
  * Renders the social preview card to `static/og.png` at 1200x630.
  *
- * Drawn as HTML and screenshotted with the Playwright browser that's already a
- * devDependency for the E2E suite, rather than hand-authoring an image. That way
- * the card is built from the same tokens as the app — cream canvas, 4px black
- * borders, hard offset shadows, no gradients — and re-running the script after a
- * palette change keeps the card in step instead of quietly going stale.
+ * Drawn as HTML and screenshotted with the Playwright browser the E2E suite
+ * already needs, so the card is built from the same tokens as the app and
+ * re-running after a palette change keeps it in step.
  *
  * Run with: node scripts/generate-og.mjs
  */

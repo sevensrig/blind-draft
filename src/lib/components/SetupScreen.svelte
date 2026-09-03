@@ -37,12 +37,9 @@
 	const template = $derived(category?.roster ?? null);
 
 	/**
-	 * One item per line. Blank lines and repeats are dropped rather than flagged —
-	 * this gets pasted from notes apps, where both are normal.
-	 *
-	 * Everything is tagged `mid`. Tiers exist to curate which items get dealt from
-	 * a large pool; when the player hands over the exact list there is nothing to
-	 * curate, and a fake spread of tiers would only distort the draw order.
+	 * One item per line. Blanks and repeats are dropped, not flagged — this gets
+	 * pasted from notes apps. Everything is `mid`: tiers curate a large pool, and
+	 * the player handed over the exact list.
 	 */
 	const customSeeds = $derived.by(() => {
 		const seen = new Set<string>();
@@ -61,9 +58,8 @@
 	const poolItems = $derived(isCustom ? customItems : (activeVariant?.items ?? []));
 
 	/**
-	 * A pool has to cover both rosters, so a thin pool lowers the ceiling. An
-	 * empty custom list leaves the picker alone instead of collapsing it to zero —
-	 * `canStart` is the real gate.
+	 * A pool covers both rosters, so a thin one lowers the ceiling. An empty custom
+	 * list leaves the picker alone rather than collapsing it; `canStart` is the gate.
 	 */
 	const slotCap = $derived(
 		poolItems.length ? Math.min(SLOT_CEILING, maxSlotsFor(poolItems.length)) : SLOT_CEILING
@@ -126,12 +122,8 @@
 		</h1>
 		<p class="hero__tag">Nobody knows what's coming next. Bid anyway.</p>
 
-		<!--
-			Local play stays the default: this screen is what a shared link opens, and
-			putting a mode chooser first would cost every pass-and-play game a tap.
-			Hidden entirely when Supabase isn't configured, so a local-only deploy
-			never offers something that can't work.
-		-->
+		<!-- Local play stays the default; a mode chooser first would cost every
+		     pass-and-play game a tap. Hidden when Supabase isn't configured. -->
 		{#if remoteEnabled}
 			<a class="online" href="/online">Play with others online</a>
 		{/if}
@@ -216,11 +208,8 @@
 	<section class="block">
 		<h2 class="block__title">Category</h2>
 
-		<!--
-			Above the grid on purpose. The sports tiles are the first four, so below
-			fourteen tiles this toggle appeared off-screen and looked like it hadn't
-			appeared at all.
-		-->
+		<!-- Above the grid: below fourteen tiles this toggle was off-screen and
+		     looked like it hadn't appeared at all. -->
 		{#if isCustom}
 			<div class="custom">
 				<label class="custom__field">
@@ -296,18 +285,8 @@
 
 	<details class="rules">
 		<summary>How it works</summary>
-		<!--
-			Plain definition first. Answer engines quote sentences shaped like
-			"X is a Y that does Z", and the hero tagline is deliberately not that.
-			Inside the collapsed block it's still in the prerendered HTML, so it's
-			indexable without competing with the copy on screen.
-
-			It names the game both ways on purpose. The wordmark above says "Blind
-			Draft"; what people search for is "$20 budget draft". A player who found
-			this by searching the second one needs to see it here to know they're in
-			the right place, and a crawler needs both phrases on the page to connect
-			them.
-		-->
+		<!-- Plain definition, and both names of the game: still prerendered inside
+		     the collapsed block, so it's indexable without competing on screen. -->
 		<p class="rules__what">
 			$20 Blind Draft is a free two-player party game played in a browser — the $20 budget draft
 			you've seen going around. Two players share one phone, each get a $20 budget, and bid against
@@ -327,11 +306,8 @@
 		</ol>
 	</details>
 
-	<!--
-		Only docked once there's something to start. A sticky bar sits on top of the
-		category grid, and a disabled button in it silently swallowed taps aimed at
-		whichever tiles happened to be scrolled underneath.
-	-->
+	<!-- Only docked once there's something to start: a sticky disabled button
+	     swallowed taps aimed at the tiles scrolled underneath it. -->
 	{#if category}
 		<div class="dock">
 			<button class="btn btn--hot start" type="button" disabled={!canStart} onclick={start}>
@@ -391,8 +367,7 @@
 		line-height: 1.3;
 	}
 
-	/* A signpost, not a second primary action: it's smaller, thinner-bordered and
-	   sits above the fold rather than in the dock. */
+	/* A signpost, not a second primary action. */
 	.online {
 		display: inline-block;
 		align-self: flex-start;
@@ -557,8 +532,7 @@
 		box-shadow: none;
 	}
 
-	/* Selecting floods the tile with its own accent, so the colour previewed in
-	   the emoji chip is the colour you get. */
+	/* Floods with its own accent, so the chip previews the colour you get. */
 	.tile--on {
 		background: var(--accent);
 		box-shadow: var(--shadow-lg);
@@ -570,9 +544,8 @@
 		box-shadow: none;
 	}
 
-	/* A chip rather than a bare glyph: it carries the category's accent while the
-	   tile itself stays white, which keeps 14 tiles legible instead of loud.
-	   Fixed square so fourteen icons of differing widths still line up. */
+	/* A chip, not a bare glyph: carries the accent while the tile stays white.
+	   Fixed square so icons of differing widths line up. */
 	.tile__icon {
 		display: grid;
 		place-items: center;
@@ -641,7 +614,7 @@
 	.custom textarea {
 		font-size: 0.9rem;
 		line-height: 1.5;
-		/* Vertical only — horizontal resize would break the tile grid beside it. */
+		/* Vertical only — horizontal would break the tile grid beside it. */
 		resize: vertical;
 	}
 
@@ -665,7 +638,7 @@
 		text-transform: uppercase;
 	}
 
-	/* Sits on yellow, so the shortfall warning inverts rather than going red. */
+	/* Sits on yellow, so the warning inverts rather than going red. */
 	.custom__count--short {
 		align-self: flex-start;
 		padding: 0.15rem 0.35rem;
