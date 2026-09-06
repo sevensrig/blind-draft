@@ -1,18 +1,8 @@
 /**
- * Copies the game engine and content pools into `supabase/functions/_shared/vendor/`
- * with import specifiers rewritten to be fully explicit.
- *
- * Why this exists: the Supabase Edge Runtime resolves modules strictly. It will
- * not add a `.ts` extension, will not resolve a directory to `index.ts`, and does
- * not honour Deno's `sloppy-imports`. The app's own source uses extensionless
- * relative imports and the `$lib` alias, so importing it directly into a function
- * fails at boot with "Module not found" — which is proven, not theoretical.
- *
- * Rewriting the app's source instead was the alternative, but that would put
- * `.ts` extensions through every file in `src/lib` to satisfy a constraint that
- * belongs to one deploy target. Deriving a copy keeps the rulebook single-source:
- * `npm run test:unit` covers the original, and `vendor-engine.test.ts` fails if
- * this copy drifts from it.
+ * Copies the engine and content pools into `supabase/functions/_shared/vendor/`,
+ * rewriting import specifiers to be fully explicit — the Supabase Edge Runtime
+ * resolves strictly, so importing `src/lib` directly fails at boot. A copy
+ * rather than `.ts` extensions everywhere; `vendor.test.ts` catches drift.
  *
  * Run with: node scripts/vendor-engine.mjs
  */

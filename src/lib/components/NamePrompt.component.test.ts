@@ -5,11 +5,8 @@ import { expectNoViolations } from '$lib/testing/axe';
 import NamePrompt from './NamePrompt.svelte';
 
 /**
- * The join-a-room name prompt.
- *
- * Worth testing here rather than only end to end: both callers reach it from a
- * live server (an invite link, or the rooms browser), so the E2E suite can only
- * see it with two devices and Supabase up. In isolation it's just a form.
+ * The join-a-room name prompt. Tested here because both callers reach it from a
+ * live server, so E2E only sees it with two devices and Supabase up.
  */
 describe('NamePrompt', () => {
 	const props = {

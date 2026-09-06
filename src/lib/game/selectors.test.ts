@@ -42,10 +42,7 @@ function win(state: GameState, player: PlayerId, amount = 1): GameState {
 	return applyAction(next, { type: 'next' });
 }
 
-/**
- * Drives a game to the results screen. Handles whichever rule governs each item,
- * and is guarded so a rule change can't turn a bug into a hung test run.
- */
+/** To the results screen, guarded so a rule change can't hang the run. */
 function playToEnd(state: GameState, opener: PlayerId = 0): GameState {
 	let current = state;
 	for (let guard = 0; guard < 500 && current.phase !== 'results'; guard++) {

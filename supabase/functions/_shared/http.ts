@@ -14,9 +14,8 @@ export function json(body: unknown, status = 200): Response {
 }
 
 /**
- * Error shape the client can act on. `code` matters more than `message`:
- * `stale` in particular tells the client its view is behind and it should take
- * the state in the response rather than showing what the player just tried.
+ * `code` matters more than `message`: `stale` tells the client to take the state
+ * in the response rather than showing what the player just tried.
  */
 export type ErrorCode =
 	| 'bad_request'
@@ -41,8 +40,7 @@ export function fail(code: ErrorCode, message: string, extra: Record<string, unk
 
 /**
  * Best-effort caller identity for rate limiting. Behind Supabase's proxy the
- * real address is in x-forwarded-for; the device token is the fallback so a
- * caller without a resolvable IP is still bucketed somehow.
+ * real address is in x-forwarded-for; the token is the fallback.
  */
 export function actorOf(req: Request, token?: string | null): string {
 	const forwarded = req.headers.get('x-forwarded-for');

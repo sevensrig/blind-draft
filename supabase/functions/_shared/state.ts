@@ -2,17 +2,13 @@ import type { GameState } from './vendor/game/types.ts';
 import { currentItem } from './vendor/game/engine.ts';
 
 /**
- * Strips the authoritative state down to what a player is allowed to see.
+ * Strips the authoritative state down to what a player may see. `GameState`
+ * carries the whole shuffled deck and the game only works because nobody knows
+ * what's coming, so this is what lands in `game_public` — the only game table
+ * clients can read.
  *
- * This is the single most important function in the remote build. `GameState`
- * carries the whole shuffled deck, and the game only works because nobody knows
- * what is coming — so the deck never leaves the server. Everything a client
- * needs is derived here, and the result is what lands in `game_public`, which
- * is the only game table clients can read or subscribe to.
- *
- * The revealed item is included only once it has actually been turned over. In
- * the `reveal` phase the card is still face down, so sending it would hand the
- * answer to anyone with dev tools open.
+ * The item is included only once it has actually been turned over: in `reveal`
+ * the card is face down, so sending it hands the answer to anyone with dev tools.
  */
 export interface PublicGameState {
 	phase: GameState['phase'];
@@ -26,11 +22,8 @@ export interface PublicGameState {
 	itemNumber: number;
 	deckSize: number;
 	/**
-	 * How many seats are filled, 1 or 2.
-	 *
-	 * Can't be inferred from the state: a new game is seeded with a placeholder
-	 * name for player two, so "has a name" is true before anyone has joined. The
-	 * client needs the real occupancy to know whether to show a lobby.
+	 * Can't be inferred from the state: a new game seeds a placeholder name for
+	 * player two, so "has a name" is true before anyone joins.
 	 */
 	seatsTaken: number;
 	/** Null while the card is face down. */

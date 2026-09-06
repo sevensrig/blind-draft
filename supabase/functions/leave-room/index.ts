@@ -2,30 +2,16 @@ import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
 
 /**
- * Ends a room early, on purpose.
+ * Ends a room early. Two writes: `rooms.status = 'abandoned'`, which the trigger
+ * turns into a delete from `public_room_listings`, then
+ * `game_public.abandoned_by`, which is how the opponent finds out — clients have
+ * no grant on `rooms`.
  *
- * Leaving used to be entirely client-side — forget the seat, drop the channel —
- * so the room stayed `open`/`playing` forever, a public lobby stayed listed for
- * strangers to walk into, and the opponent was told nothing. Quitting has to be
- * a server fact for the same reason every other move is: the server owns the
- * room, so it is the only thing that can close it.
+ * The version is deliberately left alone: it mirrors `games.version` and
+ * quitting applies no game action, so bumping it would make the survivor's next
+ * move come back `stale`.
  *
- * Two writes, in this order:
- *
- * 1. `rooms.status = 'abandoned'`, which the existing trigger turns into a
- *    delete from `public_room_listings` — the room drops off the browser without
- *    this function knowing that table exists.
- * 2. `game_public.abandoned_by`, which is how the opponent finds out. Clients
- *    have no grant on `rooms`, so the fact has to travel through a projection,
- *    and writing that table fires the broadcast trigger that makes them re-fetch.
- *
- * The version is deliberately left alone. `game_public.version` mirrors
- * `games.version` and quitting applies no game action, so bumping one and not
- * the other would make the surviving player's next move come back `stale`.
- *
- * Idempotent, and a no-op on a room that already reached `finished`: pressing
- * "Leave room" on the results sheet is walking away from a game that ended
- * properly, not abandoning one, and must not rewrite it as a quit.
+ * Idempotent, and a no-op on a `finished` room.
  */
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -47,7 +33,7 @@ Deno.serve(async (req) => {
 		return fail('rate_limited', 'Slow down a moment.');
 	}
 
-	// Same authorisation story as every other endpoint: the token is the seat.
+	// Same as every other endpoint: the token is the seat.
 	const { data: player } = await db
 		.from('room_players')
 		.select('seat')
@@ -68,8 +54,7 @@ Deno.serve(async (req) => {
 		console.error('room lookup failed', loadError);
 		return fail('server_error', 'Could not leave that room');
 	}
-	// Already gone — cleanup may have reaped it. Nothing to close, and the caller
-	// only wants to know it is safe to walk away.
+	// Already gone — cleanup may have reaped it. Safe to walk away either way.
 	if (!room) return json({ ok: true, status: 'abandoned' });
 
 	// A game that ran to the end stays finished. Nobody abandoned it.
@@ -89,8 +74,8 @@ Deno.serve(async (req) => {
 		return fail('server_error', 'Could not leave that room');
 	}
 
-	// Best effort past this point: the room is already closed, which is the part
-	// that matters. A failure here costs the opponent a notification, not the fix.
+	// Best effort past here: the room is already closed, which is the part that
+	// matters. A failure costs the opponent a notification, not the fix.
 	const { error: notifyError } = await db
 		.from('game_public')
 		.update({ abandoned_by: seat, updated_at: now })

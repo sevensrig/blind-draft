@@ -1,16 +1,11 @@
 /**
- * Stand-in for `$env/dynamic/public` in component tests.
+ * Stand-in for `$env/dynamic/public` in component tests, aliased in
+ * `vitest.config.ts`. SvelteKit compiles that import to a global the
+ * server-rendered shell defines, which browser-mode vitest has no server for —
+ * so the real module throws on import and takes out every test reaching
+ * `SetupScreen`.
  *
- * SvelteKit compiles that import to `export const env = __sveltekit_<hash>.env`
- * in the browser, and the global is defined by the server-rendered shell. Vitest
- * browser mode has no SvelteKit server, so the global is undefined and the module
- * throws on import — which took out every test file that reaches `SetupScreen`,
- * including the whole component-level a11y suite. It surfaced when remote play
- * merged and `SetupScreen` started importing `remoteEnabled`.
- *
- * Deliberately empty, so `remoteEnabled` is false and components render their
- * local-only shape — the same thing those tests asserted before remote play
- * existed. The configured path is covered by the remote E2E specs, which run
- * against a real stack.
+ * Empty on purpose: `remoteEnabled` is false and components render their
+ * local-only shape. The configured path is covered by the remote E2E specs.
  */
 export const env: Record<string, string | undefined> = {};

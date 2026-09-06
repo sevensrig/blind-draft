@@ -29,10 +29,8 @@
 	const freebies = $derived(s.history.filter((award) => award.free).length);
 
 	/**
-	 * Same names, same settings, brand new blind order.
-	 *
-	 * A custom game carries its pool in the config, because the category registry
-	 * has no items for it — looking it up would rebuild from an empty list.
+	 * Same names and settings, brand new blind order. A custom game carries its
+	 * pool in the config; the registry has no items for it.
 	 */
 	function runItBack() {
 		const category = getCategory(s.config.categoryId);
@@ -302,8 +300,7 @@
 		gap: 0.5rem;
 	}
 
-	/* Two stats, two accents, so the footer reads as a pair rather than one
-	   highlighted box next to a blank one. */
+	/* Two accents, so the footer reads as a pair, not one highlighted box. */
 	.stat {
 		display: flex;
 		flex-direction: column;

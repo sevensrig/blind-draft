@@ -4,12 +4,9 @@ import { CORS, actorOf, fail, json } from '../_shared/http.ts';
 import { redact } from '../_shared/state.ts';
 
 /**
- * Takes the second seat in a room, by id or by code.
- *
- * Rejoining is the common case, not an edge case: a refresh, a locked phone or
- * a dropped connection all come back through here. A device presenting a token
- * that already holds a seat gets that seat back rather than being told the room
- * is full.
+ * Takes the second seat, by id or by code. Rejoining is the common case, not an
+ * edge case: a token that already holds a seat gets it back rather than being
+ * told the room is full.
  */
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -48,7 +45,7 @@ Deno.serve(async (req) => {
 		return fail('not_found', 'That game has already finished');
 	}
 
-	// Already in this room? Hand back the same seat. This is what makes a
+	// Already in this room? Hand back the same seat — this is what makes a
 	// refresh mid-game recover instead of hitting "room full".
 	const { data: existing } = await db
 		.from('room_players')
@@ -68,9 +65,8 @@ Deno.serve(async (req) => {
 
 	const name = String(body.name ?? '').slice(0, 14).trim() || 'Player 2';
 
-	// The unique (room_id, seat) constraint is what actually settles a race
-	// between two devices joining at once — one insert wins, the other gets
-	// 23505 and is told the room is full.
+	// The unique (room_id, seat) constraint settles a race between two devices
+	// joining at once: one insert wins, the other gets 23505.
 	const { error: seatError } = await db
 		.from('room_players')
 		.insert({ room_id: room.id, seat: 1, name, token });
@@ -81,8 +77,7 @@ Deno.serve(async (req) => {
 		return fail('server_error', 'Could not join that room');
 	}
 
-	// Second seat taken: the game is on, and the room drops off the public list
-	// via the trigger on `status`.
+	// Second seat taken, so the trigger on `status` drops the public listing.
 	const { data: game } = await db
 		.from('games')
 		.select('state, version')
@@ -93,7 +88,7 @@ Deno.serve(async (req) => {
 		const state = game.state as GameState;
 		state.players[1].name = name;
 		await db.from('games').update({ state }).eq('room_id', room.id);
-		// Redaction happens here, in TypeScript, because it depends on the engine.
+		// Redaction runs here, in TypeScript, because it depends on the engine.
 		await db
 			.from('game_public')
 			.update({ payload: redact(state, 2), updated_at: new Date().toISOString() })

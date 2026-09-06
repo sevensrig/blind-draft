@@ -16,16 +16,12 @@ import ResultsScreen from './ResultsScreen.svelte';
 import SetupScreen from './SetupScreen.svelte';
 
 /**
- * Component-level accessibility scans.
+ * Component-level accessibility scans, in isolation — so a violation points at
+ * the component that owns it. The Playwright suite covers the same screens
+ * assembled, where document-level rules apply.
  *
- * These run axe against each component in isolation, so a violation points at
- * the component that owns it instead of surfacing only once a whole route is
- * assembled. The Playwright suite covers the same screens as full pages, where
- * document-level rules (landmarks, headings, page title) actually apply.
- *
- * Contrast states get their own cases on purpose: this palette is high-contrast
- * black-on-colour by design, but the disabled and inverted variants are exactly
- * where that can quietly break.
+ * Contrast states get their own cases: the palette is black-on-colour by design,
+ * and the disabled and inverted variants are where that quietly breaks.
  */
 describe('accessibility', () => {
 	beforeEach(() => {
@@ -61,11 +57,8 @@ describe('accessibility', () => {
 		await expectNoViolations();
 	});
 
-	/*
-	 * The disabled/inverted button states are the ones worth scanning: a standing
-	 * bid disables the holder's button and inverts it to black-on-cream, which is a
-	 * classic spot for a contrast regression to hide.
-	 */
+	// A standing bid disables the holder's button and inverts it to
+	// black-on-cream, which is where a contrast regression hides.
 	it('bidding controls are clean with a standing bid and a disabled holder', async () => {
 		game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 4));
 		render(BidScreen);

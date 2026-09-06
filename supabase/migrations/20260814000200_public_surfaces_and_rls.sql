@@ -1,20 +1,14 @@
--- Security model.
+-- Security model. No auth, so every client holds the anon key and RLS is all
+-- that stands between a curious player and the deck. Two ideas do the work:
 --
--- There is no auth, so every client holds the anon key and RLS is the only thing
--- standing between a curious player and the deck. Two ideas do the work:
+-- 1. Clients never read the authoritative tables. `rooms`, `room_players` and
+--    `games` are closed to anon outright; what clients may see is copied into
+--    projections that cannot contain a secret because the columns don't exist.
+-- 2. Identity is a per-device token in the `x-player-token` header, checked
+--    against `room_players`.
 --
--- 1. Clients never read the authoritative tables at all. `rooms`, `room_players`
---    and `games` are closed to the anon role outright. What clients may see is
---    copied into dedicated projection tables that physically cannot contain a
---    secret, because the columns don't exist. Getting a policy subtly wrong then
---    leaks nothing, and Realtime — which broadcasts whole rows — has nothing
---    sensitive to broadcast.
---
--- 2. Identity is a per-device token presented in the `x-player-token` header.
---    Policies check it against `room_players`.
---
--- All writes go through Edge Functions using the service role, which bypasses
--- RLS. Nothing below grants a client any write.
+-- Every write goes through an Edge Function under the service role. Nothing
+-- below grants a client any write.
 
 -- ---------------------------------------------------------------------------
 -- Identity helper
@@ -34,12 +28,10 @@ comment on function request_player_token is
 /*
  * Does the calling device hold a seat in this room?
  *
- * SECURITY DEFINER is load-bearing, not decoration. An RLS policy is evaluated as
- * the calling role, and `anon` deliberately has no grant on `room_players` — so a
- * policy that reads that table inline fails with "permission denied" for
- * everyone, legitimate players included. Running the lookup as the owner fixes
- * that without widening what a client can read: this returns a boolean and never
- * exposes a token.
+ * SECURITY DEFINER is load-bearing. A policy is evaluated as the calling role,
+ * and `anon` has no grant on `room_players`, so reading it inline fails with
+ * "permission denied" for everyone. Running as the owner returns a boolean and
+ * never exposes a token, so nothing widens.
  */
 create or replace function player_holds_seat(p_room_id uuid)
 returns boolean
@@ -62,10 +54,9 @@ comment on function player_holds_seat is
 -- ---------------------------------------------------------------------------
 -- Projection 1: the public rooms browser
 --
--- Deliberately holds only what the spec allows on screen — category, budget,
--- roster size. No code, no player names, no state. A row exists only while the
--- room is public AND open, so a room drops off the list the moment it fills or
--- starts, without the client needing to filter.
+-- Category, budget, roster size. No code, no names, no state. A row exists only
+-- while the room is public AND open, so it drops off the list the moment the
+-- room fills or starts and the client never has to filter.
 -- ---------------------------------------------------------------------------
 
 create table public_room_listings (
@@ -106,9 +97,8 @@ create trigger rooms_sync_public_listing
 -- ---------------------------------------------------------------------------
 -- Projection 2: the redacted game state
 --
--- `games.state` holds the shuffled deck. This table holds what the two players
--- are allowed to see: the revealed item, the standing bid, both rosters and
--- wallets. The Edge Function writes both in one transaction.
+-- `games.state` holds the shuffled deck; this holds what the players may see —
+-- the revealed item, the standing bid, both rosters and wallets.
 -- ---------------------------------------------------------------------------
 
 create table game_public (
@@ -121,12 +111,8 @@ create table game_public (
 );
 
 -- ---------------------------------------------------------------------------
--- Rate limiting (Postgres, deliberately not Redis)
---
--- Public unauthenticated endpoints can be spammed. Redis would be real
--- infrastructure for a two-player party game, and Postgres already answers the
--- only question being asked: "has this caller done this too many times just
--- now?" Written and read by Edge Functions under the service role.
+-- Rate limiting, in Postgres rather than Redis: the only question is "has this
+-- caller done this too often just now?" Written by the Edge Functions.
 -- ---------------------------------------------------------------------------
 
 create table request_log (
@@ -150,9 +136,8 @@ alter table public_room_listings enable row level security;
 alter table game_public enable row level security;
 alter table request_log enable row level security;
 
--- No policies on rooms, room_players, games or request_log. RLS with zero
--- policies denies everything, which is exactly right: only the service role
--- (which bypasses RLS) touches them. This is intentional, not an omission.
+-- No policies on rooms, room_players, games or request_log. Zero policies deny
+-- everything, which is right — only the service role touches them. Intentional.
 
 -- The rooms browser is open to everyone; the table has nothing worth hiding.
 create policy "anyone may browse open public rooms"
@@ -160,41 +145,31 @@ create policy "anyone may browse open public rooms"
 	to anon, authenticated
 	using (true);
 
--- Redacted game state is readable only by a device holding a token for that
--- room, so a passer-by with a room id still sees nothing.
+-- Readable only by a device holding a token for that room, so a passer-by with
+-- a room id still sees nothing.
 create policy "players read their own room's state"
 	on game_public for select
 	to anon, authenticated
 	using (player_holds_seat(game_public.room_id));
 
 -- ---------------------------------------------------------------------------
--- Grants
---
--- Belt and braces alongside RLS: the anon role has no table privileges on the
--- authoritative tables at all, so a future policy mistake still can't expose
--- them.
+-- Grants — belt and braces alongside RLS, so a future policy mistake still
+-- can't expose the authoritative tables.
 -- ---------------------------------------------------------------------------
 
--- The authoritative tables: nothing at all.
 revoke all on rooms, room_players, games, request_log from anon, authenticated;
 
--- The projections: revoke first, then grant back only SELECT.
---
--- Supabase's default privileges hand `anon` full rights on new tables in public,
--- which includes TRUNCATE — and TRUNCATE ignores RLS completely, so the read
+-- Revoke before granting. Supabase's defaults hand `anon` full rights on new
+-- public tables, including TRUNCATE — which ignores RLS entirely, so the read
 -- policies above would not have stopped a client emptying the rooms browser.
--- Granting SELECT without revoking first leaves that in place.
 revoke all on public_room_listings, game_public from anon, authenticated;
 grant select on public_room_listings to anon, authenticated;
 grant select on game_public to anon, authenticated;
 grant execute on function player_holds_seat(uuid) to anon, authenticated;
 
--- The Edge Functions run as `service_role` and own every write in the system, so
--- they need this spelled out. Supabase's default privileges did not reach tables
--- created by these migrations — without these grants every endpoint fails with
--- "permission denied for table rooms", which is how this was found. Being
--- explicit also means the hosted project can't behave differently from local
--- because its defaults happen to be configured another way.
+-- Spelled out because Supabase's defaults did not reach tables created by these
+-- migrations: without them every endpoint fails with "permission denied for
+-- table rooms". Explicit also means hosted can't differ from local.
 grant select, insert, update, delete
 	on rooms, room_players, games, game_public, public_room_listings, request_log
 	to service_role;

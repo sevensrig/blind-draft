@@ -6,11 +6,8 @@ import { CORS, actorOf, fail, json } from '../_shared/http.ts';
 import { redact } from '../_shared/state.ts';
 
 /**
- * Creates a room and builds its deck server-side.
- *
- * The deck is built here rather than on the creator's device precisely because
- * the creator is also a player — building it client-side would hand them the
- * whole sequence, which is the one thing this game cannot survive.
+ * Creates a room and builds its deck server-side — the creator is also a player,
+ * so building it on their device would hand them the whole sequence.
  */
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -28,19 +25,10 @@ Deno.serve(async (req) => {
 	const db = serviceClient();
 
 	/*
-	 * Rooms are the cheapest thing to spam and the most expensive to absorb —
-	 * each one is a row plus a stored deck — so this stays the tightest limit in
-	 * the system. It was 5/minute, which turned out to be too tight for two
-	 * honest reasons:
-	 *
-	 * - `actorOf` buckets by IP, so everyone behind one NAT shares the budget.
-	 *   Two friends on the same WiFi, or a classroom, burn it between them.
-	 * - Now that quitting actually closes a room, create → quit → create is a
-	 *   normal thing to do rather than a dead end. Fumbling with the category and
-	 *   budget pickers reaches five rooms quickly.
-	 *
-	 * Matched to `join_room` at 20/minute. Still low enough that a real flood is
-	 * refused; high enough that ordinary play never sees it.
+	 * The tightest limit in the system — a room is a row plus a stored deck. Not
+	 * tighter than this, though: `actorOf` buckets by IP, so everyone behind one
+	 * NAT shares the budget, and create → quit → create is normal play. Matched
+	 * to `join_room` at 20/minute.
 	 */
 	if (!(await withinRateLimit(db, actorOf(req, token), 'create_room', 20, 60))) {
 		return fail('rate_limited', 'Too many rooms just now. Wait a minute and try again.');
@@ -48,8 +36,7 @@ Deno.serve(async (req) => {
 
 	const category = getCategory(String(body.categoryId ?? ''));
 	if (!category) return fail('bad_request', 'Unknown category');
-	// Custom categories are local-only: the pool lives on one device, so there is
-	// nothing here for the server to build a deck from.
+	// Custom categories are local-only: the pool lives on one device.
 	if (category.custom) return fail('bad_request', 'Custom categories are local play only');
 
 	const variant = getVariant(category, String(body.variantId ?? ''));
@@ -89,8 +76,8 @@ Deno.serve(async (req) => {
 		config
 	});
 
-	// Codes only need to be unique among joinable rooms, so a few retries against
-	// the partial unique index is plenty.
+	// Unique only among joinable rooms, so a few retries against the partial
+	// unique index is plenty.
 	for (let attempt = 0; attempt < 5; attempt++) {
 		const { data: code } = await db.rpc('generate_room_code');
 		const { data: room, error } = await db

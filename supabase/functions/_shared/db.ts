@@ -1,9 +1,8 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 /**
- * Service-role client. RLS is closed to everyone else by design — see the
- * policies migration — so every write in these functions runs here, and every
- * one of them is responsible for its own authorisation check.
+ * Service-role client. RLS is closed to everyone else, so every write runs here
+ * — and each caller is responsible for its own authorisation check.
  */
 export function serviceClient(): SupabaseClient {
 	const url = Deno.env.get('SUPABASE_URL');
@@ -13,11 +12,8 @@ export function serviceClient(): SupabaseClient {
 }
 
 /**
- * Records the attempt and reports whether it's allowed.
- *
- * Postgres rather than Redis on purpose: the only question is "has this caller
- * done this too often just now", which a small indexed table answers fine at
- * two-player-party-game scale. Revisit if this ever sees real traffic.
+ * Records the attempt and reports whether it's allowed. Postgres rather than
+ * Redis: a small indexed table answers this fine at party-game scale.
  */
 export async function withinRateLimit(
 	db: SupabaseClient,

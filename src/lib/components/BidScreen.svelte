@@ -21,25 +21,18 @@
 	import type { Action, GameState, PlayerId } from '$lib/game/types';
 
 	interface Props {
-		/**
-		 * Omitted for local play, where the in-memory store is the truth. Remote
-		 * play passes the server's state so both modes share this screen rather
-		 * than growing a second copy of it.
-		 */
+		/** Omitted for local play, where the store is the truth. Remote play passes
+		 * the server's state, so both modes share this screen. */
 		view?: GameState;
 		/** Where actions go. Defaults to applying them locally. */
 		dispatch?: (action: Action) => void;
 		/** The seat this device controls, or null when one device drives both. */
 		seat?: 0 | 1 | null;
 		/**
-		 * What quitting means here.
-		 *
-		 * Locally it means `reset` — drop back to the setup screen, which is the
-		 * default below. Remotely it cannot: `reset` is a legal engine action, so
-		 * sending it through the remote transport wrote `initialState()` to the
-		 * server as the authoritative state. That left the quitter on the same page
-		 * staring at an empty deck, and silently wiped the opponent's live game with
-		 * them. Remote play passes a handler that closes the room and navigates out.
+		 * Locally quitting means `reset`, the default below. Remotely it cannot:
+		 * `reset` is a legal engine action, so it wrote `initialState()` to the
+		 * server and wiped the opponent's live game too. Remote play passes a
+		 * handler that closes the room and navigates out.
 		 */
 		onQuit?: () => void;
 	}
@@ -47,12 +40,8 @@
 	let { view, dispatch, seat = null, onQuit }: Props = $props();
 
 	const s = $derived(view ?? game.state);
-	/*
-	 * Wrapped rather than passed by reference: `game.dispatch` is a class method
-	 * and loses its receiver when detached. The prop is named `view`, not `state`,
-	 * because a local binding called `state` shadows the `$state` rune and breaks
-	 * every `$state(...)` below it.
-	 */
+	// Wrapped, not passed by reference: `game.dispatch` loses its receiver when
+	// detached. And the prop is `view`, not `state` — that name shadows the rune.
 	const send = (action: Action) => (dispatch ? dispatch(action) : game.dispatch(action));
 
 	/** In remote play a device may only act for its own seat. */
@@ -63,10 +52,7 @@
 	const award = $derived(s.phase === 'award' ? s.lastAward : null);
 	const lastItem = $derived(s.index + 1 >= s.deck.length);
 
-	/**
-	 * Slots the winner can still choose from. Any player fits any slot, so this is
-	 * just "not already taken" — a centre can start at point guard.
-	 */
+	/** Any player fits any slot, so this is just "not already taken". */
 	const assignable = $derived.by(() => {
 		if (!award || !s.config.positional) return [];
 		const taken = new Set(
@@ -106,10 +92,8 @@
 	}
 
 	/**
-	 * Who gets to end the bidding. Whoever isn't holding the bid — accepting it is
-	 * giving up, so it can't be the leader's call. With no bid on the table there
-	 * is nothing to concede and the button is dead anyway, so seat 0 is a
-	 * placeholder the reducer would reject regardless.
+	 * Whoever isn't holding the bid — accepting it is giving up, so it can't be the
+	 * leader's call. With no bid the button is dead, so seat 0 is a placeholder.
 	 */
 	const conceder = $derived(s.bid ? other(s.bid.holder) : 0);
 	/** True when this device is the one that has to let the item go. */
@@ -419,7 +403,7 @@
 
 	.item {
 		display: flex;
-		/* Grows into whatever the controls don't use, so the card carries the screen. */
+		/* Grows into whatever the controls don't use. */
 		flex: 1;
 		flex-direction: column;
 		align-items: center;
@@ -445,8 +429,7 @@
 		box-shadow: none;
 	}
 
-	/* The card is a full-bleed tap target, so the mark scales up to fill it
-	   rather than floating in dead violet. */
+	/* Full-bleed tap target, so the mark scales up rather than floating. */
 	.back__mark {
 		font-size: clamp(4rem, 34vw, 10rem);
 		font-weight: 900;
@@ -466,8 +449,7 @@
 		animation: slam-card 90ms linear;
 	}
 
-	/* Steps back so the sold stamp owns the screen, but still absorbs the slack
-	   above it rather than leaving a hole. */
+	/* Steps back so the sold stamp owns the screen, without leaving a hole. */
 	.item--won {
 		min-height: 7.5rem;
 		box-shadow: var(--shadow-sm);
@@ -507,8 +489,8 @@
 
 	/* ---------- controls ---------- */
 
-	/* `auto` is a no-op while the card is flex:1, and pins the controls to the
-	   bottom once the card steps back during the award. */
+	/* `auto` is a no-op while the card is flex:1, and pins the controls down
+	   once the card steps back during the award. */
 	.resolve {
 		display: flex;
 		flex-direction: column;
@@ -559,24 +541,14 @@
 		font-size: 0.92rem;
 	}
 
-	/*
-	 * The player holding the bid can't raise themselves, so the button is
-	 * disabled — but they're winning, not unavailable. Invert it instead of
-	 * letting the washed-out disabled style imply something is wrong.
-	 */
+	/* Disabled because they're winning, not because anything is wrong — so it
+	   inverts rather than washing out. Same for `.sold--waiting` below. */
 	.duel__btn--holding:disabled {
 		background: var(--ink);
 		color: var(--cream);
 		opacity: 1;
 	}
 
-	/*
-	 * Waiting on the opponent is not a broken control — this device is holding the
-	 * winning bid and the message is the whole point. Same reasoning as
-	 * `.duel__btn--holding` above: the washed-out disabled face would read as
-	 * something having gone wrong, and it's the one line telling the leader why
-	 * the item hasn't landed yet.
-	 */
 	.sold--waiting:disabled {
 		background: var(--white);
 		opacity: 1;
@@ -679,8 +651,7 @@
 		text-transform: uppercase;
 	}
 
-	/* Mechanical, linear — no eased overshoot. Each keeps its own tilt so the
-	   animation can't drop the rotation mid-flight. */
+	/* Each keeps its own tilt, so the animation can't drop the rotation. */
 	@keyframes slam-card {
 		from {
 			transform: rotate(1deg) scale(1.07);

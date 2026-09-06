@@ -1,12 +1,8 @@
 import type { GameState } from '$lib/game/types';
 
 /**
- * What the server is willing to tell a client about a game.
- *
- * Mirrors `redact()` in `supabase/functions/_shared/state.ts`. The absence of a
- * `deck` field here is the whole point: the shuffled order stays on the server,
- * so `item` is the only card a client ever knows about, and only once it has
- * been turned over.
+ * Mirrors `redact()` in `supabase/functions/_shared/state.ts`. The missing `deck`
+ * field is the point: `item` is the only card a client ever knows about.
  */
 export interface PublicGameState {
 	phase: GameState['phase'];

@@ -1,12 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * E2E runs against the built app rather than the dev server, deliberately.
- *
- * The nastiest bug this project has had was a hydration crash that only showed up
- * in the built output: the prerendered HTML rendered fine and every control was
- * dead. `vite dev` would not have caught it. Testing `build` + `preview` means
- * these journeys exercise the same code path a deployed visitor gets.
+ * E2E runs against `build` + `preview`, never `vite dev`. The nastiest bug this
+ * project has had was a hydration crash visible only in built output: the HTML
+ * rendered fine and every control was dead.
  */
 export default defineConfig({
 	testDir: 'e2e',

@@ -9,25 +9,17 @@
 	import { SITE_NAME } from '$lib/site';
 
 	/**
-	 * Live list of open public rooms.
-	 *
-	 * Reads `public_room_listings`, which holds only category, budget and roster
-	 * size — no codes, no player names, no state. Rooms leave the table the moment
-	 * they fill or start, so "open" needs no filtering here, and private rooms were
-	 * never in it.
+	 * Live list of open public rooms. `public_room_listings` holds only category,
+	 * budget and roster size, and rooms leave it the moment they fill or start —
+	 * so "open" needs no filtering here.
 	 */
 	let rooms = $state<RoomListing[]>([]);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let joining = $state<string | null>(null);
-	/*
-	 * The room a nameless player tapped, held while they're asked who they are.
-	 *
-	 * `/online` has the only name field, one page back, and it's easy to walk
-	 * straight past it on the way here — at which point the server's fallback
-	 * named the joiner "Player 2" for the whole draft, with nothing to edit it
-	 * after. Same fix as an invite link, same prompt.
-	 */
+	// The room a nameless player tapped, held while they're asked who they are.
+	// `/online` has the only name field and it's easy to walk past on the way
+	// here, at which point the server named the joiner "Player 2".
 	let pending = $state<RoomListing | null>(null);
 	let name = $state('');
 
@@ -105,9 +97,8 @@
 			const { roomId } = await room.join({ roomId: listing.room_id, name: playerName });
 			await goto(`/online/room?id=${roomId}`);
 		} catch (failure) {
-			// Losing a race for the last seat is ordinary, not an error state. The
-			// prompt stays up on a failure with the name still typed, so a lost race
-			// costs a tap rather than the whole flow.
+			// Losing a race for the last seat is ordinary. The prompt stays up with
+			// the name still typed, so it costs a tap rather than the whole flow.
 			error =
 				failure instanceof RemoteError && failure.code === 'room_full'
 					? 'Someone took that seat first.'
@@ -159,9 +150,8 @@
 		{:else}
 			<ul class="list">
 				{#each rooms as listing (listing.room_id)}
-					<!-- Test hook, same idea as `data-hydrated`: the visible row shows
-					     only category and budget, so a spec asserting that one specific
-					     room dropped off the list has nothing else to grab. -->
+					<!-- Test hook: the visible row shows only category and budget, so a
+					     spec watching one room drop off has nothing else to grab. -->
 					<li data-room-id={listing.room_id}>
 						<button
 							class="row"

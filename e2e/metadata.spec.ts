@@ -1,10 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Metadata is uniquely prone to silent rot: nothing on screen breaks when an OG
- * tag disappears or a canonical points at the wrong host, and the cost only
- * shows up as a dead link preview months later. These run against the built
- * output, so they check what a crawler or a link unfurler actually receives.
+ * Metadata rots silently — nothing on screen breaks when an OG tag disappears,
+ * and the cost shows up as a dead link preview months later. These run against
+ * the built output, so they check what a crawler actually receives.
  */
 
 const ORIGIN = 'https://blind-draft.vercel.app';
@@ -15,8 +14,7 @@ test('serves the social card and canonical metadata', async ({ page }) => {
 	const content = async (selector: string) =>
 		await page.locator(selector).first().getAttribute('content');
 
-	// "$20 budget draft" is the phrase people search for, so it's what the title
-	// and description lead with. The "Blind Draft" wordmark stays on screen only.
+	// "$20 budget draft" is the searched phrase, so the title leads with it.
 	await expect(page).toHaveTitle(/Budget Draft/);
 	expect(await content('meta[name="description"]')).toMatch(/two-player party game/i);
 	expect(await content('meta[name="description"]')).toMatch(/budget/i);
@@ -53,8 +51,7 @@ test('exposes valid structured data for answer engines', async ({ page }) => {
 
 	const schema = JSON.parse(raw ?? '{}');
 	expect(schema['@type']).toBe('VideoGame');
-	// Both names, so the searched-for one and the screenshotted one resolve to a
-	// single entity rather than two competing ones.
+	// Both names, so the searched one and the screenshotted one are one entity.
 	expect(schema.name).toBe('$20 Budget Draft');
 	expect(schema.alternateName).toBe('$20 Blind Draft');
 	expect(schema.url).toBe(ORIGIN);
@@ -78,8 +75,8 @@ test('robots and sitemap agree on the origin and block nothing', async ({ reques
 });
 
 test('the page ships real text for crawlers that do not run javascript', async ({ request }) => {
-	// Prerendered, so the shell alone must carry content. This is the property
-	// that makes the app legible to AI crawlers at all.
+	// Prerendered, so the shell alone must carry content — that's what makes the
+	// app legible to a crawler at all.
 	const html = await (await request.get('/')).text();
 	const text = html
 		.replace(/<script[\s\S]*?<\/script>/g, '')
@@ -87,9 +84,8 @@ test('the page ships real text for crawlers that do not run javascript', async (
 		.replace(/<[^>]+>/g, ' ')
 		.replace(/\s+/g, ' ');
 
-	// Both names have to survive into the static HTML: the wordmark because it's
-	// what a player sees, and the search phrase because a crawler needs the two
-	// on one page to connect them.
+	// Both names have to survive into the static HTML, so a crawler can connect
+	// what a player sees with what they'd search for.
 	expect(text).toContain('Blind Draft');
 	expect(text).toMatch(/budget draft/i);
 	expect(text).toMatch(/free two-player party game/i);
@@ -102,9 +98,8 @@ test('the page ships real text for crawlers that do not run javascript', async (
 test('serves the tab icon in every form the browsers ask for', async ({ page, request }) => {
 	await page.goto('/');
 
-	// The Svelte template's logo used to live here; make sure it stays gone.
-	// Read as pathnames: the DOM resolves link hrefs against the origin, and the
-	// path is the part worth pinning anyway.
+	// The Svelte template's logo used to live here; make sure it stays gone. Read
+	// as pathnames, since the DOM resolves hrefs against the origin.
 	const paths = await page
 		.locator('link[rel="icon"], link[rel="apple-touch-icon"]')
 		.evaluateAll((links) =>

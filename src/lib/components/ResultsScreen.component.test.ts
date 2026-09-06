@@ -21,9 +21,8 @@ describe('ResultsScreen', () => {
 		await expect.element(page.getByRole('heading', { name: 'Sri' })).toBeVisible();
 		await expect.element(page.getByRole('heading', { name: 'Alex' })).toBeVisible();
 
-		// Every drafted item appears somewhere on the sheet. Scoped with `.first()`
-		// because a name can legitimately show twice — once in the roster list and
-		// again in the "Top price" stat.
+		// `.first()` because a name can legitimately show twice: once in the roster
+		// list and again in the "Top price" stat.
 		for (const player of finished.players) {
 			for (const entry of player.roster) {
 				await expect

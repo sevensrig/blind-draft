@@ -1,13 +1,8 @@
 /**
- * Renders PNG fallbacks from `static/favicon.svg`.
- *
- * SVG favicons cover current desktop browsers, but not everything reads them —
- * and iOS ignores them entirely for "Add to Home Screen", which matters here
- * because the whole game is designed to be played on a phone. So the same mark
- * gets rasterised at the two sizes that actually get used.
- *
- * Rendered with the Playwright browser that's already a devDependency, so the
- * PNGs come from the same file as the SVG and can't drift from it.
+ * Renders PNG fallbacks from `static/favicon.svg`. iOS ignores SVG favicons for
+ * "Add to Home Screen", which matters for a phone-first game. Rendered with the
+ * Playwright browser that's already a devDependency, so the PNGs can't drift
+ * from the SVG.
  *
  * Run with: node scripts/generate-icons.mjs
  */

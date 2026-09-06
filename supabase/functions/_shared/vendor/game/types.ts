@@ -8,7 +8,7 @@ export type PlayerId = 0 | 1;
 export interface RosterEntry {
 	item: Item;
 	price: number;
-	/** Awarded without money changing hands (fallback rules 7, 8, or a full roster). */
+	/** Awarded without money changing hands (rules 7, 8, or a full roster). */
 	free: boolean;
 	/** Which `config.roster` slot this filled. */
 	slotId: string;
@@ -25,10 +25,7 @@ export interface GameConfig {
 	budget: number;
 	/** Always equals `roster.length`; kept for readouts. */
 	slots: number;
-	/**
-	 * The slot template both players fill. Positional categories supply their
-	 * own; the rest get generated open slots, so there is only one code path.
-	 */
+	/** Positional categories supply their own; the rest get generated open slots. */
 	roster: SlotSpec[];
 	/** True when slots are position-gated, which locks the roster size. */
 	positional: boolean;
@@ -38,24 +35,19 @@ export interface GameConfig {
 	categoryLabel: string;
 	/** Null when the category has no sub-modes. */
 	variantLabel: string | null;
-	/**
-	 * The player-typed pool, present only for the custom category. Carried in the
-	 * config so a saved game and "run it back" don't depend on the setup form
-	 * still holding the list.
-	 */
+	/** The player-typed pool, so a saved game doesn't depend on the setup form. */
 	customItems?: Item[];
 }
 
 export type Phase = 'setup' | 'reveal' | 'resolve' | 'award' | 'results';
 
 /**
- * How the current item has to be resolved. Always derived from state via
- * `itemMode()` — never stored, so it can't drift out of sync.
+ * Derived via `itemMode()`, never stored, so it can't drift.
  *
- * - `contest`   both solvent and both need slots: free-for-all bidding, no turn order
- * - `solo`      one player is at $0: the solvent one names a price or passes
+ * - `contest`   both solvent, both need slots: free-for-all bidding
+ * - `solo`      one player at $0: the solvent one names a price or passes
  * - `alternate` both at $0: awarded free, strictly alternating
- * - `forced`    one roster is already full: the other player takes the rest free
+ * - `forced`    one roster full: the other takes the rest free
  */
 export type ItemMode = 'contest' | 'solo' | 'alternate' | 'forced';
 
@@ -92,23 +84,15 @@ export interface GameState {
 	history: Award[];
 }
 
-/**
- * Every mutation the game supports. Actions are plain serialisable data on
- * purpose: Tier 2 can ship these over a Supabase channel unchanged.
- */
+/** Plain serialisable data on purpose: these ship over the wire unchanged. */
 export type Action =
 	| { type: 'start'; config: GameConfig; names: [string, string]; deck: Item[] }
 	| { type: 'reveal' }
 	/** Opens the bidding, or raises a standing bid. */
 	| { type: 'bid'; player: PlayerId; amount: number }
 	/**
-	 * Nobody raises — the standing bid wins.
-	 *
-	 * `player` is whoever is giving up, not whoever wins: the standing bidder
-	 * can't declare their own bid sold. Locally one device drives both seats, so
-	 * the screen sends the non-holder and any pair of hands can tap it. Remotely
-	 * the server checks `player` against the caller's seat like every other
-	 * action that names one, which is what makes conceding the opponent's call.
+	 * Nobody raises — the standing bid wins. `player` is whoever is giving up, not
+	 * whoever wins: the holder can't declare their own bid sold.
 	 */
 	| { type: 'sold'; player: PlayerId }
 	/** `solo` mode: the solvent player names a price and takes it. */
@@ -117,7 +101,7 @@ export type Action =
 	| { type: 'decline'; player: PlayerId }
 	/** `alternate` / `forced` mode: confirm the free award. */
 	| { type: 'claim' }
-	/** Move the just-won item into a different open slot (e.g. Shaq at PG). */
+	/** Move the just-won item into a different open slot. */
 	| { type: 'assign'; slotId: string }
 	/** Leave the award celebration and reveal the next item (or finish). */
 	| { type: 'next' }

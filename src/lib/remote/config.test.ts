@@ -3,15 +3,12 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Guards a build failure that reached Vercel.
+ * Guards a build failure that reached Vercel: `$env/static/public` compiles each
+ * variable into a named export, so an unset one kills the whole deploy rather
+ * than letting remote play switch itself off.
  *
- * `$env/static/public` compiles each variable into a named export, so building
- * without one set fails with "not exported" — the whole deploy dies rather than
- * remote play quietly switching off. `$env/dynamic/public` returns an object, so
- * a missing key is just undefined and `remoteEnabled` can do its job.
- *
- * This is a source check rather than a behavioural one on purpose: the failure
- * happens at build time, so by the time a test could run the damage is done.
+ * A source check on purpose — the failure happens at build time, so by the time
+ * a behavioural test could run the damage is done.
  */
 describe('remote configuration', () => {
 	const source = readFileSync(join(process.cwd(), 'src/lib/remote/client.ts'), 'utf8');

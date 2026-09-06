@@ -1,16 +1,11 @@
 import type { GameConfig, GameState, Player } from './types';
 
 /**
- * Survives an accidental refresh mid-game, which matters when the whole game
- * lives on one phone. Deliberately dumb: one key, whole-state snapshot.
+ * Survives a refresh mid-game. Deliberately dumb: one key, whole-state snapshot.
  *
- * The key is versioned, and `looksLikeGameState` validates the shape properly.
- * Both matter: a snapshot written by an older build once got restored into a
- * newer one, whose components then read fields that didn't exist yet. That threw
- * during hydration, which left the prerendered HTML on screen with no event
- * handlers attached — the page looked fine but nothing was clickable. A stale
- * save must never be able to do that, so anything we can't fully vouch for is
- * dropped.
+ * Bump the key if the state shape changes. A save from an older build once threw
+ * during hydration, leaving prerendered HTML on screen with dead handlers — hence
+ * the versioned key and the real shape check below. Anything unvouched is dropped.
  */
 const KEY = 'blind-draft:state:v2';
 /** Older keys, cleared on load so they don't linger. */
@@ -52,7 +47,7 @@ export function saveState(state: GameState): void {
 	try {
 		localStorage.setItem(KEY, JSON.stringify(state));
 	} catch {
-		// Private mode or a full quota: the game still plays, it just won't resume.
+		// Private mode or full quota: the game plays, it just won't resume.
 	}
 }
 
@@ -82,17 +77,15 @@ export function clearState(): void {
 /* ------------------------------------------------------------------ *
  * The custom category's typed list
  *
- * Kept under its own key and outside the game snapshot. Someone who has just
- * typed twenty items should not lose them to a refresh, a finished game, or a
- * schema bump on the save format — none of which have anything to do with the
- * list itself.
+ * Its own key, outside the game snapshot: a typed list shouldn't be lost to a
+ * finished game or a schema bump on the save format.
  * ------------------------------------------------------------------ */
 
 const CUSTOM_KEY = 'blind-draft:custom:v1';
 
 export interface CustomDraft {
 	name: string;
-	/** Raw textarea contents, one item per line, kept verbatim so the caret behaves. */
+	/** Raw textarea contents, kept verbatim so the caret behaves. */
 	text: string;
 }
 
@@ -100,7 +93,7 @@ export function saveCustomDraft(draft: CustomDraft): void {
 	try {
 		localStorage.setItem(CUSTOM_KEY, JSON.stringify(draft));
 	} catch {
-		// See saveState — losing the convenience is fine, breaking play is not.
+		// See saveState.
 	}
 }
 

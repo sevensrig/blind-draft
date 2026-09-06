@@ -13,11 +13,9 @@ import {
 import type { GameState, Player, PlayerId } from '$lib/game/types';
 
 /**
- * Game states for component and a11y tests.
- *
- * Everything is built by running real actions through the reducer, so a fixture
- * can never describe a state the rules wouldn't produce. Only wallets are poked
- * directly, since going broke legitimately would take a dozen actions.
+ * Game states for component and a11y tests, built by running real actions
+ * through the reducer — so a fixture can't describe an impossible state. Only
+ * wallets are poked directly.
  */
 
 const item = (id: string, name: string): Item => ({ id, name, tier: 'mid' });
@@ -61,10 +59,10 @@ export function startedGame({
 	});
 }
 
-export const reveal = (state: GameState): GameState => applyAction(state, { type: 'reveal' });
+const reveal = (state: GameState): GameState => applyAction(state, { type: 'reveal' });
 
-/** Sets wallets directly. The only shortcut these fixtures take. */
-export function withMoney(state: GameState, money: [number, number]): GameState {
+/** The only shortcut these fixtures take. */
+function withMoney(state: GameState, money: [number, number]): GameState {
 	const players = state.players.map((player, i) => ({ ...player, money: money[i] })) as [
 		Player,
 		Player
@@ -93,11 +91,9 @@ export function bothBrokeFallback(options?: GameOptions): GameState {
 }
 
 /**
- * A game played through to the results screen, with a mix of paid and free picks.
- *
- * Handles every rule that can govern an item, not just contested bidding — once
- * one roster fills or a wallet empties, the remaining items are resolved by the
- * fallback rules, and a loop that only knows how to bid would stall there.
+ * Played through to the results screen, with a mix of paid and free picks.
+ * Handles every rule, not just contested bidding — a bid-only loop stalls once a
+ * wallet empties or a roster fills.
  */
 export function finishedGame(options?: GameOptions): GameState {
 	let state = startedGame(options);

@@ -3,15 +3,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { playRound, playToResults, setUpGame, waitForHydration } from './helpers';
 
 /**
- * Page-level accessibility scans.
+ * Page-level accessibility scans, on real assembled routes — where the
+ * document-scoped rules the component suite disables actually apply.
  *
- * The component suite scans components in isolation; this scans the real assembled
- * routes, where document-scoped rules (landmarks, headings, page title, tab order)
- * actually apply. Both run the same axe engine in the same browser.
- *
- * Dynamic states get their own scans deliberately: the bid controls enable and
- * disable as bids land and wallets empty, and that churn is where a11y regressions
- * tend to hide.
+ * Dynamic states get their own scans: the bid controls enable and disable as
+ * wallets empty, and that churn is where a11y regressions hide.
  */
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];

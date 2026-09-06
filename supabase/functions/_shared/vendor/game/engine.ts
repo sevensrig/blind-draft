@@ -6,15 +6,10 @@ import { openRoster, slotSuits } from '../data/types.ts';
 import type { Action, Award, GameConfig, GameState, ItemMode, Player, PlayerId } from './types.ts';
 
 /**
- * The whole rulebook, as one pure reducer.
- *
- * Nothing in here touches Svelte, the DOM, or storage. The UI reads state and
- * dispatches actions through `$lib/game/store.svelte.ts`; that store is the only
- * file Tier 2 has to change to sync these same actions through Supabase.
+ * The whole rulebook, as one pure reducer. No Svelte, DOM or storage.
  *
  * Invalid actions return the state untouched rather than throwing, so a stray
- * double-tap can't wedge a game. The screens disable controls using the
- * `can*` selectors below, so users shouldn't reach those paths anyway.
+ * double-tap can't wedge a game.
  */
 
 export const DEFAULT_BUDGET = 20;
@@ -72,20 +67,13 @@ export function openSlots(state: GameState, id: PlayerId): SlotSpec[] {
 	return state.config.roster.filter((slot) => !filled.has(slot.id));
 }
 
-/**
- * Where a won item lands by default: the open slot it naturally suits, else the
- * first open slot. Only a starting point — `assign` can move it anywhere open,
- * so nothing stops you starting a centre at point guard.
- */
+/** Default landing slot: the one it suits, else the first open one. `assign` can move it. */
 export function defaultSlotFor(state: GameState, id: PlayerId, item: Item): SlotSpec | null {
 	const open = openSlots(state, id);
 	return open.find((slot) => slotSuits(slot, item)) ?? open[0] ?? null;
 }
 
-/**
- * Whether this player can win the current item. Any item fits any open slot, so
- * this is purely "do they have room left".
- */
+/** Any item fits any open slot, so this is purely "do they have room left". */
 export function canReceive(state: GameState, id: PlayerId, item: Item): boolean {
 	return defaultSlotFor(state, id, item) !== null;
 }
@@ -98,10 +86,7 @@ export function isBroke(state: GameState, id: PlayerId): boolean {
 	return state.players[id].money <= 0;
 }
 
-/**
- * Which rule governs the current item. Order matters: a full roster overrides
- * the money rules, because a player with no slots can't receive anything.
- */
+/** Which rule governs the current item. A full roster outranks the money rules. */
 export function itemMode(state: GameState): ItemMode {
 	const item = currentItem(state);
 	if (!item) return 'forced';
@@ -134,7 +119,7 @@ export function minBid(state: GameState): number {
 	return state.bid ? state.bid.amount + 1 : MIN_BID;
 }
 
-/** Deliberately capped only by the player's wallet — no reserve, per rule 6. */
+/** Capped only by the wallet — no reserve, per rule 6. */
 export function maxBid(state: GameState, id: PlayerId): number {
 	return state.players[id].money;
 }
@@ -148,13 +133,8 @@ export function canBid(state: GameState, id: PlayerId, amount: number): boolean 
 }
 
 /**
- * Whether `id` may declare the standing bid sold.
- *
- * The holder of a bid can't accept it themselves — letting them do that made
- * "sold" a self-serve win button, which is nonsense with two devices: you'd bid
- * a dollar and immediately award yourself the card before your opponent's thumb
- * moved. Conceding is the other player's move. Locally it costs nothing, since
- * one device speaks for both seats and the screen sends the non-holder.
+ * Whether `id` may declare the standing bid sold. Not the holder: accepting your
+ * own bid would be a self-serve win button. Conceding is the other player's move.
  */
 export function canSell(state: GameState, id: PlayerId): boolean {
 	if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return false;
@@ -203,10 +183,7 @@ function replacePlayer(state: GameState, id: PlayerId, next: Player): [Player, P
 	return id === 0 ? [next, state.players[1]] : [state.players[0], next];
 }
 
-/**
- * Hands the current item to `playerId` and moves into the award celebration.
- * The single place money leaves a wallet and a roster slot gets consumed.
- */
+/** The single place money leaves a wallet and a roster slot gets consumed. */
 function awardCurrent(
 	state: GameState,
 	playerId: PlayerId,
@@ -277,11 +254,10 @@ export function applyAction(state: GameState, action: Action): GameState {
 		}
 
 		case 'sold': {
-			// Requires a standing bid, which is what makes opening mandatory:
-			// with 2xN items and N slots each, every item has to find an owner.
-			// And it requires the *other* player to send it — see `canSell`.
+			// A standing bid is required, which is what makes opening mandatory: with
+			// 2xN items and N slots each, every item has to find an owner. The second
+			// test only narrows the type — `canSell` already requires a bid.
 			const bid = state.bid;
-			// `canSell` already requires a bid; the second test is what narrows it.
 			if (!canSell(state, action.player) || !bid) return state;
 			return awardCurrent(state, bid.holder, bid.amount, { free: false });
 		}
@@ -311,7 +287,7 @@ export function applyAction(state: GameState, action: Action): GameState {
 		}
 
 		case 'assign': {
-			// Re-slots the player just won, while the award is still on screen.
+			// Re-slots the pick just won, while the award is still on screen.
 			if (state.phase !== 'award' || !state.lastAward) return state;
 			const award = state.lastAward;
 			const target = state.config.roster.find((slot) => slot.id === action.slotId);

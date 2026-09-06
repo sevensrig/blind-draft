@@ -2,26 +2,19 @@ import axe from 'axe-core';
 import type { AxeResults, Result } from 'axe-core';
 
 /**
- * axe-core for the component tests.
- *
- * These run in real Chromium via Vitest browser mode, so axe gets genuine
- * computed styles and layout — the same engine the Playwright E2E scans use.
- * Testing components in isolation catches a problem at the component that owns
- * it, rather than only once it's assembled into a route.
+ * axe-core for the component tests. Real Chromium via Vitest browser mode, so
+ * axe gets genuine computed styles — and a failure names the component that owns
+ * it rather than the route it ended up in.
  */
 
-/** The rule sets worth enforcing on an isolated component. */
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'];
 
-export async function findViolations(container: Element = document.body): Promise<Result[]> {
+async function findViolations(container: Element = document.body): Promise<Result[]> {
 	const results: AxeResults = await axe.run(container, {
 		runOnly: { type: 'tag', values: TAGS },
-		/*
-		 * A component rendered on its own is legitimately not a whole page, so the
-		 * document-scoped rules would fire on every single test with nothing
-		 * actionable behind them. Full-page structure is asserted by the Playwright
-		 * a11y suite instead, where it actually applies.
-		 */
+		// A component on its own isn't a page, so document-scoped rules would fire
+		// on every test with nothing actionable behind them. The Playwright a11y
+		// suite asserts full-page structure instead.
 		rules: {
 			'page-has-heading-one': { enabled: false },
 			region: { enabled: false },
@@ -33,12 +26,8 @@ export async function findViolations(container: Element = document.body): Promis
 	return results.violations;
 }
 
-/**
- * Turns violations into something readable in a test failure. Includes each
- * offending node's markup and axe's own summary, so a failure is actionable
- * without re-running anything by hand.
- */
-export function describeViolations(violations: Result[]): string {
+/** Node markup plus axe's summary, so a failure is actionable as printed. */
+function describeViolations(violations: Result[]): string {
 	return violations
 		.map((violation) => {
 			const nodes = violation.nodes

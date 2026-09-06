@@ -113,13 +113,9 @@ describe('bidding (rule 4, 5, 6)', () => {
 	});
 
 	/*
-	 * Issue #11. `sold` used to take no player, so the bidder could accept their
-	 * own bid. On one device that is harmless — a human hand taps it on behalf of
-	 * whoever gave up — but across two devices it made the button a self-serve
-	 * win: open at $1, tap sold, take the card before the opponent could raise.
-	 * Conceding is the other player's move, so the action names who is conceding
-	 * and the server checks it against the caller's seat like every other action
-	 * that names a player.
+	 * `sold` used to take no player, so the bidder could accept their own bid.
+	 * Harmless on one device; across two it was a self-serve win button. Hence the
+	 * action naming who is conceding, which the server checks against the seat.
 	 */
 	it('will not let the standing bidder accept their own bid', () => {
 		const open = reveal(startGame(items(4)));
@@ -333,8 +329,7 @@ describe('positional rosters', () => {
 });
 
 /* ------------------------------------------------------------------ *
- * Whole-game fuzz: the real guarantee is that no line of play can
- * strand a player with an unfillable roster.
+ * Whole-game fuzz: no line of play may strand an unfillable roster.
  * ------------------------------------------------------------------ */
 
 function autoPlay(start: GameState, rng: () => number, aggression: number): GameState {
@@ -397,9 +392,7 @@ describe('full games across every category', () => {
 			roster: category.roster ?? null
 		}))
 	)
-		// The custom category ships empty on purpose — its pool is typed by the
-		// player on the setup screen. `plays a player-typed custom pool` below
-		// covers that path with a real list.
+		// The custom category ships empty on purpose; the spec below covers it.
 		.filter(({ variant }) => variant.items.length > 0);
 
 	it.each(variants)('$label always reaches a complete draft', ({ variant, roster }) => {
@@ -440,9 +433,8 @@ describe('full games across every category', () => {
 	});
 
 	/**
-	 * A typed pool is all one tier, so the curve has nothing to shape and the
-	 * finale weighting has no polarised item to pull forward. Both should degrade
-	 * quietly rather than throw or hand back a short deck.
+	 * A typed pool is all one tier, so the curve and the finale weighting have
+	 * nothing to work with. Both should degrade quietly rather than throw.
 	 */
 	it('plays a player-typed custom pool through to a full draft', () => {
 		const rng = seeded(4242);
@@ -475,8 +467,8 @@ describe('full games across every category', () => {
 	});
 
 	it('never lets a tier leak into the visible item data', () => {
-		// Guards the "hidden tier" rule at the data level: every pool item has a
-		// tier, and nothing in the pool carries a price.
+		// The "hidden tier" rule at the data level: every item has a tier, and
+		// nothing in the pool carries a price.
 		for (const { variant } of variants) {
 			for (const item of variant.items) {
 				expect(['bad', 'mid', 'good', 'great']).toContain(item.tier);

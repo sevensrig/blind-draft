@@ -1,10 +1,8 @@
 -- Remote play: rooms, players and server-held game state.
 --
--- The deck is the reason this is server-authoritative. The whole game rests on
--- neither player knowing what is coming, so the shuffled order lives in
--- `games.deck` and is never sent to a client. Clients receive only the revealed
--- item, the standing bid, and rosters — see the RLS policies and the
--- `room_public` / `game_view` surfaces in the next migration.
+-- The deck is why this is server-authoritative: the game rests on neither player
+-- knowing what's coming, so the shuffled order never leaves the server. Clients
+-- read the projections built in the next migration.
 
 create extension if not exists pgcrypto;
 
@@ -44,9 +42,8 @@ create table rooms (
 	last_active_at timestamptz not null default now()
 );
 
--- Codes are only ever looked up while a room is joinable, so uniqueness only
--- needs to hold there. Finished rooms can keep their code without blocking it
--- forever.
+-- Codes are only looked up while a room is joinable, so uniqueness only needs
+-- to hold there — a finished room can keep its code without blocking it.
 create unique index rooms_code_active_idx
 	on rooms (code)
 	where status in ('open', 'playing');
@@ -68,9 +65,8 @@ create table room_players (
 	seat smallint not null check (seat in (0, 1)),
 	name text not null,
 
-	-- Per-device secret, held in localStorage. This is the entire identity
-	-- system: no accounts, so proving "I am seat 0 in this room" means
-	-- presenting this token. Never exposed by any read policy.
+	-- Per-device secret from localStorage — the entire identity system, since
+	-- there are no accounts. Never exposed by any read policy.
 	token text not null,
 
 	joined_at timestamptz not null default now(),
@@ -88,13 +84,11 @@ create index room_players_token_idx on room_players (token);
 create table games (
 	room_id uuid primary key references rooms (id) on delete cascade,
 
-	-- The full GameState from the TypeScript engine, minus nothing: this column
-	-- is authoritative and is never returned to clients as-is.
+	-- The full GameState. Authoritative, and never returned to clients as-is.
 	state jsonb not null,
 
-	-- Optimistic concurrency. Either player may raise at any moment, so two bids
-	-- can arrive together; each write is conditional on the version it read, and
-	-- the loser gets a stale-bid rejection instead of a phantom bid.
+	-- Optimistic concurrency: two bids can arrive together, so each write is
+	-- conditional on the version it read and the loser gets `stale`.
 	version integer not null default 0,
 
 	updated_at timestamptz not null default now()
@@ -110,7 +104,7 @@ comment on column games.version is
 -- ---------------------------------------------------------------------------
 
 -- 6 digits. Collisions are retried by the caller against the partial unique
--- index above rather than looped here, so the function stays cheap and pure.
+-- index above, so this stays cheap and pure.
 create or replace function generate_room_code()
 returns text
 language sql

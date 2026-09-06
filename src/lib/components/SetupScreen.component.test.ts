@@ -5,8 +5,8 @@ import { game } from '$lib/game/store.svelte';
 import SetupScreen from './SetupScreen.svelte';
 
 /**
- * The setup screen's job is to turn taps into a valid `start` action, so these
- * assert on the resulting game state rather than on internal component state.
+ * The setup screen turns taps into a valid `start` action, so these assert on
+ * the resulting game state rather than on internal component state.
  */
 describe('SetupScreen', () => {
 	beforeEach(() => {

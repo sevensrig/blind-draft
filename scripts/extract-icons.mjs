@@ -1,15 +1,7 @@
 /**
- * Generates `src/lib/icons.ts` from Font Awesome Free's SVG source.
- *
- * We inline the handful of paths we actually use rather than loading the icon
- * webfont or a CDN stylesheet. The webfont is ~1.4MB of files plus a CSS
- * framework to render fourteen glyphs, and a CDN link would be a third-party
- * runtime request, which this build rules out for the same reason it ships no
- * web font for typography.
- *
- * `@fortawesome/fontawesome-free` is a devDependency and nothing imports it at
- * runtime — it exists so this script can regenerate the module from the real
- * source instead of us pasting path data by hand.
+ * Generates `src/lib/icons.ts` from Font Awesome Free's SVG source. Inlined
+ * rather than the webfont (~1.4MB for fourteen glyphs) or a CDN stylesheet (a
+ * third-party runtime request, which this build rules out).
  *
  * Run with: node scripts/extract-icons.mjs
  */
