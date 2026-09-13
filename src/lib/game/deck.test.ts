@@ -52,6 +52,9 @@ const NFL_ROSTER: SlotSpec[] = [
 	{ id: 'flex', label: 'FLEX', drafts: ['RB', 'WR', 'TE'] }
 ];
 
+/** A single positional slot, so a deck is two items drawn from one position. */
+const ONE_SLOT_ROSTER: SlotSpec[] = [{ id: 'c', label: 'C', drafts: ['C'] }];
+
 const share = (deck: Item[], ...tiers: Tier[]) =>
 	deck.filter((item) => tiers.includes(item.tier)).length / deck.length;
 
@@ -202,6 +205,41 @@ describe('positional decks', () => {
 			expect(deck).toHaveLength(10);
 			expect(deck.every((item) => item.tier === 'mid')).toBe(true);
 			expect(new Set(deck.map((d) => d.id)).size).toBe(10);
+		}
+	});
+
+	it('bends off the tier curve when a position has nothing in a wanted tier', () => {
+		// One slot, so the deck is two items of one position, and the pool holds no
+		// `great` — the quota can never be met, so the fallback has to run.
+		const rng = seeded(31);
+		const thin: Item[] = [
+			{ id: 'mid-1', name: 'Mid one', tier: 'mid', position: 'C' },
+			{ id: 'mid-2', name: 'Mid two', tier: 'mid', position: 'C' },
+			{ id: 'bad-1', name: 'Bad one', tier: 'bad', position: 'C' },
+			{ id: 'bad-2', name: 'Bad two', tier: 'bad', position: 'C' }
+		];
+
+		for (let i = 0; i < 100; i++) {
+			const deck = buildDeck(thin, ONE_SLOT_ROSTER, rng);
+			expect(deck).toHaveLength(2);
+			expect(new Set(deck.map((d) => d.id)).size).toBe(2);
+			// The fallback takes the `mid` rather than dealing a second `bad`.
+			expect(deck.filter((item) => item.tier === 'bad').length).toBeLessThanOrEqual(1);
+		}
+	});
+
+	it('falls back onto a bad item only when the position offers nothing else', () => {
+		const rng = seeded(32);
+		const allBad: Item[] = [
+			{ id: 'bad-1', name: 'Bad one', tier: 'bad', position: 'C' },
+			{ id: 'bad-2', name: 'Bad two', tier: 'bad', position: 'C' },
+			{ id: 'bad-3', name: 'Bad three', tier: 'bad', position: 'C' }
+		];
+
+		for (let i = 0; i < 50; i++) {
+			const deck = buildDeck(allBad, ONE_SLOT_ROSTER, rng);
+			expect(deck).toHaveLength(2);
+			expect(deck.every((item) => item.tier === 'bad')).toBe(true);
 		}
 	});
 
