@@ -84,26 +84,44 @@ describe('buildDeck', () => {
 		expect(maxSlotsFor(9)).toBe(4);
 	});
 
-	it('holds the curve: mid+good dominates, great and bad stay minorities', () => {
+	it('holds the curve: mid+good dominates and great stays a minority', () => {
 		const rng = seeded(42);
 		const decks = Array.from({ length: 400 }, () => buildDeck(pool(20), openRoster(5), rng));
 
 		const avg = (fn: (deck: Item[]) => number) =>
 			decks.reduce((sum, deck) => sum + fn(deck), 0) / decks.length;
 
-		// ~15-20% great, ~15-20% bad, ~60-70% mid+good, with rounding slack.
+		// ~15-20% great, the rest mid+good, with rounding slack.
 		expect(avg((d) => share(d, 'great'))).toBeGreaterThanOrEqual(0.14);
 		expect(avg((d) => share(d, 'great'))).toBeLessThanOrEqual(0.22);
-		expect(avg((d) => share(d, 'bad'))).toBeGreaterThanOrEqual(0.14);
-		expect(avg((d) => share(d, 'bad'))).toBeLessThanOrEqual(0.22);
-		expect(avg((d) => share(d, 'mid', 'good'))).toBeGreaterThanOrEqual(0.56);
-		expect(avg((d) => share(d, 'mid', 'good'))).toBeLessThanOrEqual(0.72);
+		expect(avg((d) => share(d, 'mid', 'good'))).toBeGreaterThanOrEqual(0.72);
+		expect(avg((d) => share(d, 'mid', 'good'))).toBeLessThanOrEqual(0.86);
 
 		// Inside the middle band, mid is the one carrying the hesitation.
 		expect(avg((d) => share(d, 'mid'))).toBeGreaterThan(avg((d) => share(d, 'good')));
 	});
 
-	it('ends on a polarising item about two thirds of the time, but not reliably', () => {
+	it('deals at most one bad item, about a quarter of the time, always last', () => {
+		const rng = seeded(42);
+		const runs = 4000;
+		let withBad = 0;
+
+		for (let i = 0; i < runs; i++) {
+			const deck = buildDeck(pool(20), openRoster(5), rng);
+			const bad = deck.filter((item) => item.tier === 'bad');
+			expect(bad.length).toBeLessThanOrEqual(1);
+			if (bad.length === 1) {
+				expect(deck[deck.length - 1].tier).toBe('bad');
+				withBad++;
+			}
+		}
+
+		const rate = withBad / runs;
+		expect(rate).toBeGreaterThan(0.21);
+		expect(rate).toBeLessThan(0.29);
+	});
+
+	it('ends on a polarising item most of the time, but not reliably', () => {
 		const rng = seeded(99);
 		const runs = 4000;
 		let polarised = 0;
@@ -114,9 +132,10 @@ describe('buildDeck', () => {
 			if (last === 'great' || last === 'bad') polarised++;
 		}
 
+		// A quarter close on the bad card; most of the rest are weighted to a great.
 		const rate = polarised / runs;
-		expect(rate).toBeGreaterThan(0.6);
-		expect(rate).toBeLessThan(0.75);
+		expect(rate).toBeGreaterThan(0.7);
+		expect(rate).toBeLessThan(0.85);
 	});
 });
 
@@ -132,6 +151,8 @@ describe('positional decks', () => {
 			for (const position of ['PG', 'SG', 'SF', 'PF', 'C'] as Position[]) {
 				expect(counts.get(position)).toBe(2);
 			}
+			// The bad-card rule holds through the positional path too.
+			expect(deck.filter((item) => item.tier === 'bad').length).toBeLessThanOrEqual(1);
 		}
 	});
 
@@ -167,8 +188,8 @@ describe('positional decks', () => {
 	});
 
 	it('bends the curve rather than failing when a pool is all one tier', () => {
-		// Only mid items exist, so the great/bad quotas cannot be met and the
-		// finale has no polarising item to promote. It must still deal a full deck.
+		// Only mid items exist, so the great quota cannot be met and the finale has
+		// nothing polarising to promote. It must still deal a full deck.
 		const rng = seeded(21);
 		const flat: Item[] = Array.from({ length: 30 }, (_, i) => ({
 			id: `m${i}`,
