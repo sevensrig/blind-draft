@@ -9,10 +9,10 @@ export const FOODS: ItemSeed[] = [
 	{ name: 'Wings', tier: 'great' },
 	{ name: 'In-N-Out', tier: 'great' },
 	{ name: "Raising Cane's", tier: 'great' },
-	{ name: 'Birria tacos', tier: 'great' },
 	{ name: 'Ramen', tier: 'great' },
 	{ name: 'Steak', tier: 'great' },
 	{ name: 'Mac & cheese', tier: 'great' },
+	{ name: 'Philly cheesesteak', tier: 'great' },
 
 	// good
 	{ name: 'Popeyes', tier: 'good' },
@@ -25,6 +25,8 @@ export const FOODS: ItemSeed[] = [
 	{ name: 'Dumplings', tier: 'good' },
 	{ name: 'Waffles', tier: 'good' },
 	{ name: 'Spaghetti', tier: 'good' },
+	{ name: 'Carne asada tacos', tier: 'good' },
+	{ name: 'Loaded nachos', tier: 'good' },
 
 	// mid
 	{ name: 'Panera', tier: 'mid' },
@@ -44,11 +46,12 @@ export const FOODS: ItemSeed[] = [
 	{ name: 'Tomato soup', tier: 'mid' },
 	{ name: 'Soft pretzel', tier: 'mid' },
 	{ name: 'Rotisserie chicken', tier: 'mid' },
+	{ name: 'Fried rice', tier: 'mid' },
+	{ name: 'Meatball sub', tier: 'mid' },
 
 	// bad
 	{ name: 'Airplane food', tier: 'bad' },
 	{ name: 'Cafeteria pizza', tier: 'bad' },
-	{ name: 'Plain rice cakes', tier: 'bad' },
 	{ name: 'Gas station hot dog', tier: 'bad' },
 	{ name: 'Canned green beans', tier: 'bad' },
 	{ name: 'Fruitcake', tier: 'bad' },
