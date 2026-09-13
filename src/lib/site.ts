@@ -15,13 +15,16 @@ export const SITE_NAME = '$20 Budget Draft';
 /** The on-screen wordmark. Emitted as `alternateName` so the two names link up. */
 export const SITE_ALT_NAME = '$20 Blind Draft';
 
-/** Quotable rather than clever: answer engines lift "X is a Y that does Z". */
+/**
+ * Quotable rather than clever: answer engines lift "X is a Y that does Z". Kept
+ * under ~160 characters so Google shows all of it rather than cutting the last
+ * third; the on-page rules block carries the long explanation.
+ */
 export const SITE_DESCRIPTION =
-	'$20 Budget Draft is a free two-player party game you play in a browser. It is a blind draft: two players share one phone, each get a $20 budget, and bid against each other for items revealed one at a time, with no idea what is coming next.';
+	'$20 Budget Draft is a free two-player party game — the viral budget drafting game, playable in a browser. You each get $20 and bid blind on what comes next.';
 
 /** Short form for the social card, where long copy gets truncated anyway. */
-export const SITE_TAGLINE =
-	'A two-player $20 budget draft. One phone, blind bidding, no idea what is next.';
+export const SITE_TAGLINE = 'The viral budget drafting game. Two players, $20 each, bidding blind.';
 
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 export const OG_IMAGE_ALT =
