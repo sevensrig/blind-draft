@@ -77,7 +77,7 @@ export const CATEGORIES: Category[] = [
 		id: 'mlb',
 		label: 'MLB Players',
 		icon: 'baseball-bat-ball',
-		blurb: 'Nine innings of regret.',
+		blurb: 'Home runs.',
 		accent: 'blue',
 		variants: [
 			variant('mlb-current', 'Current', MLB_CURRENT),
@@ -107,7 +107,7 @@ export const CATEGORIES: Category[] = [
 		id: 'cartoons',
 		label: 'Childhood Cartoons',
 		icon: 'tv',
-		blurb: 'The Cartoon Network block.',
+		blurb: 'The cartoon block.',
 		accent: 'violet',
 		variants: [variant('cartoons', 'Cartoons', CARTOONS)]
 	},
@@ -115,7 +115,7 @@ export const CATEGORIES: Category[] = [
 		id: 'tv-shows',
 		label: 'Childhood TV Shows',
 		icon: 'couch',
-		blurb: 'Disney Channel prime time.',
+		blurb: 'Childhood prime time.',
 		accent: 'violet',
 		variants: [variant('tv-shows', 'TV Shows', TV_SHOWS)]
 	},
@@ -123,7 +123,7 @@ export const CATEGORIES: Category[] = [
 		id: 'nostalgia',
 		label: 'Childhood Nostalgia',
 		icon: 'gamepad',
-		blurb: 'Your whole childhood, going once.',
+		blurb: 'Throwbacks.',
 		accent: 'violet',
 		variants: [variant('nostalgia', 'Nostalgia', NOSTALGIA)]
 	},
@@ -147,7 +147,7 @@ export const CATEGORIES: Category[] = [
 		id: 'foods',
 		label: 'Foods',
 		icon: 'pizza-slice',
-		blurb: 'Bid hungry, lose money.',
+		blurb: 'yum.',
 		accent: 'green',
 		variants: [variant('foods', 'Foods', FOODS)]
 	},
@@ -179,7 +179,7 @@ export const CATEGORIES: Category[] = [
 		id: 'perfect-life',
 		label: 'Perfect Life',
 		icon: 'wand-magic-sparkles',
-		blurb: 'Wishes, going once.',
+		blurb: 'The life you always wanted.',
 		accent: 'yellow',
 		variants: [variant('perfect-life', 'Perfect Life', PERFECT_LIFE)]
 	},
@@ -187,7 +187,7 @@ export const CATEGORIES: Category[] = [
 		id: 'summer-day',
 		label: 'Summer Day',
 		icon: 'umbrella-beach',
-		blurb: 'Assemble one perfect day.',
+		blurb: 'Assemble the perfect day.',
 		accent: 'yellow',
 		variants: [variant('summer-day', 'Summer Day', SUMMER_DAY)]
 	}

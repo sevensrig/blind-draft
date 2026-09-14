@@ -81,7 +81,7 @@ const html = `<!doctype html>
   <div class="rest">Blind<br />Draft</div>
 </div>
 
-<div class="tagline">Two players. One phone. Bid blind on what comes next.</div>
+<div class="tagline">The viral budget drafting game. Bid blind on what comes next.</div>
 
 <div class="chips">
   <div class="chip">NBA</div>

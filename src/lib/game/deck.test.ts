@@ -52,6 +52,9 @@ const NFL_ROSTER: SlotSpec[] = [
 	{ id: 'flex', label: 'FLEX', drafts: ['RB', 'WR', 'TE'] }
 ];
 
+/** A single positional slot, so a deck is two items drawn from one position. */
+const ONE_SLOT_ROSTER: SlotSpec[] = [{ id: 'c', label: 'C', drafts: ['C'] }];
+
 const share = (deck: Item[], ...tiers: Tier[]) =>
 	deck.filter((item) => tiers.includes(item.tier)).length / deck.length;
 
@@ -84,26 +87,44 @@ describe('buildDeck', () => {
 		expect(maxSlotsFor(9)).toBe(4);
 	});
 
-	it('holds the curve: mid+good dominates, great and bad stay minorities', () => {
+	it('holds the curve: mid+good dominates and great stays a minority', () => {
 		const rng = seeded(42);
 		const decks = Array.from({ length: 400 }, () => buildDeck(pool(20), openRoster(5), rng));
 
 		const avg = (fn: (deck: Item[]) => number) =>
 			decks.reduce((sum, deck) => sum + fn(deck), 0) / decks.length;
 
-		// ~15-20% great, ~15-20% bad, ~60-70% mid+good, with rounding slack.
+		// ~15-20% great, the rest mid+good, with rounding slack.
 		expect(avg((d) => share(d, 'great'))).toBeGreaterThanOrEqual(0.14);
 		expect(avg((d) => share(d, 'great'))).toBeLessThanOrEqual(0.22);
-		expect(avg((d) => share(d, 'bad'))).toBeGreaterThanOrEqual(0.14);
-		expect(avg((d) => share(d, 'bad'))).toBeLessThanOrEqual(0.22);
-		expect(avg((d) => share(d, 'mid', 'good'))).toBeGreaterThanOrEqual(0.56);
-		expect(avg((d) => share(d, 'mid', 'good'))).toBeLessThanOrEqual(0.72);
+		expect(avg((d) => share(d, 'mid', 'good'))).toBeGreaterThanOrEqual(0.72);
+		expect(avg((d) => share(d, 'mid', 'good'))).toBeLessThanOrEqual(0.86);
 
 		// Inside the middle band, mid is the one carrying the hesitation.
 		expect(avg((d) => share(d, 'mid'))).toBeGreaterThan(avg((d) => share(d, 'good')));
 	});
 
-	it('ends on a polarising item about two thirds of the time, but not reliably', () => {
+	it('deals at most one bad item, about a quarter of the time, always last', () => {
+		const rng = seeded(42);
+		const runs = 4000;
+		let withBad = 0;
+
+		for (let i = 0; i < runs; i++) {
+			const deck = buildDeck(pool(20), openRoster(5), rng);
+			const bad = deck.filter((item) => item.tier === 'bad');
+			expect(bad.length).toBeLessThanOrEqual(1);
+			if (bad.length === 1) {
+				expect(deck[deck.length - 1].tier).toBe('bad');
+				withBad++;
+			}
+		}
+
+		const rate = withBad / runs;
+		expect(rate).toBeGreaterThan(0.21);
+		expect(rate).toBeLessThan(0.29);
+	});
+
+	it('ends on a polarising item most of the time, but not reliably', () => {
 		const rng = seeded(99);
 		const runs = 4000;
 		let polarised = 0;
@@ -114,9 +135,10 @@ describe('buildDeck', () => {
 			if (last === 'great' || last === 'bad') polarised++;
 		}
 
+		// A quarter close on the bad card; most of the rest are weighted to a great.
 		const rate = polarised / runs;
-		expect(rate).toBeGreaterThan(0.6);
-		expect(rate).toBeLessThan(0.75);
+		expect(rate).toBeGreaterThan(0.7);
+		expect(rate).toBeLessThan(0.85);
 	});
 });
 
@@ -132,6 +154,8 @@ describe('positional decks', () => {
 			for (const position of ['PG', 'SG', 'SF', 'PF', 'C'] as Position[]) {
 				expect(counts.get(position)).toBe(2);
 			}
+			// The bad-card rule holds through the positional path too.
+			expect(deck.filter((item) => item.tier === 'bad').length).toBeLessThanOrEqual(1);
 		}
 	});
 
@@ -167,8 +191,8 @@ describe('positional decks', () => {
 	});
 
 	it('bends the curve rather than failing when a pool is all one tier', () => {
-		// Only mid items exist, so the great/bad quotas cannot be met and the
-		// finale has no polarising item to promote. It must still deal a full deck.
+		// Only mid items exist, so the great quota cannot be met and the finale has
+		// nothing polarising to promote. It must still deal a full deck.
 		const rng = seeded(21);
 		const flat: Item[] = Array.from({ length: 30 }, (_, i) => ({
 			id: `m${i}`,
@@ -181,6 +205,41 @@ describe('positional decks', () => {
 			expect(deck).toHaveLength(10);
 			expect(deck.every((item) => item.tier === 'mid')).toBe(true);
 			expect(new Set(deck.map((d) => d.id)).size).toBe(10);
+		}
+	});
+
+	it('bends off the tier curve when a position has nothing in a wanted tier', () => {
+		// One slot, so the deck is two items of one position, and the pool holds no
+		// `great` — the quota can never be met, so the fallback has to run.
+		const rng = seeded(31);
+		const thin: Item[] = [
+			{ id: 'mid-1', name: 'Mid one', tier: 'mid', position: 'C' },
+			{ id: 'mid-2', name: 'Mid two', tier: 'mid', position: 'C' },
+			{ id: 'bad-1', name: 'Bad one', tier: 'bad', position: 'C' },
+			{ id: 'bad-2', name: 'Bad two', tier: 'bad', position: 'C' }
+		];
+
+		for (let i = 0; i < 100; i++) {
+			const deck = buildDeck(thin, ONE_SLOT_ROSTER, rng);
+			expect(deck).toHaveLength(2);
+			expect(new Set(deck.map((d) => d.id)).size).toBe(2);
+			// The fallback takes the `mid` rather than dealing a second `bad`.
+			expect(deck.filter((item) => item.tier === 'bad').length).toBeLessThanOrEqual(1);
+		}
+	});
+
+	it('falls back onto a bad item only when the position offers nothing else', () => {
+		const rng = seeded(32);
+		const allBad: Item[] = [
+			{ id: 'bad-1', name: 'Bad one', tier: 'bad', position: 'C' },
+			{ id: 'bad-2', name: 'Bad two', tier: 'bad', position: 'C' },
+			{ id: 'bad-3', name: 'Bad three', tier: 'bad', position: 'C' }
+		];
+
+		for (let i = 0; i < 50; i++) {
+			const deck = buildDeck(allBad, ONE_SLOT_ROSTER, rng);
+			expect(deck).toHaveLength(2);
+			expect(deck.every((item) => item.tier === 'bad')).toBe(true);
 		}
 	});
 

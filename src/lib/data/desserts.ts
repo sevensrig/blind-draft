@@ -11,8 +11,9 @@ export const DESSERTS: ItemSeed[] = [
 	{ name: 'Mochi ice cream', tier: 'great' },
 	{ name: 'Brownies', tier: 'great' },
 	{ name: 'Krispy Kreme', tier: 'great' },
-	{ name: 'Tres leches', tier: 'great' },
 	{ name: 'Ice cream sundae', tier: 'great' },
+	{ name: 'Ice cream cake', tier: 'great' },
+	{ name: 'Cookie cake', tier: 'great' },
 
 	// good
 	{ name: 'Chocolate chip cookies', tier: 'good' },
@@ -20,11 +21,14 @@ export const DESSERTS: ItemSeed[] = [
 	{ name: 'Cookie dough', tier: 'good' },
 	{ name: 'Cannoli', tier: 'good' },
 	{ name: 'Creme brulee', tier: 'good' },
-	{ name: 'Baklava', tier: 'good' },
 	{ name: 'Strawberry shortcake', tier: 'good' },
-	{ name: 'Banana pudding', tier: 'good' },
 	{ name: 'Red velvet cake', tier: 'good' },
-	{ name: 'Funnel cake', tier: 'good' },
+	{ name: 'Oreo McFlurry', tier: 'good' },
+	{ name: 'DQ Blizzard', tier: 'good' },
+	{ name: 'Cold Stone', tier: 'good' },
+	{ name: 'Banana split', tier: 'good' },
+	{ name: 'Donuts', tier: 'good' },
+	{ name: 'Deep fried Oreos', tier: 'good' },
 
 	// mid
 	{ name: 'Vanilla ice cream', tier: 'mid' },
@@ -35,25 +39,23 @@ export const DESSERTS: ItemSeed[] = [
 	{ name: 'Carrot cake', tier: 'mid' },
 	{ name: 'Macarons', tier: 'mid' },
 	{ name: 'Flan', tier: 'mid' },
-	{ name: 'Sorbet', tier: 'mid' },
-	{ name: 'Pound cake', tier: 'mid' },
-	{ name: 'Peach cobbler', tier: 'mid' },
 	{ name: 'Chocolate mousse', tier: 'mid' },
 	{ name: 'Sugar cookies', tier: 'mid' },
 	{ name: 'Popsicles', tier: 'mid' },
-	{ name: 'Bread pudding', tier: 'mid' },
-	{ name: 'Shortbread', tier: 'mid' },
-	{ name: 'Angel food cake', tier: 'mid' },
 	{ name: 'Pudding cup', tier: 'mid' },
+	{ name: 'Gelato', tier: 'mid' },
+	{ name: 'Pumpkin pie', tier: 'mid' },
+	{ name: 'Pecan pie', tier: 'mid' },
+	{ name: 'Key lime pie', tier: 'mid' },
+	{ name: 'Waffle cone', tier: 'mid' },
+	{ name: "Dippin' Dots", tier: 'mid' },
+	{ name: 'Chocolate covered strawberries', tier: 'mid' },
 
 	// bad
 	{ name: 'Jell-O', tier: 'bad' },
-	{ name: 'Candy corn', tier: 'bad' },
 	{ name: 'Oatmeal raisin cookies', tier: 'bad' },
-	{ name: 'Circus peanuts', tier: 'bad' },
-	{ name: 'Sugar-free pudding', tier: 'bad' },
 	{ name: 'Ribbon candy', tier: 'bad' },
 	{ name: 'Grocery store sheet cake', tier: 'bad' },
-	{ name: 'Fat-free frozen yogurt', tier: 'bad' },
-	{ name: 'Stale biscotti', tier: 'bad' }
+	{ name: 'Gas station donut', tier: 'bad' },
+	{ name: 'Store-brand Oreos', tier: 'bad' }
 ];

@@ -7,8 +7,8 @@ import { between, sample, shuffle, type Rng, defaultRng } from './rng.ts';
 /**
  * Deck curation. Exactly `2 x slots` items, so the two rosters consume it
  * precisely. Tiers never surface in the UI — they only shape the curve:
- * ~15-20% great, ~60-70% mid+good (mid dominant), ~15-20% bad, re-rolled inside
- * those bands every game so repeat decks don't feel stamped from one mould.
+ * ~15-20% great, the rest mid+good (mid dominant), re-rolled inside those bands
+ * every game so repeat decks don't feel stamped from one mould.
  *
  * Positional categories satisfy their position multiset first, then honour the
  * curve as closely as that allows.
@@ -17,17 +17,24 @@ import { between, sample, shuffle, type Rng, defaultRng } from './rng.ts';
 /** `good`'s share of the mid+good band. Mid keeps the majority either way. */
 const GOOD_SHARE_OF_MIDDLE = [0.25, 0.35] as const;
 const GREAT_BAND = [0.15, 0.2] as const;
-const BAD_BAND = [0.15, 0.2] as const;
 
-/** Chance the final item is a polarising one (a `great` or a `bad`). */
-const POLARISED_FINALE_CHANCE = 0.675;
-/** Given a polarised finale, chance the second-to-last is polarised too. */
-const POLARISED_PENULTIMATE_CHANCE = 0.45;
+/**
+ * A `bad` card is a rare closer, not a tax spread through the deck: most drafts
+ * never see one, and the deck that does gets exactly one, dealt last. Nobody
+ * wants to burn a roster slot on a dud mid-draft, but a dud arriving when a
+ * player is broke with a slot open is the joke landing.
+ */
+const BAD_CARD_CHANCE = 0.25;
+
+/** Chance a bad-free deck still ends on a `great`. */
+const GREAT_FINALE_CHANCE = 0.675;
+/** Given a `great` finale, chance the second-to-last is one too. */
+const GREAT_PENULTIMATE_CHANCE = 0.45;
 
 /** Backfill preference when a tier runs dry, so shortfalls land on `mid` first. */
 const BACKFILL_ORDER: Tier[] = ['mid', 'good', 'great', 'bad'];
 
-const isPolarised = (item: Item) => item.tier === 'great' || item.tier === 'bad';
+const isGreat = (item: Item) => item.tier === 'great';
 
 export function deckSizeFor(slots: number): number {
 	return slots * 2;
@@ -49,7 +56,7 @@ function groupByTier(pool: readonly Item[]): Record<Tier, Item[]> {
 /** Target count per tier for a deck of `size`, before pool shortfalls. */
 function targetCounts(size: number, rng: Rng): Record<Tier, number> {
 	const great = Math.max(1, Math.round(size * between(GREAT_BAND[0], GREAT_BAND[1], rng)));
-	const bad = Math.max(1, Math.round(size * between(BAD_BAND[0], BAD_BAND[1], rng)));
+	const bad = rng() < BAD_CARD_CHANCE ? 1 : 0;
 	const middle = Math.max(0, size - great - bad);
 	// Below two slots there's no room to split the band; mid wins outright.
 	const good =
@@ -60,17 +67,17 @@ function targetCounts(size: number, rng: Rng): Record<Tier, number> {
 }
 
 /**
- * Swaps a polarised (or, when `wantPolarised` is false, ordinary) item into
- * `target`. Swapping preserves the position multiset, so positional decks are safe.
+ * Swaps a `great` (or, when `wantGreat` is false, ordinary) item into `target`.
+ * Swapping preserves the position multiset, so positional decks are safe.
  */
 function swapInto(
 	deck: Item[],
 	target: number,
-	wantPolarised: boolean,
+	wantGreat: boolean,
 	locked: number[],
 	rng: Rng
 ): void {
-	const qualifies = (item: Item) => isPolarised(item) === wantPolarised;
+	const qualifies = (item: Item) => isGreat(item) === wantGreat;
 	if (qualifies(deck[target])) return;
 
 	const offLimits = new Set([target, ...locked]);
@@ -91,15 +98,29 @@ function weightFinale(deck: Item[], rng: Rng): void {
 	const last = deck.length - 1;
 	if (last < 1) return;
 
-	if (rng() >= POLARISED_FINALE_CHANCE) {
+	if (rng() >= GREAT_FINALE_CHANCE) {
 		swapInto(deck, last, false, [], rng);
 		return;
 	}
 
 	swapInto(deck, last, true, [], rng);
-	if (last >= 2 && rng() < POLARISED_PENULTIMATE_CHANCE) {
+	if (last >= 2 && rng() < GREAT_PENULTIMATE_CHANCE) {
 		swapInto(deck, last - 1, true, [last], rng);
 	}
+}
+
+/**
+ * Moves any `bad` card to the back of the draw order, and reports whether there
+ * was one. A deck should hold at most one, but a pool thin enough to force a
+ * backfill can smuggle in more; the tail is still where they belong.
+ */
+function sinkBadToTail(deck: Item[]): boolean {
+	const bad = deck.filter((item) => item.tier === 'bad');
+	if (bad.length === 0) return false;
+
+	const rest = deck.filter((item) => item.tier !== 'bad');
+	deck.splice(0, deck.length, ...rest, ...bad);
+	return true;
 }
 
 /** Free-form decks: sample straight off the tier curve. */
@@ -206,8 +227,13 @@ function buildPositionalDeck(
 				break;
 			}
 		}
-		// No candidate in any wanted tier, so the curve bends to the position.
-		chosen ??= candidates[Math.floor(rng() * candidates.length)];
+		if (!chosen) {
+			// No candidate in any wanted tier, so the curve bends to the position — but
+			// never onto `bad`, whose quota is at most one and may already be spent.
+			const ordinary = candidates.filter((item) => item.tier !== 'bad');
+			const spare = ordinary.length > 0 ? ordinary : candidates;
+			chosen = spare[Math.floor(rng() * spare.length)];
+		}
 
 		used.add(chosen.id);
 		quota[chosen.tier] = Math.max(0, quota[chosen.tier] - 1);
@@ -244,6 +270,7 @@ export function buildDeck(
 		: buildOpenDeck(pool, size, rng);
 
 	const deck = shuffle(picked, rng);
-	weightFinale(deck, rng);
+	// A `bad` card is the finale in its own right; otherwise weight toward a `great`.
+	if (!sinkBadToTail(deck)) weightFinale(deck, rng);
 	return deck;
 }
