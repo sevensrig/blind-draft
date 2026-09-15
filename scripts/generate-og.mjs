@@ -41,7 +41,7 @@ const html = `<!doctype html>
     display: flex; flex-direction: column; justify-content: center;
     padding: 68px 72px;
   }
-  .title { display: flex; align-items: flex-start; gap: 22px; }
+  .title { display: flex; align-items: center; gap: 22px; }
   .dollar {
     background: ${YELLOW};
     border: 6px solid ${INK};
@@ -52,9 +52,8 @@ const html = `<!doctype html>
     transform: rotate(-2deg);
   }
   .rest {
-    font-size: 96px; font-weight: 900; line-height: 0.88;
+    font-size: 132px; font-weight: 900; line-height: 0.88;
     letter-spacing: -0.02em; text-transform: uppercase;
-    padding-top: 6px;
   }
   .tagline {
     margin-top: 54px;
@@ -78,10 +77,10 @@ const html = `<!doctype html>
 
 <div class="title">
   <div class="dollar">$20</div>
-  <div class="rest">Blind<br />Draft</div>
+  <div class="rest">Draft</div>
 </div>
 
-<div class="tagline">The viral budget drafting game. Bid blind on what comes next.</div>
+<div class="tagline">The viral $20 draft game. Bid blind on what comes next.</div>
 
 <div class="chips">
   <div class="chip">NBA</div>

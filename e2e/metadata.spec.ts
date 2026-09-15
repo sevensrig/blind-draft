@@ -14,10 +14,10 @@ test('serves the social card and canonical metadata', async ({ page }) => {
 	const content = async (selector: string) =>
 		await page.locator(selector).first().getAttribute('content');
 
-	// "$20 budget draft" is the searched phrase, so the title leads with it.
-	await expect(page).toHaveTitle(/Budget Draft/);
+	// "$20 draft game" is the searched phrase, so the title leads with it.
+	await expect(page).toHaveTitle(/\$20 Draft Game/);
 	expect(await content('meta[name="description"]')).toMatch(/two-player party game/i);
-	expect(await content('meta[name="description"]')).toMatch(/budget/i);
+	expect(await content('meta[name="description"]')).toMatch(/\$20 draft/i);
 	expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toBe(ORIGIN);
 
 	// Open Graph — what iMessage, Discord and Slack unfurl.
@@ -51,9 +51,9 @@ test('exposes valid structured data for answer engines', async ({ page }) => {
 
 	const schema = JSON.parse(raw ?? '{}');
 	expect(schema['@type']).toBe('VideoGame');
-	// Both names, so the searched one and the screenshotted one are one entity.
-	expect(schema.name).toBe('$20 Budget Draft');
-	expect(schema.alternateName).toBe('$20 Blind Draft');
+	// Every name, so the searched one and the screenshotted one are one entity.
+	expect(schema.name).toBe('$20 Draft Game');
+	expect(schema.alternateName).toEqual(['$20 Draft', '$20 Blind Draft']);
 	expect(schema.url).toBe(ORIGIN);
 	expect(schema.isAccessibleForFree).toBe(true);
 	expect(schema.offers.price).toBe('0');
@@ -86,9 +86,8 @@ test('the page ships real text for crawlers that do not run javascript', async (
 
 	// Both names have to survive into the static HTML, so a crawler can connect
 	// what a player sees with what they'd search for.
-	expect(text).toContain('Blind Draft');
-	expect(text).toMatch(/budget draft/i);
-	expect(text).toMatch(/free two-player party game/i);
+	expect(text).toMatch(/\$20\s*Draft/i);
+	expect(text).toMatch(/\$20 Draft Game is a free two-player party game/i);
 	// Category names are the bulk of the indexable copy.
 	for (const name of ['NBA Players', 'Childhood Nostalgia', 'Pizza Toppings']) {
 		expect(text).toContain(name);

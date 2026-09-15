@@ -3,7 +3,7 @@
 	import {
 		OG_IMAGE,
 		OG_IMAGE_ALT,
-		SITE_ALT_NAME,
+		SITE_ALT_NAMES,
 		SITE_DESCRIPTION,
 		SITE_NAME,
 		SITE_TAGLINE,
@@ -21,7 +21,7 @@
 		'@type': 'VideoGame',
 		name: SITE_NAME,
 		// Declared so the searched name and the screenshotted one are one entity.
-		alternateName: SITE_ALT_NAME,
+		alternateName: SITE_ALT_NAMES,
 		url: SITE_URL,
 		description: SITE_DESCRIPTION,
 		image: OG_IMAGE,
