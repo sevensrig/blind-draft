@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
  * the built output, so they check what a crawler actually receives.
  */
 
-const ORIGIN = 'https://blind-draft.vercel.app';
+const ORIGIN = 'https://www.20dollardraftgame.com';
 
 test('serves the social card and canonical metadata', async ({ page }) => {
 	await page.goto('/');

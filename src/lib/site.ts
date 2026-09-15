@@ -1,9 +1,12 @@
 /**
  * Site metadata. Open Graph and canonical links need absolute URLs, and a
  * prerendered build can't discover its own origin, so it's declared here once.
- * Change `SITE_URL` when the real domain is set; everything else reads from it.
+ * Everything else reads from it.
+ *
+ * `www` is deliberate: Vercel serves the site there and 308s the apex across, so
+ * a canonical on the bare domain would point at a redirect.
  */
-export const SITE_URL = 'https://blind-draft.vercel.app';
+export const SITE_URL = 'https://www.20dollardraftgame.com';
 
 /**
  * The searched-for name, not the on-screen one. People type "$20 draft game",
