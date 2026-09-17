@@ -31,9 +31,25 @@ See [Testing and quality tooling](#testing-and-quality-tooling) for the rest.
 Push it to Vercel. `@sveltejs/adapter-auto` detects the platform and there is
 nothing to configure. The page is prerendered (`src/routes/+layout.ts`) and all
 state lives in the browser, so the deploy is a static shell — no server, no
-database, no runtime network calls of any kind. Building locally prints
+database, and no runtime network calls beyond the analytics pageview below.
+Building locally prints
 "Could not detect a supported production environment", which is just
 adapter-auto saying your laptop isn't Vercel; the build itself is fine.
+
+### Web Analytics
+
+`src/routes/+layout.ts` calls `injectAnalytics` from `@vercel/analytics`, which
+fires one pageview per route. It sends `url.pathname` and never the query string,
+so the room id in `/online/room?id=…` stays on the device.
+
+It has to be **enabled in the Vercel dashboard** under Analytics. Until it is,
+`/_vercel/insights/script.js` 404s and every visitor gets a console log saying
+so. The same 404 happens against `npm run preview` and the E2E suite, which
+serve the built app without Vercel in front of it — expected there, and nothing
+asserts on it.
+
+Only pageviews are tracked, which on a three-route app says very little; issue
+#22 covers the custom events worth adding.
 
 ### Keeping Supabase awake
 
