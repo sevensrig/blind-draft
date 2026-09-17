@@ -52,7 +52,7 @@
 	<!-- Framed as one unit so a screenshot explains itself. -->
 	<div class="sheet">
 		<header class="sheet__head">
-			<span class="stampline">$20 Blind Draft</span>
+			<span class="stampline">$20 Draft</span>
 			<h1>Rosters are full</h1>
 			<p class="sheet__sub">
 				{s.config.categoryLabel}{s.config.variantLabel

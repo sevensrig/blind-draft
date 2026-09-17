@@ -118,7 +118,7 @@
 		<span class="eyebrow">Two players · $20 budget</span>
 		<h1>
 			<span class="hero__dollar">$20</span>
-			<span class="hero__rest">Blind<br />Draft</span>
+			<span class="hero__rest">Draft</span>
 		</h1>
 		<p class="hero__tag">Nobody knows what's coming next. Bid anyway.</p>
 
@@ -288,9 +288,9 @@
 		<!-- Plain definition, and both names of the game: still prerendered inside
 		     the collapsed block, so it's indexable without competing on screen. -->
 		<p class="rules__what">
-			$20 Blind Draft is a free two-player party game played in a browser — the viral $20 budget
-			draft you've seen going around. You each get a $20 budget and bid against each other for items
-			revealed one at a time.
+			$20 Draft Game is a free two-player party game played in a browser — the viral $20 draft
+			you've seen going around, sometimes called a blind draft. You each get a $20 budget and bid
+			against each other for items revealed one at a time.
 		</p>
 		<ol>
 			<li>An item is revealed. Neither of you knew it was coming.</li>
@@ -337,7 +337,7 @@
 
 	.hero h1 {
 		display: flex;
-		align-items: flex-start;
+		align-items: center;
 		gap: 0.5rem;
 		margin: 0.4rem 0 0.6rem;
 	}
@@ -355,7 +355,7 @@
 	}
 
 	.hero__rest {
-		font-size: 1.9rem;
+		font-size: 2.4rem;
 		line-height: 0.92;
 	}
 
