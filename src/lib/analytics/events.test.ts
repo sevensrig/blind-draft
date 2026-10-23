@@ -112,6 +112,11 @@ describe('scrubUrl', () => {
 		expect(JSON.stringify(scrubDeep({ arguments: args }, origin))).not.toContain('abc');
 	});
 
+	it('scrubs URLs used as object keys', () => {
+		const out = scrubDeep({ [`${origin}/online/room?id=abc`]: [{ x: 1 }] }, origin);
+		expect(Object.keys(out as object)).toEqual([`${origin}/online/room`]);
+	});
+
 	it('reaches URLs inside a PostHog exception payload', () => {
 		const props = {
 			$current_url: `${origin}/online/room?id=abc`,
@@ -146,6 +151,8 @@ describe('analytics configuration', () => {
 		const source = read('index.ts');
 		expect(source).toContain('disable_session_recording: true');
 		expect(source).toContain('autocapture: false');
+		expect(source).toContain('capture_heatmaps: false');
+		expect(source).toContain('capture_dead_clicks: false');
 		expect(source).toContain('advanced_disable_flags: true');
 		expect(source).toContain("cookieless_mode: 'always'");
 		// The weekly marker stores a week label and nothing that identifies a device.

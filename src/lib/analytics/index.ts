@@ -37,7 +37,11 @@ export function initAnalytics(): void {
 				// the project settings; until then these events are dropped.
 				cookieless_mode: 'always',
 				person_profiles: 'identified_only',
+				// `defaults` turns these on, and heatmap data is keyed by page URL.
 				autocapture: false,
+				capture_heatmaps: false,
+				capture_dead_clicks: false,
+				capture_performance: false,
 				disable_session_recording: true,
 				capture_pageview: 'history_change',
 				capture_pageleave: true,
