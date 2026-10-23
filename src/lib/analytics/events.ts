@@ -48,6 +48,16 @@ export function transitionEvent(
 	return null;
 }
 
+/** ISO 8601 week, e.g. `2026-W43`, in UTC so a week boundary doesn't depend on time zone. */
+export function isoWeek(date: Date): string {
+	const day = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+	// The ISO week belongs to the year of its Thursday.
+	day.setUTCDate(day.getUTCDate() + 4 - (day.getUTCDay() || 7));
+	const yearStart = Date.UTC(day.getUTCFullYear(), 0, 1);
+	const week = Math.ceil(((day.getTime() - yearStart) / 86_400_000 + 1) / 7);
+	return `${day.getUTCFullYear()}-W${String(week).padStart(2, '0')}`;
+}
+
 /** Drops query and fragment from same-site URLs, so a room id never reaches a vendor. */
 export function scrubUrl(value: string, origin: string): string {
 	if (!value.startsWith(origin)) return value;

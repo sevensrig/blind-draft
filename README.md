@@ -75,6 +75,10 @@ text are sent. Autocapture and session replay are off, and `cookieless_mode`
 writes no cookies or storage, so there's no consent banner: PostHog counts
 visitors with a daily-rotating server-side hash instead. **Cookieless mode has to
 be enabled in the PostHog project settings too, or every event is dropped.**
+Daily hashing can't dedupe across days, so a `weekly_visitor` event fires once
+per device per ISO week: localStorage holds only the week label
+(`blind-draft:visit-week:v1`), never an id. Count those events for weekly unique
+devices.
 `before_send` strips the query string from every
 same-site URL, so room ids stay on the device. The flags request is off for the
 same reason: it carries the initial URL.

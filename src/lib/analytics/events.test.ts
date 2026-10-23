@@ -2,7 +2,14 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { GameConfig, Phase } from '$lib/game/types';
-import { scrubDeep, scrubText, scrubUrl, transitionEvent, type GameSnapshot } from './events';
+import {
+	isoWeek,
+	scrubDeep,
+	scrubText,
+	scrubUrl,
+	transitionEvent,
+	type GameSnapshot
+} from './events';
 
 const config = {
 	budget: 20,
@@ -61,6 +68,23 @@ describe('transitionEvent', () => {
 	it('never sends player-typed content', () => {
 		const event = transitionEvent(at('setup'), at('reveal'), 'local');
 		expect(JSON.stringify(event)).not.toContain('secret');
+	});
+});
+
+describe('isoWeek', () => {
+	it('labels ordinary weeks', () => {
+		expect(isoWeek(new Date('2026-10-23T12:00:00Z'))).toBe('2026-W43');
+		// Monday starts the week, Sunday ends it.
+		expect(isoWeek(new Date('2026-10-19T00:00:00Z'))).toBe('2026-W43');
+		expect(isoWeek(new Date('2026-10-25T23:59:59Z'))).toBe('2026-W43');
+		expect(isoWeek(new Date('2026-10-26T00:00:00Z'))).toBe('2026-W44');
+	});
+
+	it('follows the ISO rule across new year', () => {
+		// 2027-01-01 is a Friday, so it still belongs to 2026's last week.
+		expect(isoWeek(new Date('2027-01-01T12:00:00Z'))).toBe('2026-W53');
+		// 2025-12-29 is a Monday in the week holding 2026's first Thursday.
+		expect(isoWeek(new Date('2025-12-29T12:00:00Z'))).toBe('2026-W01');
 	});
 });
 
@@ -124,6 +148,8 @@ describe('analytics configuration', () => {
 		expect(source).toContain('autocapture: false');
 		expect(source).toContain('advanced_disable_flags: true');
 		expect(source).toContain("cookieless_mode: 'always'");
+		// The weekly marker stores a week label and nothing that identifies a device.
+		expect(source).toMatch(/localStorage\.setItem\(WEEK_KEY, week\)/);
 		// Initial-URL person properties ride at the top level, outside `properties`.
 		expect(source).toMatch(/event\.\$set_once = scrubDeep/);
 	});

@@ -5,6 +5,7 @@ import {
 	type GameEvent,
 	type GameSnapshot,
 	type PlayMode,
+	isoWeek,
 	scrubDeep,
 	transitionEvent
 } from './events';
@@ -57,12 +58,32 @@ export function initAnalytics(): void {
 					return event;
 				}
 			});
+			markWeeklyVisit(posthog);
 			return posthog;
 		})
 		.catch((error) => {
 			console.warn('[blind-draft] analytics failed to load', error);
 			return null;
 		});
+}
+
+const WEEK_KEY = 'blind-draft:visit-week:v1';
+
+/**
+ * Cookieless hashing resets daily, so weekly uniques come from this instead: one
+ * `weekly_visitor` per device per ISO week. Only the week label is stored, never
+ * an id, so weeks can't be linked to each other.
+ */
+function markWeeklyVisit(posthog: PostHog): void {
+	const week = isoWeek(new Date());
+	try {
+		if (localStorage.getItem(WEEK_KEY) === week) return;
+		localStorage.setItem(WEEK_KEY, week);
+	} catch {
+		// Storage blocked (some private modes): skip rather than count every load.
+		return;
+	}
+	posthog.capture('weekly_visitor', { week });
 }
 
 /** Never throws into game code: a blocked or failed SDK just drops the event. */
