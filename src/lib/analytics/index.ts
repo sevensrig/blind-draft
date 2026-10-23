@@ -5,7 +5,7 @@ import {
 	type GameEvent,
 	type GameSnapshot,
 	type PlayMode,
-	scrubProperties,
+	scrubDeep,
 	transitionEvent
 } from './events';
 
@@ -24,8 +24,10 @@ let client: Promise<PostHog | null> | null = null;
 export function initAnalytics(): void {
 	if (!browser || !analyticsEnabled || client) return;
 	const origin = location.origin;
-	client = import('posthog-js')
-		.then(({ default: posthog }) => {
+	// The exception extension is bundled rather than fetched from PostHog's CDN at
+	// runtime; importing it registers it for `capture_exceptions`.
+	client = Promise.all([import('posthog-js'), import('posthog-js/dist/exception-autocapture')])
+		.then(([{ default: posthog }]) => {
 			posthog.init(POSTHOG_KEY as string, {
 				api_host: POSTHOG_HOST,
 				defaults: '2026-08-30',
@@ -40,11 +42,17 @@ export function initAnalytics(): void {
 				// The flags request carries the initial URL as a person property, and no
 				// feature flags are used.
 				advanced_disable_flags: true,
+				// Uncaught errors and rejections, sent as `$exception` events.
+				capture_exceptions: true,
+				// Deep because exception stacks and messages nest URLs, and the initial-URL
+				// person properties ride outside `properties`.
 				before_send: (event) => {
 					if (!event) return event;
-					event.properties = scrubProperties(event.properties, origin);
-					if (event.$set) event.$set = scrubProperties(event.$set, origin);
-					if (event.$set_once) event.$set_once = scrubProperties(event.$set_once, origin);
+					event.properties = scrubDeep(event.properties, origin) as typeof event.properties;
+					if (event.$set) event.$set = scrubDeep(event.$set, origin) as typeof event.$set;
+					if (event.$set_once) {
+						event.$set_once = scrubDeep(event.$set_once, origin) as typeof event.$set_once;
+					}
 					return event;
 				}
 			});
@@ -60,6 +68,11 @@ export function initAnalytics(): void {
 export function track(event: GameEvent | null): void {
 	if (!client || !event) return;
 	void client.then((posthog) => posthog?.capture(event.name, event.props));
+}
+
+/** For errors SvelteKit catches itself, which never reach the global handlers. */
+export function reportError(error: unknown): void {
+	void client?.then((posthog) => posthog?.captureException(error));
 }
 
 export function trackTransition(prev: GameSnapshot, next: GameSnapshot, mode: PlayMode): void {

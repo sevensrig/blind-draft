@@ -27,7 +27,6 @@
 		"@biomejs/biome": "^2.5.6",
 		"@fortawesome/fontawesome-free": "^7.3.1",
 		"@playwright/test": "^1.62.0",
-		"@sentry/vite-plugin": "^11.8.0",
 		"@sveltejs/adapter-auto": "^7.0.1",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
@@ -47,7 +46,6 @@
 		"vitest-browser-svelte": "^3.0.0"
 	},
 	"dependencies": {
-		"@sentry/svelte": "^11.8.0",
 		"@supabase/supabase-js": "^2.112.3",
 		"@vercel/analytics": "^2.0.1",
 		"posthog-js": "^1.438.19"

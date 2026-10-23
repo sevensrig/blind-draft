@@ -1,9 +1,7 @@
 import type { HandleClientError } from '@sveltejs/kit';
-import { initAnalytics } from '$lib/analytics';
-import { initErrorTracking, reportError } from '$lib/analytics/errors';
+import { initAnalytics, reportError } from '$lib/analytics';
 
 export function init(): void {
-	initErrorTracking();
 	initAnalytics();
 }
 

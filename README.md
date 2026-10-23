@@ -53,9 +53,10 @@ rate counts a full game as a bounce. Game events go to PostHog instead.
 
 ### Product analytics and error tracking
 
-Both switch on from env vars (see `.env.example`) and stay off without them,
-which is how tests and local dev run. Each SDK is loaded lazily from
-`src/hooks.client.ts`, so a deploy without the keys ships neither.
+Both are PostHog. It switches on from `PUBLIC_POSTHOG_KEY` (see `.env.example`)
+and stays off without it, which is how tests and local dev run. The SDK is
+loaded lazily from `src/hooks.client.ts`, so a deploy without the key ships
+none of it.
 
 **PostHog** (`src/lib/analytics/`) gets pageviews plus three events, fired from
 the two state seams (`store.svelte.ts`, `room.svelte.ts`) rather than from
@@ -73,13 +74,15 @@ game between two players shows up twice. No player names or custom-category
 text are sent. Autocapture and session replay are off, persistence is
 in-memory (no cookies, so no consent banner; the trade-off is that a returning
 visitor counts as new), and `before_send` strips the query string from every
-same-site URL, so room ids stay on the device.
+same-site URL, so room ids stay on the device. The flags request is off for the
+same reason: it carries the initial URL.
 
-**Sentry** (`src/lib/analytics/errors.ts`) captures uncaught errors only: no
-tracing, no replay, no default PII, and room ids are scrubbed from the event
-URL and breadcrumbs. Setting `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
-`SENTRY_PROJECT` in Vercel uploads hidden source maps during the build; CI
-has no token and skips it.
+**Errors** go to PostHog's error tracking as `$exception` events: uncaught
+errors and rejections, plus anything SvelteKit's `handleError` catches. They
+share a session with the game events, so a crash can be read alongside the
+`game_quit` that followed it. The same `before_send` scrubs them, recursively,
+because stack frames and messages nest URLs. Stack traces are minified; no
+source maps are uploaded.
 
 ### Keeping Supabase awake
 
