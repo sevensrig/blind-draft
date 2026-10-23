@@ -35,3 +35,7 @@ export const SITE_TAGLINE = 'The viral $20 draft game. Two players, $20 each, bi
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 export const OG_IMAGE_ALT =
 	'$20 Draft Game — a two-player blind bidding party game played in a browser.';
+
+/** A Google Form, so players can send feedback without an account. */
+export const FEEDBACK_URL =
+	'https://docs.google.com/forms/d/e/1FAIpQLScjDk1NuuvdJtVEwnNNnEWmG6MmhVPZ3vgq9xIG12fiyQrRoQ/viewform';

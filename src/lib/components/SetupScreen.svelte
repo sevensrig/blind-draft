@@ -7,6 +7,7 @@
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
 	import { game } from '$lib/game/store.svelte';
+	import { FEEDBACK_URL } from '$lib/site';
 	import Icon from './Icon.svelte';
 
 	const BUDGET_PRESETS = [10, 20, 50];
@@ -322,6 +323,8 @@
 	{:else}
 		<p class="prompt">Pick a category to start</p>
 	{/if}
+
+	<a class="feedback" href={FEEDBACK_URL} target="_blank" rel="noopener">Send feedback</a>
 </div>
 
 <style>
@@ -699,5 +702,15 @@
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--ink-muted);
+	}
+
+	.feedback {
+		align-self: center;
+		padding-bottom: 1rem;
+		font-size: 0.72rem;
+		font-weight: 900;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink);
 	}
 </style>
