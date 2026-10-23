@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { trackTransition } from '$lib/analytics';
 import { applyAction, initialState } from './engine';
 import { clearState, loadState, saveState } from './persist';
 import type { Action, GameState } from './types';
@@ -43,6 +44,7 @@ class GameStore {
 	}
 
 	#commit(next: GameState): void {
+		trackTransition(this.#state, next, 'local');
 		this.#state = next;
 		if (!browser) return;
 		if (next.phase === 'setup') clearState();
