@@ -29,7 +29,8 @@ const WANTED = [
 	'umbrella-beach',
 	'pen-to-square',
 	'ice-cream',
-	'cheese'
+	'cheese',
+	'basket-shopping'
 ];
 
 function extract(slug) {

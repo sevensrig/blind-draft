@@ -34,6 +34,7 @@ import { FOODS } from './foods';
 import { DRINKS } from './drinks';
 import { DESSERTS } from './desserts';
 import { PIZZA_TOPPINGS } from './pizza-toppings';
+import { TRADER_JOES } from './trader-joes';
 import { PERFECT_LIFE } from './perfect-life';
 import { SUMMER_DAY } from './summer-day';
 
@@ -174,6 +175,14 @@ export const CATEGORIES: Category[] = [
 		blurb: 'Yes, pineapple is in here.',
 		accent: 'green',
 		variants: [variant('pizza-toppings', 'Pizza Toppings', PIZZA_TOPPINGS)]
+	},
+	{
+		id: 'trader-joes',
+		label: "Trader Joe's",
+		icon: 'basket-shopping',
+		blurb: 'Fill the cart.',
+		accent: 'green',
+		variants: [variant('trader-joes', "Trader Joe's", TRADER_JOES)]
 	},
 	{
 		id: 'perfect-life',
