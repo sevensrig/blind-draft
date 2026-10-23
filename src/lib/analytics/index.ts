@@ -31,9 +31,10 @@ export function initAnalytics(): void {
 			posthog.init(POSTHOG_KEY as string, {
 				api_host: POSTHOG_HOST,
 				defaults: '2026-08-30',
-				// Nothing written to cookies or storage, so no consent banner; the cost
-				// is that a returning visitor counts as new.
-				persistence: 'memory',
+				// No cookies or storage, so no consent banner. PostHog hashes visitors
+				// server-side instead, which only works once cookieless mode is enabled in
+				// the project settings; until then these events are dropped.
+				cookieless_mode: 'always',
 				person_profiles: 'identified_only',
 				autocapture: false,
 				disable_session_recording: true,

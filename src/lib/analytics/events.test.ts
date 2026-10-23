@@ -123,6 +123,7 @@ describe('analytics configuration', () => {
 		expect(source).toContain('disable_session_recording: true');
 		expect(source).toContain('autocapture: false');
 		expect(source).toContain('advanced_disable_flags: true');
+		expect(source).toContain("cookieless_mode: 'always'");
 		// Initial-URL person properties ride at the top level, outside `properties`.
 		expect(source).toMatch(/event\.\$set_once = scrubDeep/);
 	});

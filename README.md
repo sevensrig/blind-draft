@@ -71,9 +71,11 @@ components:
 Each carries `mode` (`local`/`online`), `category`, `variant`, `budget`,
 `slots` and `items_played`. Online games are counted once per device, so one
 game between two players shows up twice. No player names or custom-category
-text are sent. Autocapture and session replay are off, persistence is
-in-memory (no cookies, so no consent banner; the trade-off is that a returning
-visitor counts as new), and `before_send` strips the query string from every
+text are sent. Autocapture and session replay are off, and `cookieless_mode`
+writes no cookies or storage, so there's no consent banner: PostHog counts
+visitors with a daily-rotating server-side hash instead. **Cookieless mode has to
+be enabled in the PostHog project settings too, or every event is dropped.**
+`before_send` strips the query string from every
 same-site URL, so room ids stay on the device. The flags request is off for the
 same reason: it carries the initial URL.
 
