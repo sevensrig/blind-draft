@@ -16,6 +16,10 @@ export interface PublicGameState {
 	players: GameState['players'];
 	bid: GameState['bid'];
 	freeTurn: GameState['freeTurn'];
+	skipsLeft: GameState['skipsLeft'];
+	skipVotes: GameState['skipVotes'];
+	/** A count, never the items: the spares are the rest of the hidden sequence. */
+	spareCount: number;
 	lastAward: GameState['lastAward'];
 	history: GameState['history'];
 	/** 1-based position in the deck, for the "Item 3 of 10" readout. */
@@ -38,6 +42,10 @@ export function redact(state: GameState, seatsTaken: number): PublicGameState {
 		players: state.players,
 		bid: state.bid,
 		freeTurn: state.freeTurn,
+		// Defaults cover games started before skips existed.
+		skipsLeft: state.skipsLeft ?? 0,
+		skipVotes: state.skipVotes ?? [false, false],
+		spareCount: state.spares?.length ?? 0,
 		lastAward: state.lastAward,
 		history: state.history,
 		itemNumber: Math.min(state.index + 1, state.deck.length),

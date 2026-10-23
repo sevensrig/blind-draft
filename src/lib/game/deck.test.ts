@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { openRoster } from '$lib/data/types';
 import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
-import { buildDeck, deckSizeFor, maxSlotsFor, poolSupportsRoster } from './deck';
+import {
+	buildDeck,
+	deckSizeFor,
+	maxSlotsFor,
+	poolSupportsRoster,
+	replacementFor,
+	sparesFor
+} from './deck';
 
 /** Deterministic RNG so a failure is reproducible. */
 function seeded(seed: number): () => number {
@@ -267,5 +274,23 @@ describe('positional decks', () => {
 		];
 		// Both players need a centre, so a single one still isn't enough.
 		expect(poolSupportsRoster(oneCenter, NBA_ROSTER)).toBe(false);
+	});
+});
+
+describe('skip replacements', () => {
+	it('keeps every undealt item as a spare, and nothing dealt', () => {
+		const items = pool(5);
+		const deck = buildDeck(items, openRoster(5), seeded(31));
+		const spares = sparesFor(items, deck, seeded(32));
+		expect(spares).toHaveLength(items.length - deck.length);
+		const dealt = new Set(deck.map((item) => item.id));
+		expect(spares.some((item) => dealt.has(item.id))).toBe(false);
+	});
+
+	it('takes any spare over none, and reports an empty pool', () => {
+		const skipped: Item = { id: 'x', name: 'X', tier: 'great', position: 'C' };
+		const only: Item = { id: 'y', name: 'Y', tier: 'bad', position: 'PG' };
+		expect(replacementFor([only], skipped)).toBe(0);
+		expect(replacementFor([], skipped)).toBe(-1);
 	});
 });

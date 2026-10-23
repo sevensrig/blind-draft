@@ -2,6 +2,7 @@ import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import type { Action } from '$lib/game/types';
+import { applyAction } from '$lib/game/engine';
 import { game } from '$lib/game/store.svelte';
 import {
 	bothBrokeFallback,
@@ -231,5 +232,50 @@ describe('BidScreen', () => {
 
 		expect(game.state.lastAward?.slotId).toBe('pg');
 		expect(game.state.players[0].roster[0].slotId).toBe('pg');
+	});
+
+	describe('skipping', () => {
+		it('skips only once both players agree, and deals a face-down replacement', async () => {
+			game.replace(contested({ names: ['Sri', 'Alex'] }));
+			render(BidScreen);
+
+			await page.getByRole('button', { name: 'Skip · 2 left' }).click();
+			await page.getByRole('button', { name: 'Sri agrees' }).click();
+			expect(game.state.phase).toBe('resolve');
+			await expect.element(page.getByRole('button', { name: 'Sri is in' })).toBeDisabled();
+
+			await page.getByRole('button', { name: 'Alex agrees' }).click();
+			await expect.element(page.getByText('Tap to reveal')).toBeVisible();
+			expect(game.state.skipsLeft).toBe(1);
+			expect(game.state.deck[0].id).toBe('spare-0');
+		});
+
+		it('hides the chip once someone opens', async () => {
+			game.replace(withStandingBid(contested(), 0, 1));
+			render(BidScreen);
+			await expect.element(page.getByText(/leads/)).toBeVisible();
+			expect(page.getByRole('button', { name: /Skip/ }).elements()).toHaveLength(0);
+		});
+
+		it('hides the chip with no spares left to draw', async () => {
+			game.replace(contested({ spares: [] }));
+			render(BidScreen);
+			await expect.element(page.getByText('No bids · anyone can open')).toBeVisible();
+			expect(page.getByRole('button', { name: /Skip/ }).elements()).toHaveLength(0);
+		});
+
+		it('only votes for its own seat remotely, and shows the other vote', async () => {
+			const dispatched: Action[] = [];
+			const view = applyAction(contested({ names: ['Sri', 'Alex'] }), {
+				type: 'skip',
+				player: 1
+			});
+			render(BidScreen, { view, seat: 0, dispatch: (a: Action) => dispatched.push(a) });
+
+			// The opponent's vote opens the prompt without a tap here.
+			await expect.element(page.getByRole('button', { name: 'Alex is in' })).toBeDisabled();
+			await page.getByRole('button', { name: 'Sri agrees' }).click();
+			expect(dispatched).toEqual([{ type: 'skip', player: 0 }]);
+		});
 	});
 });

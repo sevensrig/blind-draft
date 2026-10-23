@@ -7,9 +7,9 @@ import type { GameConfig, GameState, Player } from './types';
  * during hydration, leaving prerendered HTML on screen with dead handlers — hence
  * the versioned key and the real shape check below. Anything unvouched is dropped.
  */
-const KEY = 'blind-draft:state:v2';
+const KEY = 'blind-draft:state:v3';
 /** Older keys, cleared on load so they don't linger. */
-const LEGACY_KEYS = ['blind-draft:state:v1'];
+const LEGACY_KEYS = ['blind-draft:state:v1', 'blind-draft:state:v2'];
 
 function isPlayer(value: unknown, slotIds: Set<string>): value is Player {
 	if (!value || typeof value !== 'object') return false;
@@ -36,6 +36,8 @@ function looksLikeGameState(value: unknown): value is GameState {
 
 	if (typeof state.phase !== 'string') return false;
 	if (!Array.isArray(state.deck) || typeof state.index !== 'number') return false;
+	if (!Array.isArray(state.spares) || typeof state.skipsLeft !== 'number') return false;
+	if (!Array.isArray(state.skipVotes) || state.skipVotes.length !== 2) return false;
 	if (!Array.isArray(state.players) || state.players.length !== 2) return false;
 	if (!isConfig(state.config)) return false;
 

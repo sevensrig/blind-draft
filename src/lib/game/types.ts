@@ -74,6 +74,12 @@ export interface GameState {
 	/** Index into `deck` of the item currently in play. */
 	index: number;
 	bid: Bid | null;
+	/** The unused pool a skip draws replacements from. Never leaves the server. */
+	spares: Item[];
+	/** Shared by both players for the whole game. */
+	skipsLeft: number;
+	/** Who has agreed to skip the current item; it goes once both have. */
+	skipVotes: [boolean, boolean];
 	/** Alternation pointer for the both-broke endgame (rule 8). */
 	freeTurn: PlayerId;
 	/** The award being celebrated during the `award` phase. */
@@ -83,8 +89,16 @@ export interface GameState {
 
 /** Plain serialisable data on purpose: these ship over the wire unchanged. */
 export type Action =
-	| { type: 'start'; config: GameConfig; names: [string, string]; deck: Item[] }
+	| {
+			type: 'start';
+			config: GameConfig;
+			names: [string, string];
+			deck: Item[];
+			spares?: Item[];
+	  }
 	| { type: 'reveal' }
+	/** Agree to skip the revealed item. Both players have to. */
+	| { type: 'skip'; player: PlayerId }
 	/** Opens the bidding, or raises a standing bid. */
 	| { type: 'bid'; player: PlayerId; amount: number }
 	/**

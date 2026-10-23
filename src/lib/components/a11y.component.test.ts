@@ -57,6 +57,16 @@ describe('accessibility', () => {
 		await expectNoViolations();
 	});
 
+	// A cast vote inverts, and a seat this device can't vote for mutes.
+	it('skip prompt is clean with one vote in', async () => {
+		game.replace(contested());
+		render(BidScreen);
+		await page.getByRole('button', { name: /Skip/ }).click();
+		await page.getByRole('button', { name: 'Ann agrees' }).click();
+		await expect.element(page.getByRole('button', { name: 'Ann is in' })).toBeVisible();
+		await expectNoViolations();
+	});
+
 	// A standing bid disables the holder's button and inverts it to
 	// black-on-cream, which is where a contrast regression hides.
 	it('bidding controls are clean with a standing bid and a disabled holder', async () => {

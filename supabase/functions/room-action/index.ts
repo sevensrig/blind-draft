@@ -13,7 +13,7 @@ import { redact } from '../_shared/state.ts';
  */
 
 /** Every action that speaks for one seat, and so must speak for the caller's. */
-const SEATED = new Set<Action['type']>(['bid', 'sold', 'buy', 'decline']);
+const SEATED = new Set<Action['type']>(['bid', 'sold', 'buy', 'decline', 'skip']);
 
 /**
  * Actions that name a player must name the caller's own seat. With the engine

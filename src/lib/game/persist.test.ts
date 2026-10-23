@@ -4,8 +4,8 @@ import { defaultConfig, initialState } from './engine';
 import { clearState, loadCustomDraft, loadState, saveCustomDraft, saveState } from './persist';
 import type { GameState } from './types';
 
-const KEY = 'blind-draft:state:v2';
-const LEGACY_KEY = 'blind-draft:state:v1';
+const KEY = 'blind-draft:state:v3';
+const LEGACY_KEY = 'blind-draft:state:v2';
 
 /** Minimal localStorage so these run without a DOM. */
 function installStorage(): Map<string, string> {

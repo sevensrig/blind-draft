@@ -10,6 +10,9 @@ export interface PublicGameState {
 	players: GameState['players'];
 	bid: GameState['bid'];
 	freeTurn: GameState['freeTurn'];
+	skipsLeft: GameState['skipsLeft'];
+	skipVotes: GameState['skipVotes'];
+	spareCount: number;
 	lastAward: GameState['lastAward'];
 	history: GameState['history'];
 	itemNumber: number;
