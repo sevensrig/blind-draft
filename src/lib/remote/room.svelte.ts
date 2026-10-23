@@ -1,3 +1,4 @@
+import { gameEvent, track, trackTransition } from '$lib/analytics';
 import type { Action } from '$lib/game/types';
 import { RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
@@ -200,6 +201,10 @@ class RemoteRoom {
 	 */
 	async leave(): Promise<void> {
 		const roomId = this.#roomId;
+		const state = this.#state;
+		if (state && this.#abandonedBy === null && state.seatsTaken >= 2) {
+			trackTransition(state, { ...state, phase: 'setup' }, 'online');
+		}
 		if (roomId) {
 			try {
 				await callFunction('leave-room', { roomId, token: deviceToken() });
@@ -245,11 +250,26 @@ class RemoteRoom {
 
 	#apply(state: PublicGameState, version: number): void {
 		if (version < this.#version) return;
+		this.#trackApply(this.#state, state);
 		this.#state = state;
 		this.#version = version;
 		if (this.#status === 'connecting' || this.#status === 'waiting') {
 			this.#status = this.bothSeated ? 'live' : 'waiting';
 		}
+	}
+
+	/**
+	 * The server deals the deck before anyone joins, so an online game "starts"
+	 * when the second seat fills. An empty history keeps a mid-game reload from
+	 * counting it twice.
+	 */
+	#trackApply(prev: PublicGameState | null, next: PublicGameState): void {
+		if (next.seatsTaken < 2) return;
+		if (!prev || prev.seatsTaken < 2) {
+			if (next.history.length === 0) track(gameEvent('game_started', next, 'online'));
+			return;
+		}
+		trackTransition(prev, next, 'online');
 	}
 }
 

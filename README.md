@@ -31,7 +31,7 @@ See [Testing and quality tooling](#testing-and-quality-tooling) for the rest.
 Push it to Vercel. `@sveltejs/adapter-auto` detects the platform and there is
 nothing to configure. The page is prerendered (`src/routes/+layout.ts`) and all
 state lives in the browser, so the deploy is a static shell — no server, no
-database, and no runtime network calls beyond the analytics pageview below.
+database, and no runtime network calls beyond the analytics below.
 Building locally prints
 "Could not detect a supported production environment", which is just
 adapter-auto saying your laptop isn't Vercel; the build itself is fine.
@@ -48,8 +48,38 @@ so. The same 404 happens against `npm run preview` and the E2E suite, which
 serve the built app without Vercel in front of it — expected there, and nothing
 asserts on it.
 
-Only pageviews are tracked, which on a three-route app says very little; issue
-#22 covers the custom events worth adding.
+Vercel only counts pageviews, and local play never leaves `/`, so its bounce
+rate counts a full game as a bounce. Game events go to PostHog instead.
+
+### Product analytics and error tracking
+
+Both switch on from env vars (see `.env.example`) and stay off without them,
+which is how tests and local dev run. Each SDK is loaded lazily from
+`src/hooks.client.ts`, so a deploy without the keys ships neither.
+
+**PostHog** (`src/lib/analytics/`) gets pageviews plus three events, fired from
+the two state seams (`store.svelte.ts`, `room.svelte.ts`) rather than from
+components:
+
+| Event | When |
+| --- | --- |
+| `game_started` | Local: setup is submitted. Online: the second seat fills. |
+| `game_finished` | The results screen is reached. |
+| `game_quit` | A game is abandoned before results. |
+
+Each carries `mode` (`local`/`online`), `category`, `variant`, `budget`,
+`slots` and `items_played`. Online games are counted once per device, so one
+game between two players shows up twice. No player names or custom-category
+text are sent. Autocapture and session replay are off, persistence is
+in-memory (no cookies, so no consent banner; the trade-off is that a returning
+visitor counts as new), and `before_send` strips the query string from every
+same-site URL, so room ids stay on the device.
+
+**Sentry** (`src/lib/analytics/errors.ts`) captures uncaught errors only: no
+tracing, no replay, no default PII, and room ids are scrubbed from the event
+URL and breadcrumbs. Setting `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
+`SENTRY_PROJECT` in Vercel uploads hidden source maps during the build; CI
+has no token and skips it.
 
 ### Keeping Supabase awake
 
