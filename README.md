@@ -53,9 +53,10 @@ rate counts a full game as a bounce. Game events go to PostHog instead.
 
 ### Product analytics and error tracking
 
-Both switch on from env vars (see `.env.example`) and stay off without them,
-which is how tests and local dev run. Each SDK is loaded lazily from
-`src/hooks.client.ts`, so a deploy without the keys ships neither.
+Both are PostHog. It switches on from `PUBLIC_POSTHOG_KEY` (see `.env.example`)
+and stays off without it, which is how tests and local dev run. The SDK is
+loaded lazily from `src/hooks.client.ts`, so a deploy without the key ships
+none of it.
 
 **PostHog** (`src/lib/analytics/`) gets pageviews plus three events, fired from
 the two state seams (`store.svelte.ts`, `room.svelte.ts`) rather than from
@@ -70,16 +71,24 @@ components:
 Each carries `mode` (`local`/`online`), `category`, `variant`, `budget`,
 `slots` and `items_played`. Online games are counted once per device, so one
 game between two players shows up twice. No player names or custom-category
-text are sent. Autocapture and session replay are off, persistence is
-in-memory (no cookies, so no consent banner; the trade-off is that a returning
-visitor counts as new), and `before_send` strips the query string from every
-same-site URL, so room ids stay on the device.
+text are sent. Autocapture and session replay are off, and `cookieless_mode`
+writes no cookies or storage, so there's no consent banner: PostHog counts
+visitors with a daily-rotating server-side hash instead. **Cookieless mode has to
+be enabled in the PostHog project settings too, or every event is dropped.**
+Daily hashing can't dedupe across days, so a `weekly_visitor` event fires once
+per device per ISO week: localStorage holds only the week label
+(`blind-draft:visit-week:v1`), never an id. Count those events for weekly unique
+devices.
+`before_send` strips the query string from every
+same-site URL, so room ids stay on the device. The flags request is off for the
+same reason: it carries the initial URL.
 
-**Sentry** (`src/lib/analytics/errors.ts`) captures uncaught errors only: no
-tracing, no replay, no default PII, and room ids are scrubbed from the event
-URL and breadcrumbs. Setting `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` and
-`SENTRY_PROJECT` in Vercel uploads hidden source maps during the build; CI
-has no token and skips it.
+**Errors** go to PostHog's error tracking as `$exception` events: uncaught
+errors and rejections, plus anything SvelteKit's `handleError` catches. They
+share a session with the game events, so a crash can be read alongside the
+`game_quit` that followed it. The same `before_send` scrubs them, recursively,
+because stack frames and messages nest URLs. Stack traces are minified; no
+source maps are uploaded.
 
 ### Keeping Supabase awake
 

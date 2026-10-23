@@ -3,8 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { GameConfig, Phase } from '$lib/game/types';
 import {
+	isoWeek,
 	scrubDeep,
-	scrubProperties,
 	scrubText,
 	scrubUrl,
 	transitionEvent,
@@ -71,6 +71,23 @@ describe('transitionEvent', () => {
 	});
 });
 
+describe('isoWeek', () => {
+	it('labels ordinary weeks', () => {
+		expect(isoWeek(new Date('2026-10-23T12:00:00Z'))).toBe('2026-W43');
+		// Monday starts the week, Sunday ends it.
+		expect(isoWeek(new Date('2026-10-19T00:00:00Z'))).toBe('2026-W43');
+		expect(isoWeek(new Date('2026-10-25T23:59:59Z'))).toBe('2026-W43');
+		expect(isoWeek(new Date('2026-10-26T00:00:00Z'))).toBe('2026-W44');
+	});
+
+	it('follows the ISO rule across new year', () => {
+		// 2027-01-01 is a Friday, so it still belongs to 2026's last week.
+		expect(isoWeek(new Date('2027-01-01T12:00:00Z'))).toBe('2026-W53');
+		// 2025-12-29 is a Monday in the week holding 2026's first Thursday.
+		expect(isoWeek(new Date('2025-12-29T12:00:00Z'))).toBe('2026-W01');
+	});
+});
+
 describe('scrubUrl', () => {
 	const origin = 'https://20dollardraftgame.com';
 
@@ -95,16 +112,23 @@ describe('scrubUrl', () => {
 		expect(JSON.stringify(scrubDeep({ arguments: args }, origin))).not.toContain('abc');
 	});
 
-	it('covers PostHog properties including $set_once', () => {
-		const out = scrubProperties(
-			{
-				$current_url: `${origin}/online/room?id=abc`,
-				$set_once: { $initial_current_url: `${origin}/online/room?id=abc` },
-				count: 2
-			},
-			origin
-		);
+	it('reaches URLs inside a PostHog exception payload', () => {
+		const props = {
+			$current_url: `${origin}/online/room?id=abc`,
+			$exception_list: [
+				{
+					value: `Failed to load ${origin}/online/room?id=abc`,
+					stacktrace: { frames: [{ filename: `${origin}/_app/immutable/x.js`, lineno: 1 }] }
+				}
+			],
+			count: 2
+		};
+		const out = scrubDeep(props, origin) as typeof props;
 		expect(JSON.stringify(out)).not.toContain('abc');
+		expect(out.$exception_list[0].stacktrace.frames[0]).toEqual({
+			filename: `${origin}/_app/immutable/x.js`,
+			lineno: 1
+		});
 		expect(out.count).toBe(2);
 	});
 });
@@ -114,10 +138,8 @@ describe('analytics configuration', () => {
 		readFileSync(join(process.cwd(), 'src/lib/analytics', file), 'utf8');
 
 	it('reads env dynamically so an unset key cannot break the build', () => {
-		for (const file of ['index.ts', 'errors.ts']) {
-			expect(read(file)).toContain("from '$env/dynamic/public'");
-			expect(read(file)).not.toContain("from '$env/static/public'");
-		}
+		expect(read('index.ts')).toContain("from '$env/dynamic/public'");
+		expect(read('index.ts')).not.toContain("from '$env/static/public'");
 	});
 
 	it('keeps session replay and autocapture off', () => {
@@ -125,7 +147,10 @@ describe('analytics configuration', () => {
 		expect(source).toContain('disable_session_recording: true');
 		expect(source).toContain('autocapture: false');
 		expect(source).toContain('advanced_disable_flags: true');
+		expect(source).toContain("cookieless_mode: 'always'");
+		// The weekly marker stores a week label and nothing that identifies a device.
+		expect(source).toMatch(/localStorage\.setItem\(WEEK_KEY, week\)/);
 		// Initial-URL person properties ride at the top level, outside `properties`.
-		expect(source).toMatch(/event\.\$set_once = scrubProperties/);
+		expect(source).toMatch(/event\.\$set_once = scrubDeep/);
 	});
 });
