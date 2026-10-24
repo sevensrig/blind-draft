@@ -157,6 +157,52 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	await expect(guest.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
 });
 
+test('a remote skip needs both seats, and the spares never reach a client', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+
+	// Every payload either device receives, to prove the pool stays on the server.
+	const bodies: string[] = [];
+	for (const page of [host, guest]) {
+		page.on('response', async (res) => {
+			if (!res.url().startsWith(SUPABASE)) return;
+			bodies.push(await res.text().catch(() => ''));
+		});
+	}
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await guest.waitForURL(/\/online\/room\?id=/);
+
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+	await host.getByRole('button', { name: /Tap to reveal/ }).click();
+	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
+	const first = (await guest.locator('.item__name').textContent())?.trim();
+
+	// One vote isn't a skip, and it opens the prompt on the other device.
+	await host.getByRole('button', { name: 'Skip · 2 left' }).click();
+	await expect(host.getByRole('button', { name: 'Alex agrees' })).toBeDisabled();
+	await host.getByRole('button', { name: 'Sri agrees' }).click();
+	await expect(guest.getByRole('button', { name: 'Sri is in' })).toBeVisible({ timeout: 15_000 });
+	await scan(guest, 'remote skip prompt');
+
+	await guest.getByRole('button', { name: 'Alex agrees' }).click();
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+	await expect(guest.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+
+	await guest.getByRole('button', { name: /Tap to reveal/ }).click();
+	await expect(host.locator('.item__name')).not.toHaveText(first ?? '', { timeout: 15_000 });
+	await expect(host.getByRole('button', { name: 'Skip · 1 left' })).toBeVisible();
+
+	expect(bodies.some((body) => body.includes('"skipsLeft"'))).toBe(true);
+	expect(bodies.some((body) => /"(spares|deck)"\s*:/.test(body))).toBe(false);
+});
+
 /*
  * Quitting used to do nothing that mattered: the Quit button sent
  * `{ type: 'reset' }`, a legal engine action, so the server wrote a blank
@@ -331,7 +377,7 @@ test('the deck never reaches a client', async ({ browser }) => {
 	// Nothing the browser holds should contain a deck: not storage, not the DOM.
 	const exposed = await host.evaluate(() => {
 		const storage = JSON.stringify(Object.entries(localStorage));
-		return /"deck"\s*:\s*\[/.test(storage + document.documentElement.innerHTML);
+		return /"(deck|spares)"\s*:\s*\[/.test(storage + document.documentElement.innerHTML);
 	});
 	expect(exposed).toBe(false);
 });

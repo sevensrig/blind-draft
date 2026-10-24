@@ -20,6 +20,12 @@ export function toGameState(view: PublicGameState): GameState {
 		tier: 'mid' as const
 	}));
 	if (view.item) deck[index] = view.item;
+	// Same trick for the spares: only their count matters to a client, for `canSkip`.
+	const spares: Item[] = Array.from({ length: view.spareCount }, (_, i) => ({
+		id: `spare-${i}`,
+		name: '',
+		tier: 'mid' as const
+	}));
 
 	return {
 		phase: view.phase,
@@ -27,6 +33,9 @@ export function toGameState(view: PublicGameState): GameState {
 		players: view.players,
 		bid: view.bid,
 		freeTurn: view.freeTurn,
+		skipsLeft: view.skipsLeft,
+		skipVotes: view.skipVotes,
+		spares,
 		lastAward: view.lastAward,
 		history: view.history,
 		deck,

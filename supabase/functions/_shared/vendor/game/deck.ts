@@ -274,3 +274,44 @@ export function buildDeck(
 	if (!sinkBadToTail(deck)) weightFinale(deck, rng);
 	return deck;
 }
+
+/** The unused pool in random order, for skips to draw from. */
+export function sparesFor(
+	pool: readonly Item[],
+	deck: readonly Item[],
+	rng: Rng = defaultRng
+): Item[] {
+	const dealt = new Set(deck.map((item) => item.id));
+	return shuffle(
+		pool.filter((item) => !dealt.has(item.id)),
+		rng
+	);
+}
+
+const isPolar = (tier: Tier) => tier === 'great' || tier === 'bad';
+
+function tierFit(skipped: Tier, candidate: Tier): number {
+	if (candidate === skipped) return 3;
+	if (isPolar(candidate) === isPolar(skipped) && candidate !== 'bad') return 2;
+	return candidate === 'bad' ? 0 : 1;
+}
+
+/**
+ * Which spare replaces a skipped item: same position first (keeps NBA/NFL
+ * stocking), then the same tier so the curve and the weighted ending hold.
+ * Any spare beats none, so a skip only fails on an empty pool. Pure, so the
+ * reducer can call it. Returns -1 when there are no spares.
+ */
+export function replacementFor(spares: readonly Item[], skipped: Item): number {
+	let best = -1;
+	let bestScore = -1;
+	spares.forEach((candidate, i) => {
+		const score =
+			(candidate.position === skipped.position ? 10 : 0) + tierFit(skipped.tier, candidate.tier);
+		if (score > bestScore) {
+			best = i;
+			bestScore = score;
+		}
+	});
+	return best;
+}

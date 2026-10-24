@@ -3,6 +3,7 @@
 
 import type { Item, SlotSpec } from '../data/types.ts';
 import { openRoster, slotSuits } from '../data/types.ts';
+import { replacementFor } from './deck.ts';
 import type { Action, Award, GameConfig, GameState, ItemMode, Player, PlayerId } from './types.ts';
 
 /**
@@ -15,6 +16,10 @@ import type { Action, Award, GameConfig, GameState, ItemMode, Player, PlayerId }
 export const DEFAULT_BUDGET = 20;
 export const DEFAULT_SLOTS = 5;
 export const MIN_BID = 1;
+/** Shared between both players, and only spent when both agree. */
+export const SKIPS_PER_GAME = 2;
+
+const NO_VOTES: [boolean, boolean] = [false, false];
 
 const OTHER: Record<PlayerId, PlayerId> = { 0: 1, 1: 0 };
 
@@ -46,6 +51,9 @@ export function initialState(): GameState {
 			blankPlayer(1, 'Player 2', DEFAULT_BUDGET)
 		],
 		deck: [],
+		spares: [],
+		skipsLeft: SKIPS_PER_GAME,
+		skipVotes: NO_VOTES,
 		index: 0,
 		bid: null,
 		freeTurn: 0,
@@ -149,6 +157,13 @@ export function canBuy(state: GameState, id: PlayerId, amount: number): boolean 
 	return amount >= MIN_BID && amount <= maxBid(state, id);
 }
 
+/** Only before anyone opens, and only while it's a real contest. */
+export function canSkip(state: GameState, id: PlayerId): boolean {
+	if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return false;
+	if (state.bid || state.skipsLeft <= 0 || state.spares.length === 0) return false;
+	return !state.skipVotes[id];
+}
+
 export function totalSpent(player: Player): number {
 	return player.roster.reduce((sum, entry) => sum + entry.price, 0);
 }
@@ -239,7 +254,8 @@ export function applyAction(state: GameState, action: Action): GameState {
 					blankPlayer(0, nameA.trim() || 'Player 1', action.config.budget),
 					blankPlayer(1, nameB.trim() || 'Player 2', action.config.budget)
 				],
-				deck: action.deck
+				deck: action.deck,
+				spares: action.spares ?? []
 			};
 		}
 
@@ -248,9 +264,36 @@ export function applyAction(state: GameState, action: Action): GameState {
 			return { ...state, phase: 'resolve' };
 		}
 
+		case 'skip': {
+			if (!canSkip(state, action.player)) return state;
+			const votes: [boolean, boolean] = [...state.skipVotes];
+			votes[action.player] = true;
+			if (!votes[0] || !votes[1]) return { ...state, skipVotes: votes };
+
+			// Swapped in place, so the deck stays 2 x N and every roster still fills.
+			const skipped = currentItem(state);
+			const pick = skipped ? replacementFor(state.spares, skipped) : -1;
+			if (!skipped || pick < 0) return state;
+			const deck = [...state.deck];
+			deck[state.index] = state.spares[pick];
+			return {
+				...state,
+				phase: 'reveal',
+				deck,
+				spares: state.spares.filter((_, i) => i !== pick),
+				skipsLeft: state.skipsLeft - 1,
+				skipVotes: NO_VOTES
+			};
+		}
+
 		case 'bid': {
 			if (!canBid(state, action.player, action.amount)) return state;
-			return { ...state, bid: { amount: action.amount, holder: action.player } };
+			// Opening is how a player says no to a pending skip.
+			return {
+				...state,
+				bid: { amount: action.amount, holder: action.player },
+				skipVotes: NO_VOTES
+			};
 		}
 
 		case 'sold': {
@@ -321,6 +364,7 @@ export function applyAction(state: GameState, action: Action): GameState {
 				phase: done ? 'results' : 'reveal',
 				index,
 				bid: null,
+				skipVotes: NO_VOTES,
 				lastAward: done ? state.lastAward : null
 			};
 		}

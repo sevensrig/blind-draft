@@ -7,6 +7,7 @@
 		canBuy,
 		canReceive,
 		canSell,
+		canSkip,
 		currentItem,
 		freeRecipient,
 		itemMode,
@@ -82,6 +83,37 @@
 	});
 
 	let confirmQuit = $state(false);
+
+	/** Open only before anyone bids, while the shared skips and the pool last. */
+	const skippable = $derived(
+		s.phase === 'resolve' &&
+			mode === 'contest' &&
+			!s.bid &&
+			s.skipsLeft > 0 &&
+			s.spares.length > 0
+	);
+	let askSkip = $state(false);
+	let skipDialog = $state<HTMLDialogElement>();
+	const skipPrompt = $derived(skippable && askSkip);
+	// A string, so a re-fetch with the same votes doesn't reopen a dismissed modal.
+	const votes = $derived(s.skipVotes.join());
+
+	$effect(() => {
+		void item?.id;
+		askSkip = false;
+	});
+
+	$effect(() => {
+		// A vote from the other device opens it here too.
+		if (votes.includes('true')) askSkip = true;
+	});
+
+	$effect(() => {
+		if (!skippable) askSkip = false;
+		if (!skipDialog) return;
+		if (skipPrompt && !skipDialog.open) skipDialog.showModal();
+		else if (!skipPrompt && skipDialog.open) skipDialog.close();
+	});
 
 	const nameOf = (id: PlayerId) => s.players[id].name;
 
@@ -165,6 +197,16 @@
 		</button>
 	{:else if item}
 		<div class="item item--face" class:item--won={!!award}>
+			{#if skippable}
+				<button
+					class="skip"
+					type="button"
+					aria-haspopup="dialog"
+					onclick={() => (askSkip = true)}
+				>
+					Skip · {s.skipsLeft} left
+				</button>
+			{/if}
 			{#if item.position}
 				<span class="item__tag item__tag--pos">{item.position}</span>
 			{:else}
@@ -317,6 +359,38 @@
 			</div>
 		{/if}
 	{/if}
+
+	{#if skippable}
+		<dialog
+			class="skipper"
+			bind:this={skipDialog}
+			aria-labelledby="skip-title"
+			onclose={() => (askSkip = false)}
+		>
+			<h2 id="skip-title" class="skipper__title">Skip {item?.name}?</h2>
+			<p class="skipper__label">
+				Both have to agree · {s.skipsLeft}
+				{s.skipsLeft === 1 ? 'skip' : 'skips'} left between you
+			</p>
+			<div class="skipper__row">
+				{#each [0, 1] as const as id (id)}
+					<button
+						class="skipper__vote"
+						class:on={s.skipVotes[id]}
+						type="button"
+						disabled={!canSkip(s, id) || !controls(id)}
+						onclick={() => send({ type: 'skip', player: id })}
+					>
+						{s.skipVotes[id] ? `${nameOf(id)} is in` : `${nameOf(id)} agrees`}
+					</button>
+				{/each}
+			</div>
+			<p class="skipper__label">Opening a bid keeps it</p>
+			<button class="btn btn--ghost" type="button" onclick={() => skipDialog?.close()}>
+				Not now
+			</button>
+		</dialog>
+	{/if}
 </div>
 
 <style>
@@ -444,6 +518,7 @@
 	}
 
 	.item--face {
+		position: relative;
 		background: var(--white);
 		transform: rotate(1deg);
 		animation: slam-card 90ms linear;
@@ -485,6 +560,26 @@
 		font-weight: 900;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
+	}
+
+	.skip {
+		position: absolute;
+		top: -0.7rem;
+		right: -0.5rem;
+		padding: 0.3rem 0.5rem;
+		background: var(--red);
+		border: var(--bw-thin) solid var(--ink);
+		box-shadow: 3px 3px 0 var(--ink);
+		font-size: 0.6rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		transform: rotate(2deg);
+	}
+
+	.skip:active {
+		background: var(--ink);
+		color: var(--cream);
+		box-shadow: none;
 	}
 
 	/* ---------- controls ---------- */
@@ -576,6 +671,68 @@
 		font-size: 0.72rem;
 		font-weight: 800;
 		text-transform: uppercase;
+	}
+
+	/* ---------- skip agreement ---------- */
+
+	.skipper {
+		width: calc(100% - 2rem);
+		max-width: calc(var(--shell) - 2rem);
+		padding: 0.9rem;
+		background: var(--cream);
+		color: var(--ink);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-lg);
+	}
+
+	.skipper[open] {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+	}
+
+	.skipper::backdrop {
+		background: rgb(0 0 0 / 0.55);
+	}
+
+	.skipper__title {
+		font-size: 1.3rem;
+		line-height: 1;
+		text-wrap: balance;
+	}
+
+	.skipper__label {
+		margin: 0;
+		font-size: 0.58rem;
+		font-weight: 900;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.skipper__row {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 0.3rem;
+	}
+
+	.skipper__vote {
+		padding: 0.45rem 0.2rem;
+		background: var(--white);
+		border: var(--bw-thin) solid var(--ink);
+		font-size: 0.78rem;
+		text-transform: uppercase;
+	}
+
+	.skipper__vote:disabled:not(.on) {
+		color: var(--ink-muted);
+		cursor: not-allowed;
+	}
+
+	/* Agreed, not broken — so it inverts rather than washing out. */
+	.skipper__vote.on:disabled {
+		background: var(--ink);
+		color: var(--cream);
+		opacity: 1;
 	}
 
 	/* ---------- slot picker ---------- */

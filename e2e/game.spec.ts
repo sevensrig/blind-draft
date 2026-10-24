@@ -139,6 +139,27 @@ test('resumes an in-progress draft after a reload', async ({ page }) => {
 	await expect(page.getByText('On the block')).toBeVisible();
 });
 
+test('a skip both players agree to swaps the card and survives a reload', async ({ page }) => {
+	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
+	await page.getByRole('button', { name: /Tap to reveal/ }).click();
+	const first = (await page.locator('.item__name').textContent())?.trim();
+
+	await page.getByRole('button', { name: 'Skip · 2 left' }).click();
+	await page.getByRole('button', { name: 'Sri agrees' }).click();
+	await page.getByRole('button', { name: 'Alex agrees' }).click();
+
+	// Same slot in the draft, a new card face down.
+	await expect(page.getByText('Item 1')).toBeVisible();
+	await page.reload();
+	await page.getByRole('button', { name: /Tap to reveal/ }).click();
+	await expect(page.locator('.item__name')).not.toHaveText(first ?? '');
+	await expect(page.getByRole('button', { name: 'Skip · 1 left' })).toBeVisible();
+
+	// Opening a bid takes the skip off the table.
+	await page.locator('.duel__btn').first().click();
+	await expect(page.getByRole('button', { name: /Skip/ })).toHaveCount(0);
+});
+
 test('quitting twice abandons the draft and returns to setup', async ({ page }) => {
 	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
 

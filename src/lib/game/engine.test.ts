@@ -2,11 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from '$lib/data';
 import { openRoster } from '$lib/data/types';
 import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
-import { buildDeck } from './deck';
+import { buildDeck, sparesFor } from './deck';
 import {
 	applyAction,
 	canReceive,
 	canSell,
+	canSkip,
 	defaultConfig,
 	defaultSlotFor,
 	initialState,
@@ -61,11 +62,13 @@ const deckOf = (positions: Position[]): Item[] =>
 function startGame(
 	deck: Item[],
 	roster: SlotSpec[] = openRoster(deck.length / 2),
-	budget = 20
+	budget = 20,
+	spares: Item[] = []
 ): GameState {
 	return applyAction(initialState(), {
 		type: 'start',
 		deck,
+		spares,
 		names: ['Ann', 'Bo'],
 		config: {
 			...defaultConfig(),
@@ -328,6 +331,90 @@ describe('positional rosters', () => {
 	});
 });
 
+describe('skips', () => {
+	const tiered = (id: string, tier: Tier, position?: Position): Item => ({
+		id,
+		name: id,
+		tier,
+		...(position ? { position } : {})
+	});
+
+	function skippable(
+		spares: Item[] = [tiered('spare-mid', 'mid'), tiered('spare-great', 'great')]
+	) {
+		return reveal(startGame(items(6), openRoster(3), 20, spares));
+	}
+
+	const bothSkip = (state: GameState) =>
+		applyAction(applyAction(state, { type: 'skip', player: 0 }), { type: 'skip', player: 1 });
+
+	it('needs both players to agree before the item goes', () => {
+		const one = applyAction(skippable(), { type: 'skip', player: 0 });
+		expect(one.phase).toBe('resolve');
+		expect(one.skipVotes).toEqual([true, false]);
+		expect(one.skipsLeft).toBe(2);
+		// Voting twice changes nothing.
+		expect(applyAction(one, { type: 'skip', player: 0 })).toBe(one);
+
+		const both = applyAction(one, { type: 'skip', player: 1 });
+		expect(both.phase).toBe('reveal');
+		expect(both.index).toBe(0);
+		expect(both.skipsLeft).toBe(1);
+		expect(both.skipVotes).toEqual([false, false]);
+	});
+
+	it('swaps in a spare of the same tier, face down, and spends it', () => {
+		const next = bothSkip(skippable());
+		expect(next.deck[0].id).toBe('spare-mid');
+		expect(next.deck).toHaveLength(6);
+		expect(next.spares.map((item) => item.id)).toEqual(['spare-great']);
+	});
+
+	it('prefers the same position, then the same tier', () => {
+		const roster = NBA_ROSTER.slice(0, 1);
+		const deck = [tiered('c', 'great', 'C'), tiered('c2', 'mid', 'C')];
+		const spares = [
+			tiered('pg-great', 'great', 'PG'),
+			tiered('c-mid', 'mid', 'C'),
+			tiered('c-great', 'great', 'C')
+		];
+		const next = bothSkip(reveal(startGame(deck, roster, 20, spares)));
+		expect(next.deck[0].id).toBe('c-great');
+	});
+
+	it('keeps a bad card out of the middle of the deck', () => {
+		const next = bothSkip(skippable([tiered('spare-bad', 'bad'), tiered('spare-good', 'good')]));
+		expect(next.deck[0].id).toBe('spare-good');
+	});
+
+	it('shares two skips for the whole game', () => {
+		let state = skippable([tiered('a', 'mid'), tiered('b', 'mid'), tiered('c', 'mid')]);
+		state = reveal(bothSkip(state));
+		state = reveal(bothSkip(state));
+		expect(state.skipsLeft).toBe(0);
+		expect(canSkip(state, 0)).toBe(false);
+		expect(applyAction(state, { type: 'skip', player: 0 })).toBe(state);
+	});
+
+	it('closes once anyone opens, and opening clears a pending vote', () => {
+		const voted = applyAction(skippable(), { type: 'skip', player: 0 });
+		const opened = applyAction(voted, { type: 'bid', player: 1, amount: 1 });
+		expect(opened.skipVotes).toEqual([false, false]);
+		expect(canSkip(opened, 0)).toBe(false);
+		expect(applyAction(opened, { type: 'skip', player: 1 })).toBe(opened);
+	});
+
+	it('is off while face down, outside a contest, or with no spares left', () => {
+		expect(canSkip(startGame(items(6), openRoster(3), 20, items(2)), 0)).toBe(false);
+		expect(canSkip(skippable([]), 0)).toBe(false);
+
+		const broke = skippable();
+		broke.players[1] = { ...broke.players[1], money: 0 };
+		expect(itemMode(broke)).toBe('solo');
+		expect(canSkip(broke, 0)).toBe(false);
+	});
+});
+
 /* ------------------------------------------------------------------ *
  * Whole-game fuzz: no line of play may strand an unfillable roster.
  * ------------------------------------------------------------------ */
@@ -348,6 +435,13 @@ function autoPlay(start: GameState, rng: () => number, aggression: number): Game
 		const mode = itemMode(state);
 
 		if (mode === 'contest') {
+			// Now and then both agree to skip; a lone vote is undone by the next bid.
+			if (!state.bid && rng() < 0.15) {
+				const first: PlayerId = rng() < 0.5 ? 0 : 1;
+				state = applyAction(state, { type: 'skip', player: first });
+				if (rng() < 0.7) state = applyAction(state, { type: 'skip', player: other(first) });
+				if (state.phase === 'reveal') continue;
+			}
 			const challenger: PlayerId = state.bid ? other(state.bid.holder) : rng() < 0.5 ? 0 : 1;
 			const floor = minBid(state);
 			const ceiling = maxBid(state, challenger);
@@ -397,6 +491,7 @@ describe('full games across every category', () => {
 
 	it.each(variants)('$label always reaches a complete draft', ({ variant, roster }) => {
 		const rng = seeded(variant.items.length);
+		let skipped = 0;
 
 		for (let run = 0; run < 40; run++) {
 			// Positional categories lock their roster; the rest vary the shape.
@@ -406,10 +501,17 @@ describe('full games across every category', () => {
 			const aggression = run / 40;
 
 			const deck = buildDeck(variant.items, template, rng);
-			const end = autoPlay(startGame(deck, template, budget), rng, aggression);
+			const spares = sparesFor(variant.items, deck, rng);
+			const end = autoPlay(startGame(deck, template, budget, spares), rng, aggression);
 
 			expect(end.phase).toBe('results');
 			expect(end.history).toHaveLength(deck.length);
+			expect(end.deck).toHaveLength(deck.length);
+			expect(end.skipsLeft).toBeGreaterThanOrEqual(0);
+			skipped += initialState().skipsLeft - end.skipsLeft;
+			// A skip swaps like for like, so positional stocking survives it.
+			const positions = (cards: Item[]) => cards.map((card) => card.position ?? '').sort();
+			expect(positions(end.deck)).toEqual(positions(deck));
 
 			for (const player of end.players) {
 				expect(player.roster).toHaveLength(template.length);
@@ -425,11 +527,14 @@ describe('full games across every category', () => {
 				}
 			}
 
-			// Every dealt item ends up owned exactly once.
+			// Every dealt item ends up owned exactly once; a skipped one by nobody.
 			const owned = end.players.flatMap((player) => player.roster.map((entry) => entry.item.id));
 			expect(new Set(owned).size).toBe(deck.length);
-			expect(new Set(owned)).toEqual(new Set(deck.map((item) => item.id)));
+			expect(new Set(owned)).toEqual(new Set(end.deck.map((item) => item.id)));
+			for (const spare of end.spares) expect(owned).not.toContain(spare.id);
 		}
+		// Otherwise the fuzz would pass without ever exercising a skip.
+		expect(skipped).toBeGreaterThan(0);
 	});
 
 	/**
@@ -455,7 +560,8 @@ describe('full games across every category', () => {
 			const deck = buildDeck(pool, template, rng);
 			expect(deck).toHaveLength(slots * 2);
 
-			const end = autoPlay(startGame(deck, template, budget), rng, run / 40);
+			const spares = sparesFor(pool, deck, rng);
+			const end = autoPlay(startGame(deck, template, budget, spares), rng, run / 40);
 			expect(end.phase).toBe('results');
 			for (const player of end.players) {
 				expect(player.roster).toHaveLength(slots);

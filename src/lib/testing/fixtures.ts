@@ -26,6 +26,8 @@ export interface GameOptions {
 	names?: [string, string];
 	roster?: SlotSpec[];
 	deck?: Item[];
+	/** Unused pool for skips. Defaults to two, so the skip chip shows. */
+	spares?: Item[];
 }
 
 /** A game sitting on the first face-down card. */
@@ -34,7 +36,8 @@ export function startedGame({
 	budget = 20,
 	names = ['Ann', 'Bo'],
 	roster,
-	deck
+	deck,
+	spares = [item('spare-0', 'Spare 1'), item('spare-1', 'Spare 2')]
 }: GameOptions = {}): GameState {
 	const template = roster ?? openRoster(slots);
 	const cards =
@@ -44,6 +47,7 @@ export function startedGame({
 	return applyAction(initialState(), {
 		type: 'start',
 		deck: cards,
+		spares,
 		names,
 		config: {
 			...defaultConfig(),
