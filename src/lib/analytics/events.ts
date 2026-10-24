@@ -1,4 +1,5 @@
 import type { GameConfig, Phase } from '$lib/game/types';
+import type { ShareMethod } from '$lib/share';
 
 export type PlayMode = 'local' | 'online';
 
@@ -9,7 +10,7 @@ export interface GameSnapshot {
 	history: readonly unknown[];
 }
 
-export type GameEventName = 'game_started' | 'game_finished' | 'game_quit';
+export type GameEventName = 'game_started' | 'game_finished' | 'game_quit' | 'results_shared';
 
 export interface GameEvent {
 	name: GameEventName;
@@ -30,6 +31,11 @@ export function gameEvent(name: GameEventName, state: GameSnapshot, mode: PlayMo
 			items_played: state.history.length
 		}
 	};
+}
+
+export function shareEvent(state: GameSnapshot, mode: PlayMode, method: ShareMethod): GameEvent {
+	const event = gameEvent('results_shared', state, mode);
+	return { ...event, props: { ...event.props, method } };
 }
 
 /** Maps a state change to the event it represents, if any. */

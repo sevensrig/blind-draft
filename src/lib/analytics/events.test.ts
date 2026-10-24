@@ -7,6 +7,7 @@ import {
 	scrubDeep,
 	scrubText,
 	scrubUrl,
+	shareEvent,
 	transitionEvent,
 	type GameSnapshot
 } from './events';
@@ -67,6 +68,15 @@ describe('transitionEvent', () => {
 
 	it('never sends player-typed content', () => {
 		const event = transitionEvent(at('setup'), at('reveal'), 'local');
+		expect(JSON.stringify(event)).not.toContain('secret');
+	});
+});
+
+describe('shareEvent', () => {
+	it('records how it was shared alongside the game settings', () => {
+		const event = shareEvent(at('results', 10), 'local', 'image');
+		expect(event.name).toBe('results_shared');
+		expect(event.props).toMatchObject({ method: 'image', category: 'nba', items_played: 10 });
 		expect(JSON.stringify(event)).not.toContain('secret');
 	});
 });

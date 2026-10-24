@@ -1,9 +1,14 @@
 <script lang="ts">
+	import { shareEvent, track } from '$lib/analytics';
+	import Icon from '$lib/components/Icon.svelte';
 	import { getCategory, getVariant } from '$lib/data';
 	import { buildDeck } from '$lib/game/deck';
 	import { entryInSlot, totalSpent } from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
 	import type { GameState, Player } from '$lib/game/types';
+	import { shareResults } from '$lib/share';
+	import { cardFile } from '$lib/share/card';
+	import { shareText } from '$lib/share/text';
 
 	interface Props {
 		/** Remote play supplies the server's state; local play uses the store. */
@@ -42,6 +47,30 @@
 			names: [p1.name, p2.name],
 			deck: buildDeck(pool, s.config.roster)
 		});
+	}
+
+	// Rendered ahead of the tap: iOS drops the share sheet if the click awaits first.
+	let image = $state<File | null>(null);
+	$effect(() => {
+		let live = true;
+		cardFile(s).then((file) => {
+			if (live) image = file;
+		});
+		return () => {
+			live = false;
+		};
+	});
+
+	let copied = $state(false);
+
+	async function share() {
+		const method = await shareResults(shareText(s), image);
+		if (!method) return;
+		track(shareEvent(s, view ? 'online' : 'local', method));
+		if (method === 'clipboard') {
+			copied = true;
+			setTimeout(() => (copied = false), 2000);
+		}
 	}
 
 	const accentFor = (player: Player) => (player.id === 0 ? 'var(--p1)' : 'var(--p2)');
@@ -119,6 +148,12 @@
 	<p class="verdict">No scores here — argue about who won.</p>
 
 	<div class="actions">
+		<button class="btn btn--yellow" type="button" onclick={share}>
+			<span class="share__label"><Icon name="arrow-up-from-bracket" /> Share results</span>
+			<span class="btn__sub" aria-live="polite">
+				{copied ? 'Copied — paste it anywhere' : 'post the rosters, start the argument'}
+			</span>
+		</button>
 		{#if onRunItBack !== null}
 			<button class="btn btn--hot" type="button" onclick={onRunItBack ?? runItBack}>
 				Run it back
@@ -343,6 +378,12 @@
 	.actions {
 		display: flex;
 		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.share__label {
+		display: inline-flex;
+		align-items: center;
 		gap: 0.5rem;
 	}
 </style>

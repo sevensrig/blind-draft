@@ -10,7 +10,7 @@ import {
 	transitionEvent
 } from './events';
 
-export { gameEvent } from './events';
+export { gameEvent, shareEvent } from './events';
 
 // Dynamic for the same reason as `$lib/remote/client.ts`: an unset key switches
 // analytics off instead of failing the build. Unset in tests and local dev.

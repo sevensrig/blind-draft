@@ -29,6 +29,26 @@ test('plays a complete two-player draft through to the results sheet', async ({ 
 	await expect(page.getByText('of 6 items')).toBeVisible();
 });
 
+test('copies a text version of the results when the browser has no share sheet', async ({
+	page,
+	context
+}) => {
+	await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+	// Desktop Chromium may have a share sheet; this covers the browsers that don't.
+	await page.addInitScript(() => {
+		Object.defineProperty(navigator, 'share', { value: undefined });
+	});
+	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
+	for (const winner of ['Sri', 'Alex', 'Sri'] as const) await playRound(page, { winner });
+	await playToResults(page, { winner: 'Alex' });
+
+	await page.getByRole('button', { name: /Share results/ }).click();
+	await expect(page.getByText(/Copied/)).toBeVisible();
+
+	const copied = await page.evaluate(() => navigator.clipboard.readText());
+	expect(copied).toMatch(/^\$20 Draft · Foods · \$20 each\nSri: .+\nAlex: .+\nWho won\?/);
+});
+
 test('drops into the broke-player fallback when someone spends everything', async ({ page }) => {
 	await setUpGame(page, { names: ['Sri', 'Alex'], budget: '$10', slots: '3' });
 
