@@ -1,8 +1,9 @@
 import { page } from 'vitest/browser';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { totalSpent } from '$lib/game/engine';
 import { game } from '$lib/game/store.svelte';
+import { shareText } from '$lib/share/text';
 import { finishedGame } from '$lib/testing/fixtures';
 import ResultsScreen from './ResultsScreen.svelte';
 
@@ -93,5 +94,94 @@ describe('ResultsScreen', () => {
 
 		await page.getByRole('button', { name: /New setup/ }).click();
 		expect(game.state.phase).toBe('setup');
+	});
+
+	describe('sharing', () => {
+		const stubs: string[] = [];
+
+		/** Navigator's share APIs are read-only getters, so they're redefined per test. */
+		function stub(name: 'share' | 'canShare' | 'clipboard', value: unknown) {
+			Object.defineProperty(navigator, name, { value, configurable: true });
+			stubs.push(name);
+		}
+
+		/** Resolves once the card PNG exists, so the image path is the one taken. */
+		function cardRendered(): Promise<void> {
+			const original = HTMLCanvasElement.prototype.toBlob;
+			return new Promise((resolve) => {
+				vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(function (
+					this: HTMLCanvasElement,
+					callback,
+					...rest
+				) {
+					original.call(this, (blob) => (callback(blob), resolve()), ...rest);
+				});
+			});
+		}
+
+		afterEach(() => {
+			for (const name of stubs.splice(0))
+				delete (navigator as unknown as Record<string, unknown>)[name];
+			vi.restoreAllMocks();
+		});
+
+		it('shares the card image and text through the share sheet when files are supported', async () => {
+			const share = vi.fn().mockResolvedValue(undefined);
+			stub('share', share);
+			stub('canShare', () => true);
+			const rendered = cardRendered();
+			const finished = finishedGame({ slots: 3, names: ['Sri', 'Alex'] });
+			game.replace(finished);
+			render(ResultsScreen);
+			await rendered;
+
+			await page.getByRole('button', { name: /Share results/ }).click();
+
+			expect(share).toHaveBeenCalledOnce();
+			const [data] = share.mock.calls[0];
+			expect(data.text).toBe(shareText(finished));
+			expect(data.files).toHaveLength(1);
+			expect(data.files[0].type).toBe('image/png');
+		});
+
+		it('falls back to text when the device can share but not files', async () => {
+			const share = vi.fn().mockResolvedValue(undefined);
+			stub('share', share);
+			stub('canShare', () => false);
+			const finished = finishedGame({ slots: 3 });
+			game.replace(finished);
+			render(ResultsScreen);
+
+			await page.getByRole('button', { name: /Share results/ }).click();
+
+			expect(share).toHaveBeenCalledWith({ text: shareText(finished) });
+		});
+
+		it('copies to the clipboard when there is no share sheet', async () => {
+			const writeText = vi.fn().mockResolvedValue(undefined);
+			stub('share', undefined);
+			stub('clipboard', { writeText });
+			const finished = finishedGame({ slots: 3 });
+			game.replace(finished);
+			render(ResultsScreen);
+
+			await page.getByRole('button', { name: /Share results/ }).click();
+
+			expect(writeText).toHaveBeenCalledWith(shareText(finished));
+			await expect.element(page.getByText(/Copied/)).toBeVisible();
+		});
+
+		it('treats a dismissed share sheet as a choice, not a failure', async () => {
+			const writeText = vi.fn().mockResolvedValue(undefined);
+			stub('share', vi.fn().mockRejectedValue(new DOMException('dismissed', 'AbortError')));
+			stub('clipboard', { writeText });
+			game.replace(finishedGame({ slots: 3 }));
+			render(ResultsScreen);
+
+			await page.getByRole('button', { name: /Share results/ }).click();
+
+			expect(writeText).not.toHaveBeenCalled();
+			await expect.element(page.getByText(/Copied/)).not.toBeInTheDocument();
+		});
 	});
 });

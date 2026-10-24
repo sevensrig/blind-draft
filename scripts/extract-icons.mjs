@@ -30,7 +30,8 @@ const WANTED = [
 	'pen-to-square',
 	'ice-cream',
 	'cheese',
-	'basket-shopping'
+	'basket-shopping',
+	'arrow-up-from-bracket'
 ];
 
 function extract(slug) {
