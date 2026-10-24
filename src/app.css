@@ -176,6 +176,20 @@ input {
 	text-transform: uppercase;
 }
 
+/* Wide screens: a roomier column on dot paper. Hard-stop gradients draw dots,
+   not fades. */
+@media (min-width: 48rem) {
+	:root {
+		--shell: 38rem;
+	}
+
+	body {
+		background-image: radial-gradient(#d9d2b6 1.5px, transparent 1.5px);
+		background-size: 24px 24px;
+		background-attachment: fixed;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	*,
 	*::before,
