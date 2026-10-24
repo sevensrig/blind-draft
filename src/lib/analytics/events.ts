@@ -84,7 +84,10 @@ export function scrubDeep(value: unknown, origin: string): unknown {
 	if (typeof value === 'string') return scrubText(value, origin);
 	if (Array.isArray(value)) return value.map((v) => scrubDeep(v, origin));
 	if (value && typeof value === 'object') {
-		return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, scrubDeep(v, origin)]));
+		// Keys too: some payloads, like heatmap data, are keyed by URL.
+		return Object.fromEntries(
+			Object.entries(value).map(([k, v]) => [scrubText(k, origin), scrubDeep(v, origin)])
+		);
 	}
 	return value;
 }
