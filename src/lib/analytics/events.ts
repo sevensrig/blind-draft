@@ -1,7 +1,7 @@
 import type { GameConfig, Phase } from '$lib/game/types';
 import type { ShareMethod } from '$lib/share';
 
-export type PlayMode = 'local' | 'online';
+export type PlayMode = 'local' | 'bot' | 'online';
 
 /** The slice of local and remote state the events read. */
 export interface GameSnapshot {
@@ -15,6 +15,11 @@ export type GameEventName = 'game_started' | 'game_finished' | 'game_quit' | 're
 export interface GameEvent {
 	name: GameEventName;
 	props: Record<string, string | number | boolean | null>;
+}
+
+/** Single-device games, split by whether the second seat is a bot. */
+export function localMode(...configs: GameConfig[]): PlayMode {
+	return configs.some((config) => config.bot !== undefined) ? 'bot' : 'local';
 }
 
 /** Category and settings only: player names and custom item text never leave the device. */

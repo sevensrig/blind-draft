@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { shareEvent, track } from '$lib/analytics';
+	import { localMode, shareEvent, track } from '$lib/analytics';
 	import Icon from '$lib/components/Icon.svelte';
 	import { getCategory, getVariant } from '$lib/data';
 	import { buildDeck } from '$lib/game/deck';
@@ -66,7 +66,7 @@
 	async function share() {
 		const method = await shareResults(shareText(s), image);
 		if (!method) return;
-		track(shareEvent(s, view ? 'online' : 'local', method));
+		track(shareEvent(s, view ? 'online' : localMode(s.config), method));
 		if (method === 'clipboard') {
 			copied = true;
 			setTimeout(() => (copied = false), 2000);

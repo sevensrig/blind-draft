@@ -34,6 +34,8 @@ export interface GameConfig {
 	variantLabel: string | null;
 	/** The player-typed pool, so a saved game doesn't depend on the setup form. */
 	customItems?: Item[];
+	/** The seat a bot plays, for single-player games. Absent when two people play. */
+	bot?: PlayerId;
 }
 
 export type Phase = 'setup' | 'reveal' | 'resolve' | 'award' | 'results';

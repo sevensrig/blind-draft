@@ -139,6 +139,16 @@ describe('persistence', () => {
 		expect(loadState()).toBeNull();
 	});
 
+	it('keeps a bot game, and drops one naming a seat that does not exist', () => {
+		const vsBot = playableState();
+		vsBot.config.bot = 1;
+		saveState(vsBot);
+		expect(loadState()).toEqual(vsBot);
+
+		store.set(KEY, JSON.stringify({ ...vsBot, config: { ...vsBot.config, bot: 2 } }));
+		expect(loadState()).toBeNull();
+	});
+
 	it('clears keys from previous versions', () => {
 		store.set(LEGACY_KEY, JSON.stringify({ anything: true }));
 		loadState();
