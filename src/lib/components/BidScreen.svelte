@@ -54,7 +54,7 @@
 
 	/** Any player fits any slot, so this is just "not already taken". */
 	const assignable = $derived.by(() => {
-		if (!award || !s.config.positional) return [];
+		if (!award || !s.config.positional || !controls(award.playerId)) return [];
 		const taken = new Set(
 			s.players[award.playerId].roster
 				.filter((entry) => entry.item.id !== award.item.id)
@@ -279,7 +279,7 @@
 				<button
 					class="btn btn--hot"
 					type="button"
-					disabled={!canBuy(s, seller, amount)}
+					disabled={!canBuy(s, seller, amount) || !controls(seller)}
 					onclick={() => send({ type: 'buy', player: seller, amount })}
 				>
 					{nameOf(seller)} takes it for ${amount}
@@ -288,6 +288,7 @@
 				<button
 					class="btn btn--ghost"
 					type="button"
+					disabled={!controls(seller)}
 					onclick={() => send({ type: 'decline', player: seller })}
 				>
 					Pass

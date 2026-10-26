@@ -46,6 +46,28 @@ describe('SetupScreen', () => {
 		expect(game.state.config.slots).toBe(5);
 	});
 
+	it('seats the bot as player 2 when playing solo', async () => {
+		render(SetupScreen);
+
+		await page.getByRole('button', { name: 'Vs. the bot' }).click();
+		expect(page.getByPlaceholder('Player 2').elements()).toHaveLength(0);
+		await page.getByPlaceholder('Player 1').fill('Sri');
+		await page.getByRole('button', { name: /Foods/ }).click();
+		await page.getByRole('button', { name: /Start the draft/ }).click();
+
+		expect(game.state.players.map((player) => player.name)).toEqual(['Sri', 'Bot']);
+		expect(game.state.config.bot).toBe(1);
+	});
+
+	it('leaves pass-and-play games without a bot', async () => {
+		render(SetupScreen);
+
+		await page.getByRole('button', { name: /Foods/ }).click();
+		await page.getByRole('button', { name: /Start the draft/ }).click();
+
+		expect(game.state.config.bot).toBeUndefined();
+	});
+
 	it('cannot start until a category is chosen', async () => {
 		render(SetupScreen);
 

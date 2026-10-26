@@ -11,7 +11,9 @@ shipped under, so old links resolve to the same entity. `SITE_NAME` /
 `SITE_ALT_NAMES` in `src/lib/site.ts` are the only place any of them is defined.
 
 Pass-and-play, or one person holds the phone as game master and taps in bids for
-two people arguing out loud. Same mode either way.
+two people arguing out loud. Same mode either way. Or play alone against a bot,
+which bids from what it can see (the card, both wallets, what's already gone by)
+and never from the deck order.
 
 ## Running it
 
@@ -68,7 +70,7 @@ components:
 | `game_finished` | The results screen is reached. |
 | `game_quit` | A game is abandoned before results. |
 
-Each carries `mode` (`local`/`online`), `category`, `variant`, `budget`,
+Each carries `mode` (`local`/`bot`/`online`), `category`, `variant`, `budget`,
 `slots` and `items_played`. Online games are counted once per device, so one
 game between two players shows up twice. No player names or custom-category
 text are sent. Autocapture and session replay are off, and `cookieless_mode`

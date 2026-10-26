@@ -3,6 +3,7 @@
 	import BidScreen from '$lib/components/BidScreen.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
 	import SetupScreen from '$lib/components/SetupScreen.svelte';
+	import { other } from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
 	import { SITE_DESCRIPTION } from '$lib/site';
 
@@ -16,6 +17,9 @@
 	});
 
 	const phase = $derived(game.state.phase);
+	const bot = $derived(game.state.config.bot);
+	/** Against the bot this device only drives the human's seat. */
+	const seat = $derived(bot === undefined ? null : other(bot));
 </script>
 
 <svelte:head>
@@ -29,6 +33,6 @@
 	{:else if phase === 'results'}
 		<ResultsScreen />
 	{:else}
-		<BidScreen />
+		<BidScreen {seat} />
 	{/if}
 </main>

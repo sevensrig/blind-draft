@@ -17,8 +17,11 @@
 	const SLOT_CEILING = 10;
 	/** Enough to cover the smallest roster on both sides (3 slots each). */
 	const CUSTOM_MIN_ITEMS = 6;
+	const BOT_NAME = 'Bot';
 
 	let names = $state<[string, string]>(['', '']);
+	/** Player 2 is the bot, so one person can play alone. */
+	let vsBot = $state(false);
 	let budget = $state(DEFAULT_BUDGET);
 	let slots = $state(DEFAULT_SLOTS);
 	let categoryId = $state<string | null>(null);
@@ -98,7 +101,7 @@
 		game.dispatch({
 			type: 'start',
 			deck: buildDeck(poolItems, roster),
-			names: [names[0], names[1]],
+			names: [names[0], vsBot ? BOT_NAME : names[1]],
 			config: {
 				budget,
 				slots: roster.length,
@@ -108,7 +111,8 @@
 				variantId: activeVariant.id,
 				categoryLabel: isCustom ? customLabel : category.label,
 				variantLabel: hasVariants(category) ? activeVariant.label : null,
-				...(isCustom ? { customItems: poolItems } : {})
+				...(isCustom ? { customItems: poolItems } : {}),
+				...(vsBot ? { bot: 1 as const } : {})
 			}
 		});
 	}
@@ -132,8 +136,23 @@
 
 	<section class="block">
 		<h2 class="block__title">Who's playing</h2>
+		<div class="chips">
+			<button class="chip" class:chip--on={!vsBot} type="button" aria-pressed={!vsBot} onclick={() => (vsBot = false)}>
+				Pass &amp; play
+			</button>
+			<button class="chip" class:chip--on={vsBot} type="button" aria-pressed={vsBot} onclick={() => (vsBot = true)}>
+				<span class="chip__icon"><Icon name="robot" /></span>
+				Vs. the bot
+			</button>
+		</div>
 		<div class="names">
 			{#each [0, 1] as const as slot (slot)}
+				{#if slot === 1 && vsBot}
+					<div class="name" style:--accent="var(--p2)">
+						<span class="name__tag">Player 2</span>
+						<span class="name__bot">{BOT_NAME}</span>
+					</div>
+				{:else}
 				<label class="name" style:--accent={slot === 0 ? 'var(--p1)' : 'var(--p2)'}>
 					<span class="name__tag">Player {slot + 1}</span>
 					<input
@@ -145,6 +164,7 @@
 						spellcheck="false"
 					/>
 				</label>
+				{/if}
 			{/each}
 		</div>
 	</section>
@@ -431,6 +451,16 @@
 		font-weight: 900;
 	}
 
+	/* Same block as the input, but there's nothing to type. */
+	.name__bot {
+		padding: 0.6rem 0.55rem;
+		background: var(--accent);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+		font-size: 1rem;
+		font-weight: 900;
+	}
+
 	.name input:focus {
 		outline: none;
 		background: var(--accent);
@@ -462,6 +492,12 @@
 		font-size: 0.9rem;
 		font-variant-numeric: tabular-nums;
 		text-transform: uppercase;
+	}
+
+	.chip__icon {
+		display: inline-block;
+		margin-right: 0.3rem;
+		vertical-align: -0.12em;
 	}
 
 	/* Instant inversion, no easing. */
