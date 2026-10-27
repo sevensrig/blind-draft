@@ -107,6 +107,24 @@ its guard and never sends a ping, which is how the project came to be asleep
 once already (issue #17). "Not configured" means missing secrets; "Ping failed"
 means Supabase didn't answer 200.
 
+### Deploying Supabase
+
+The `deploy` job in `ci.yml` runs on `main` after every other job passes, and
+only when something under `supabase/` changed: `supabase db push`, then
+`supabase functions deploy` (migrations first, because a function may read a
+column the migration adds). Running CI by hand on `main` (Actions → CI → Run
+workflow) always deploys, which is how to retry after rotating the token.
+
+It needs three repository secrets, `SUPABASE_ACCESS_TOKEN`,
+`SUPABASE_PROJECT_REF` and `SUPABASE_DB_PASSWORD`, plus a repository
+**variable** `SUPABASE_TOKEN_EXPIRES` holding the token's expiry as
+`YYYY-MM-DD`. Supabase won't issue a token without an expiry, and its API won't
+say when a token expires, so the date is recorded by hand.
+`supabase-token.yml` checks every Monday and fails from two weeks out, and
+GitHub emails the failure. To rotate: make a new token at
+<https://supabase.com/dashboard/account/tokens>, update the secret and the date,
+and re-run the token check.
+
 ## How a game plays
 
 1. **Setup** — names, budget (default $20), roster slots each (default 5), and a
@@ -249,6 +267,7 @@ before you push. The pieces individually:
 | `npm run test:a11y`     | axe at both levels, for iterating on a11y alone              |
 | `npm run test`          | unit → component → e2e (a11y included in the last two)       |
 | `npm run coverage`      | Coverage report, scoped to the engine                        |
+| `npm run test:load`     | k6 against the local Supabase stack (needs `k6`, see below)  |
 
 ### The shape of the suite
 
@@ -273,6 +292,33 @@ in the built output, where the prerendered HTML rendered perfectly and every
 control was dead. The journeys cover a full game, both fallback paths, setup
 choices changing the game shape, a positional draft, mid-game reload recovery,
 and quitting.
+
+### Load testing
+
+`load/game.js` is a [k6](https://k6.io) script: each virtual user plays a whole
+two-player game through the Edge Functions, both seats refetching `game_public`
+after every move the way clients do on a broadcast nudge. About 30% of openings
+fire both bids at once, so the optimistic `version` check gets exercised under
+load; the run fails unless exactly one of each pair wins.
+
+```bash
+brew install k6
+npx supabase start && npx supabase functions serve --no-verify-jwt
+SUPABASE_ANON_KEY=<printed anon key> npm run test:load
+```
+
+`PROFILE=stress` ramps to 100 concurrent games instead of the CI profile's 10,
+and is expected to cross the thresholds: on a laptop the local Edge Runtime
+starts answering 503 and `room-action` p95 nears 2s around there.
+CI runs the default profile against its own local stack; the thresholds at the
+top of the script are what make it pass or fail. Its latency numbers describe a
+GitHub runner, not production, so they catch regressions rather than measure
+the hosted project.
+
+Each seat gets its own fake `x-forwarded-for`, since that's what the rate
+limiter buckets by and real players don't share an IP. The script refuses to
+run against anything but localhost without `ALLOW_REMOTE=1`, because the hosted
+project is a shared free tier.
 
 ### Coverage
 
