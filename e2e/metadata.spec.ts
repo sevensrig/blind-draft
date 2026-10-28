@@ -122,23 +122,26 @@ test('serves the tab icon in every form the browsers ask for', async ({ page, re
 	}
 });
 
-test('the home page answers common questions in markup and on the page', async ({ page }) => {
-	await page.goto('/');
+test('the FAQ page answers in markup exactly what it answers on the page', async ({ page }) => {
+	await page.goto('/faq');
 
 	const faq = (await schemas(page)).find((entry) => entry['@type'] === 'FAQPage');
 	expect(faq).toBeTruthy();
 	expect(faq.mainEntity.length).toBeGreaterThan(3);
 
-	// Google asks that FAQ markup match what a visitor can read. An accordion
-	// counts, which is why these live in a <details> — but it has to be openable
-	// and the answers have to be really in there, so expand it and read.
-	await page.getByText('Common questions').click();
+	// Google asks that FAQ markup match what a visitor can read, so every answer
+	// in the data has to be really on the page.
 	const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
 	for (const entry of faq.mainEntity) {
 		expect(entry['@type']).toBe('Question');
 		expect(body).toContain(entry.name);
 		expect(body).toContain(entry.acceptedAnswer.text.slice(0, 60));
 	}
+
+	// One FAQPage block on the site: two pages claiming the same Q&A is the
+	// duplicate-content version of this, which is why the home page dropped it.
+	await page.goto('/');
+	expect((await schemas(page)).find((entry) => entry['@type'] === 'FAQPage')).toBeUndefined();
 });
 
 test('every category has a landing page the home page links to', async ({ page, request }) => {

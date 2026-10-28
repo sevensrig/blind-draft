@@ -7,7 +7,7 @@
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
 	import { game } from '$lib/game/store.svelte';
-	import { CATEGORY_COPY, FAQ } from '$lib/seo';
+	import { CATEGORY_COPY } from '$lib/seo';
 	import { FEEDBACK_URL } from '$lib/site';
 	import Icon from './Icon.svelte';
 
@@ -332,20 +332,14 @@
 		</ol>
 	</details>
 
-	<!-- Visible answers, and the same array feeds the `FAQPage` data on the route.
-	     Google wants FAQ markup to match what a player can actually read. -->
-	<details class="rules faq">
-		<summary>Common questions</summary>
-		{#each FAQ as entry (entry.q)}
-			<h3>{entry.q}</h3>
-			<p>{entry.a}</p>
-		{/each}
-	</details>
-
 	<!-- De-orphans the landing pages: without a link from here they'd rank on
-	     nothing, however good the copy is. -->
+	     nothing, however good the copy is. Labelled as guides, because the tiles
+	     above are buttons that select a category and these are pages about it. -->
 	<nav class="browse" aria-label="Category guides">
-		<h2>Every category</h2>
+		<h2>Read about a category</h2>
+		<p class="browse__note">
+			What's in each pool, and how that draft plays. Or <a href="/faq">see common questions</a>.
+		</p>
 		<ul>
 			{#each CATEGORIES.filter((entry) => CATEGORY_COPY[entry.id]) as entry (entry.id)}
 				<li><a href="/{entry.id}">{entry.label}</a></li>
@@ -743,21 +737,16 @@
 		line-height: 1.35;
 	}
 
-	/* The global heading rule shouts these; full sentences don't survive it. */
-	.faq h3 {
-		margin: 0.75rem 0 0.2rem;
-		font-size: 0.78rem;
-		font-weight: 900;
-		line-height: 1.3;
-		text-transform: none;
+	.browse__note {
+		margin: 0 0 0.5rem;
+		font-size: 0.76rem;
+		font-weight: 600;
+		line-height: 1.35;
+		color: var(--ink-muted);
 	}
 
-	.faq p {
-		margin: 0;
-		font-size: 0.78rem;
-		font-weight: 600;
-		line-height: 1.4;
-		color: var(--ink-muted);
+	.browse__note a {
+		color: var(--ink);
 	}
 
 	.browse h2 {

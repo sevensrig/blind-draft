@@ -34,11 +34,10 @@ test('setup screen is accessible', async ({ page }) => {
 	await scan(page, 'setup screen');
 });
 
-test('the questions and category links are accessible', async ({ page }) => {
-	await page.goto('/');
-	await waitForHydration(page);
-	await page.getByText('Common questions').click();
-	await scan(page, 'home page with questions open');
+test('the FAQ page is accessible', async ({ page }) => {
+	await page.goto('/faq');
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+	await scan(page, 'FAQ page');
 });
 
 /**

@@ -16,6 +16,7 @@ export const prerender = true;
  */
 const paths = [
 	'/',
+	'/faq',
 	'/online',
 	...CATEGORIES.filter((entry) => CATEGORY_COPY[entry.id]).map((entry) => `/${entry.id}`)
 ];
