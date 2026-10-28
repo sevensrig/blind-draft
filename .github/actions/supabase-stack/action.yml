@@ -1,0 +1,38 @@
+name: Local Supabase stack
+description: Boots Supabase, serves the Edge Functions and waits until they answer.
+
+outputs:
+  anon-key:
+    description: The local stack's anon key.
+    value: ${{ steps.keys.outputs.anon-key }}
+
+runs:
+  using: composite
+  steps:
+    - uses: supabase/setup-cli@v1
+      with:
+        version: latest
+
+    - name: Start Supabase
+      shell: bash
+      run: supabase start
+
+    - name: Serve the Edge Functions
+      shell: bash
+      run: |
+        supabase functions serve --no-verify-jwt > /tmp/functions.log 2>&1 &
+        for i in $(seq 1 60); do
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -X POST http://127.0.0.1:54321/functions/v1/leave-room \
+            -H 'content-type: application/json' -d '{}' || true)
+          # 400 is the endpoint rejecting an empty body, i.e. it's alive.
+          if [ "$code" = "400" ]; then echo "functions ready"; exit 0; fi
+          sleep 2
+        done
+        echo "::error::Edge Functions did not come up"
+        cat /tmp/functions.log
+        exit 1
+
+    - id: keys
+      shell: bash
+      run: echo "anon-key=$(supabase status -o json | jq -r .ANON_KEY)" >> "$GITHUB_OUTPUT"
