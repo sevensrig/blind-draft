@@ -2,9 +2,11 @@
 	import { onMount } from 'svelte';
 	import BidScreen from '$lib/components/BidScreen.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import SetupScreen from '$lib/components/SetupScreen.svelte';
 	import { other } from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
+	import { FAQ } from '$lib/seo';
 	import { SITE_DESCRIPTION } from '$lib/site';
 
 	onMount(() => {
@@ -20,12 +22,25 @@
 	const bot = $derived(game.state.config.bot);
 	/** Against the bot this device only drives the human's seat. */
 	const seat = $derived(bot === undefined ? null : other(bot));
+
+	/** Built from the same `FAQ` the page renders, so the two can't drift. */
+	const schema = {
+		'@context': 'https://schema.org',
+		'@type': 'FAQPage',
+		mainEntity: FAQ.map(({ q, a }) => ({
+			'@type': 'Question',
+			name: q,
+			acceptedAnswer: { '@type': 'Answer', text: a }
+		}))
+	};
 </script>
 
-<svelte:head>
-	<title>$20 Draft Game — free two-player bidding party game</title>
-	<meta name="description" content={SITE_DESCRIPTION} />
-</svelte:head>
+<Seo
+	title="$20 Draft Game — free two-player bidding party game"
+	description={SITE_DESCRIPTION}
+	path="/"
+	{schema}
+/>
 
 <main>
 	{#if phase === 'setup'}

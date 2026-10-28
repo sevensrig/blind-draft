@@ -10,7 +10,12 @@ export interface GameSnapshot {
 	history: readonly unknown[];
 }
 
-export type GameEventName = 'game_started' | 'game_finished' | 'game_quit' | 'results_shared';
+export type GameEventName =
+	| 'game_started'
+	| 'game_finished'
+	| 'game_quit'
+	| 'results_shared'
+	| 'category_landing_start';
 
 export interface GameEvent {
 	name: GameEventName;
@@ -36,6 +41,15 @@ export function gameEvent(name: GameEventName, state: GameSnapshot, mode: PlayMo
 			items_played: state.history.length
 		}
 	};
+}
+
+/**
+ * The CTA on a category landing page. Separate from `game_started` on purpose:
+ * pairing the two is what says whether the SEO pages actually send anyone into a
+ * draft, which is the only reason those pages exist.
+ */
+export function categoryLandingEvent(categoryId: string): GameEvent {
+	return { name: 'category_landing_start', props: { category: categoryId } };
 }
 
 export function shareEvent(state: GameSnapshot, mode: PlayMode, method: ShareMethod): GameEvent {

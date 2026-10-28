@@ -44,12 +44,17 @@ test('the preview image is actually served at the advertised size', async ({ pag
 	expect(res.headers()['content-type']).toContain('image');
 });
 
+/** The layout's site-wide block plus whatever the route added. */
+async function schemas(page: import('@playwright/test').Page) {
+	const raw = await page.locator('script[type="application/ld+json"]').allTextContents();
+	return raw.map((text) => JSON.parse(text));
+}
+
 test('exposes valid structured data for answer engines', async ({ page }) => {
 	await page.goto('/');
-	const raw = await page.locator('script[type="application/ld+json"]').textContent();
-	expect(raw).toBeTruthy();
-
-	const schema = JSON.parse(raw ?? '{}');
+	const all = await schemas(page);
+	const schema = all.find((entry) => entry['@type'] === 'VideoGame');
+	expect(schema).toBeTruthy();
 	expect(schema['@type']).toBe('VideoGame');
 	// Every name, so the searched one and the screenshotted one are one entity.
 	expect(schema.name).toBe('$20 Draft Game');
@@ -115,4 +120,92 @@ test('serves the tab icon in every form the browsers ask for', async ({ page, re
 		expect(res.status(), `${path} should be served`).toBe(200);
 		expect(res.headers()['content-type']).toContain(type);
 	}
+});
+
+test('the home page answers common questions in markup and on the page', async ({ page }) => {
+	await page.goto('/');
+
+	const faq = (await schemas(page)).find((entry) => entry['@type'] === 'FAQPage');
+	expect(faq).toBeTruthy();
+	expect(faq.mainEntity.length).toBeGreaterThan(3);
+
+	// Google asks that FAQ markup match what a visitor can read. An accordion
+	// counts, which is why these live in a <details> — but it has to be openable
+	// and the answers have to be really in there, so expand it and read.
+	await page.getByText('Common questions').click();
+	const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+	for (const entry of faq.mainEntity) {
+		expect(entry['@type']).toBe('Question');
+		expect(body).toContain(entry.name);
+		expect(body).toContain(entry.acceptedAnswer.text.slice(0, 60));
+	}
+});
+
+test('every category has a landing page the home page links to', async ({ page, request }) => {
+	await page.goto('/');
+
+	const hrefs = await page
+		.locator('nav[aria-label="Category guides"] a')
+		.evaluateAll((links) => links.map((l) => l.getAttribute('href') ?? ''));
+	expect(hrefs.length).toBeGreaterThan(10);
+
+	// Orphaned pages rank on nothing however good the copy is, so the link from
+	// here is the point of the nav — and every link has to actually resolve.
+	const sitemap = await (await request.get('/sitemap.xml')).text();
+	for (const href of hrefs) {
+		expect(sitemap, `${href} should be in the sitemap`).toContain(
+			`<loc>https://www.20dollardraftgame.com${href}</loc>`
+		);
+	}
+});
+
+test('a category page stands on its own content', async ({ page }) => {
+	await page.goto('/nba');
+
+	await expect(page).toHaveTitle(/NBA/);
+	expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toBe(`${ORIGIN}/nba`);
+	// Its own Open Graph pair, so a shared category link doesn't unfurl as the home page.
+	expect(await page.locator('meta[property="og:url"]').getAttribute('content')).toBe(
+		`${ORIGIN}/nba`
+	);
+
+	const crumbs = (await schemas(page)).find((entry) => entry['@type'] === 'BreadcrumbList');
+	expect(crumbs.itemListElement.at(-1).item).toBe(`${ORIGIN}/nba`);
+
+	const body = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+	// Real pool names are what stop this being a templated doorway page.
+	expect(body).toMatch(/PG|SG|SF|PF/);
+	expect(body.length).toBeGreaterThan(600);
+
+	// And it has to lead somewhere: the CTA preselects the category on setup.
+	await page.getByRole('link', { name: /Draft NBA/i }).click();
+	await expect(page).toHaveURL(/\?category=nba/);
+	await page.waitForSelector('html[data-hydrated="true"]');
+	await expect(page.getByRole('button', { name: /Start the draft/ })).toBeVisible();
+});
+
+test('two category pages do not read as the same page', async ({ request }) => {
+	const read = async (path: string) => {
+		const html = await (await request.get(path)).text();
+		return (html.match(/<meta name="description" content="([^"]*)"/) ?? [])[1] ?? '';
+	};
+	const [nba, pizza] = await Promise.all([read('/nba'), read('/pizza-toppings')]);
+	expect(nba).toBeTruthy();
+	expect(pizza).toBeTruthy();
+	expect(nba).not.toBe(pizza);
+});
+
+test('the online page is indexable and the live room pages are not', async ({ page, request }) => {
+	await page.goto('/online');
+	await expect(page).toHaveTitle(/online/i);
+	expect(await page.locator('link[rel="canonical"]').getAttribute('href')).toBe(`${ORIGIN}/online`);
+	// It used to prerender as an empty shell with no head tags at all.
+	expect((await page.locator('body').innerText()).length).toBeGreaterThan(200);
+
+	// A room page can never be a useful landing page. It stays out of the sitemap,
+	// which is not what keeps it unindexed — `vercel.json` sends X-Robots-Tag, and
+	// that header can only be checked against a real deploy.
+	const sitemap = await (await request.get('/sitemap.xml')).text();
+	expect(sitemap).not.toContain('/online/room');
+	expect(sitemap).not.toContain('/online/rooms');
 });

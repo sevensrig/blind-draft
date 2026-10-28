@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Browser, type Page } from '@playwright/test';
+import { waitForHydration } from './helpers';
 
 /**
  * Two-device remote play, driven as two independent browser contexts. Needs a
@@ -25,6 +26,8 @@ async function device(browser: Browser, name: string): Promise<Page> {
 	const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
 	const page = await context.newPage();
 	await page.goto('/online');
+	// `/online` prerenders its form now, so without this the fill races hydration.
+	await waitForHydration(page);
 	await page.getByPlaceholder('Player').fill(name);
 	return page;
 }
