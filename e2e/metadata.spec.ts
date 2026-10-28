@@ -58,7 +58,11 @@ test('exposes valid structured data for answer engines', async ({ page }) => {
 	expect(schema['@type']).toBe('VideoGame');
 	// Every name, so the searched one and the screenshotted one are one entity.
 	expect(schema.name).toBe('$20 Draft Game');
-	expect(schema.alternateName).toEqual(['$20 Draft', '$20 Blind Draft']);
+	// Pinned by role rather than as an exact list, so adding a spelling people
+	// actually search doesn't fail the build.
+	expect(schema.alternateName).toContain('$20 Draft'); // the wordmark
+	expect(schema.alternateName).toContain('20 Dollar Draft Game'); // the domain
+	expect(schema.alternateName).toContain('$20 Blind Draft'); // what it shipped as
 	expect(schema.url).toBe(ORIGIN);
 	expect(schema.isAccessibleForFree).toBe(true);
 	expect(schema.offers.price).toBe('0');
@@ -150,7 +154,7 @@ test('every category has a landing page the home page links to', async ({ page, 
 	const hrefs = await page
 		.locator('nav[aria-label="Category guides"] a')
 		.evaluateAll((links) => links.map((l) => l.getAttribute('href') ?? ''));
-	expect(hrefs.length).toBeGreaterThan(10);
+	expect(hrefs.length).toBeGreaterThan(2);
 
 	// Orphaned pages rank on nothing however good the copy is, so the link from
 	// here is the point of the nav — and every link has to actually resolve.
@@ -192,10 +196,10 @@ test('two category pages do not read as the same page', async ({ request }) => {
 		const html = await (await request.get(path)).text();
 		return (html.match(/<meta name="description" content="([^"]*)"/) ?? [])[1] ?? '';
 	};
-	const [nba, pizza] = await Promise.all([read('/nba'), read('/pizza-toppings')]);
+	const [nba, movies] = await Promise.all([read('/nba'), read('/movies')]);
 	expect(nba).toBeTruthy();
-	expect(pizza).toBeTruthy();
-	expect(nba).not.toBe(pizza);
+	expect(movies).toBeTruthy();
+	expect(nba).not.toBe(movies);
 });
 
 test('the online page is indexable and the live room pages are not', async ({ page, request }) => {

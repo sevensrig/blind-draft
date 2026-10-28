@@ -3,17 +3,20 @@ import { CATEGORIES } from './data';
 import { CATEGORY_COPY, FAQ, canonical } from './seo';
 import { SITE_URL } from './site';
 
-const drafted = CATEGORIES.filter((entry) => !entry.custom);
+/** A deliberate subset — see the note on `CATEGORY_COPY`. */
+const drafted = CATEGORIES.filter((entry) => CATEGORY_COPY[entry.id]);
 
 describe('category landing copy', () => {
-	it('covers every category that has a bundled pool', () => {
-		const missing = drafted.filter((entry) => !CATEGORY_COPY[entry.id]).map((entry) => entry.id);
-		expect(missing).toEqual([]);
+	it('names only categories that really exist and can be drafted', () => {
+		const real = new Set(CATEGORIES.filter((entry) => !entry.custom).map((entry) => entry.id));
+		// Catches a typo or a stale entry left behind after a category is renamed,
+		// either of which would prerender a page whose load throws a 404.
+		for (const id of Object.keys(CATEGORY_COPY)) expect(real.has(id)).toBe(true);
 	});
 
-	it('describes nothing that has no pool to draft from', () => {
-		const custom = CATEGORIES.filter((entry) => entry.custom).map((entry) => entry.id);
-		for (const id of custom) expect(CATEGORY_COPY[id]).toBeUndefined();
+	it('stays a subset worth writing, not one page per category', () => {
+		expect(drafted.length).toBeGreaterThan(0);
+		expect(drafted.length).toBeLessThan(CATEGORIES.length);
 	});
 
 	it.each(drafted.map((entry) => entry.id))('%s reads as its own page', (id) => {

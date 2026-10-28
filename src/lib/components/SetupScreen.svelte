@@ -332,14 +332,15 @@
 		</ol>
 	</details>
 
+	<!-- Sits directly under the rules and matches them: one row expands, the other
+	     navigates, and they read as a pair. -->
+	<a class="rules rules--link" href="/faq">See common questions</a>
+
 	<!-- De-orphans the landing pages: without a link from here they'd rank on
 	     nothing, however good the copy is. Labelled as guides, because the tiles
 	     above are buttons that select a category and these are pages about it. -->
 	<nav class="browse" aria-label="Category guides">
 		<h2>Read about a category</h2>
-		<p class="browse__note">
-			What's in each pool, and how that draft plays. Or <a href="/faq">see common questions</a>.
-		</p>
 		<ul>
 			{#each CATEGORIES.filter((entry) => CATEGORY_COPY[entry.id]) as entry (entry.id)}
 				<li><a href="/{entry.id}">{entry.label}</a></li>
@@ -737,16 +738,15 @@
 		line-height: 1.35;
 	}
 
-	.browse__note {
-		margin: 0 0 0.5rem;
-		font-size: 0.76rem;
-		font-weight: 600;
-		line-height: 1.35;
-		color: var(--ink-muted);
-	}
-
-	.browse__note a {
+	/* Same box as a collapsed `.rules`, so the two rows match exactly. */
+	.rules--link {
+		display: block;
+		font-size: 0.72rem;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 		color: var(--ink);
+		text-decoration: none;
 	}
 
 	.browse h2 {
