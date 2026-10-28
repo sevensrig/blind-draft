@@ -34,6 +34,29 @@ test('setup screen is accessible', async ({ page }) => {
 	await scan(page, 'setup screen');
 });
 
+test('the FAQ page is accessible', async ({ page }) => {
+	await page.goto('/faq');
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+	await scan(page, 'FAQ page');
+});
+
+/**
+ * One category page, not all seventeen — they render from one component, so a
+ * second scan would re-test the template rather than the content. NBA is the
+ * one with the extra roster block.
+ */
+test('a category landing page is accessible', async ({ page }) => {
+	await page.goto('/nba');
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+	await scan(page, 'category landing page');
+});
+
+test('the online entry page is accessible', async ({ page }) => {
+	await page.goto('/online');
+	await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+	await scan(page, 'online entry page');
+});
+
 test('setup screen is accessible with a category and sub-mode toggle showing', async ({ page }) => {
 	await page.goto('/');
 	await waitForHydration(page);
@@ -48,7 +71,10 @@ test('setup screen is accessible with the rules expanded', async ({ page }) => {
 	await waitForHydration(page);
 
 	await page.getByText('How it works').click();
-	await expect(page.getByText(/An item is revealed/)).toBeVisible();
+	// Scoped: the questions block answers the same rule in its own words.
+	await expect(
+		page.locator('details.rules:not(.faq)').getByText(/An item is revealed/)
+	).toBeVisible();
 	await scan(page, 'setup screen with rules open');
 });
 

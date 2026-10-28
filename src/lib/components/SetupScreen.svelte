@@ -7,6 +7,7 @@
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
 	import { game } from '$lib/game/store.svelte';
+	import { CATEGORY_COPY } from '$lib/seo';
 	import { FEEDBACK_URL } from '$lib/site';
 	import Icon from './Icon.svelte';
 
@@ -84,6 +85,10 @@
 			customName = saved.name;
 			customText = saved.text;
 		}
+		// A landing page sends `?category=nba`, so arriving from one lands on that
+		// tile already selected. Unknown ids are ignored rather than cleared.
+		const wanted = new URLSearchParams(location.search).get('category');
+		if (wanted && getCategory(wanted)) categoryId = wanted;
 	});
 
 	$effect(() => {
@@ -326,6 +331,22 @@
 			<li>Both broke? The rest are handed out free, alternating, until both rosters are full.</li>
 		</ol>
 	</details>
+
+	<!-- Sits directly under the rules and matches them: one row expands, the other
+	     navigates, and they read as a pair. -->
+	<a class="rules rules--link" href="/faq">See common questions</a>
+
+	<!-- De-orphans the landing pages: without a link from here they'd rank on
+	     nothing, however good the copy is. Labelled as guides, because the tiles
+	     above are buttons that select a category and these are pages about it. -->
+	<nav class="browse" aria-label="Category guides">
+		<h2>Read about a category</h2>
+		<ul>
+			{#each CATEGORIES.filter((entry) => CATEGORY_COPY[entry.id]) as entry (entry.id)}
+				<li><a href="/{entry.id}">{entry.label}</a></li>
+			{/each}
+		</ul>
+	</nav>
 
 	<!-- Only docked once there's something to start: a sticky disabled button
 	     swallowed taps aimed at the tiles scrolled underneath it. -->
@@ -715,6 +736,45 @@
 		font-size: 0.78rem;
 		font-weight: 700;
 		line-height: 1.35;
+	}
+
+	/* Same box as a collapsed `.rules`, so the two rows match exactly. */
+	.rules--link {
+		display: block;
+		font-size: 0.72rem;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.browse h2 {
+		margin: 0 0 0.5rem;
+		font-size: 0.68rem;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	.browse ul {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.browse a {
+		display: inline-block;
+		padding: 0.2rem 0.45rem;
+		border: var(--bw-thin) solid var(--ink);
+		background: var(--white);
+		font-size: 0.74rem;
+		font-weight: 700;
+		color: var(--ink);
+		text-decoration: none;
 	}
 
 	/* Floats over the grid, so it needs a hard opaque edge. */

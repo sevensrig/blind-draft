@@ -16,10 +16,17 @@ export const SITE_URL = 'https://www.20dollardraftgame.com';
 export const SITE_NAME = '$20 Draft Game';
 
 /**
- * The on-screen wordmark first, then the name this shipped under. Emitted as
- * `alternateName` so old links and screenshots still resolve to one entity.
+ * The on-screen wordmark first, then the spelling the domain uses, then the name
+ * this shipped under. Emitted as `alternateName` so every way people write this
+ * resolves to one entity rather than looking like several games.
  */
-export const SITE_ALT_NAMES = ['$20 Draft', '$20 Blind Draft'];
+export const SITE_ALT_NAMES = [
+	'$20 Draft',
+	'20 Dollar Draft Game',
+	'Twenty Dollar Draft',
+	'$20 Blind Draft',
+	'$20 Budget Draft'
+];
 
 /**
  * Quotable rather than clever: answer engines lift "X is a Y that does Z". Kept

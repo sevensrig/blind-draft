@@ -8,7 +8,7 @@
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
-	import { SITE_NAME } from '$lib/site';
+	import Seo from '$lib/components/Seo.svelte';
 
 	const BUDGET_PRESETS = [10, 20, 50];
 	const SLOT_PRESETS = [3, 4, 5, 6, 7, 8];
@@ -38,7 +38,13 @@
 
 	/* Typed once, then reused by the rooms browser and by invite links. */
 	onMount(() => {
-		name = recallName();
+		// Only when still empty. This page server-renders now, so the field is real
+		// and typable before hydration — overwriting it here wiped the name of
+		// anyone who typed faster than the bundle loaded.
+		if (!name) name = recallName();
+		// Same signal the home page raises, for the same reason: the form is
+		// clickable before its handlers attach, so taps land on nothing.
+		document.documentElement.dataset.hydrated = 'true';
 	});
 
 	async function create() {
@@ -79,13 +85,22 @@
 	}
 </script>
 
-<svelte:head><title>Play online — {SITE_NAME}</title></svelte:head>
+<Seo
+	title="Play the $20 Draft Game online with a friend"
+	description="Play the $20 draft game online on two phones. Create a room, send the invite link, and draft together in real time. Free, no account, nothing to install."
+	path="/online"
+/>
 
 <div class="shell online">
 	<header class="head">
 		<a class="back" href="/">Back</a>
 		<h1>Play online</h1>
 		<p class="sub">Two phones, two places. Same blind draft.</p>
+		<p class="lede">
+			Create a room and send the link. You each draft from your own phone, the reveals stay in sync,
+			and nobody has to pass a device around. No account, no download — the room disappears when
+			you're done.
+		</p>
 	</header>
 
 	{#if error}
@@ -269,6 +284,14 @@
 		margin: 0.35rem 0 0;
 		font-size: 0.88rem;
 		font-weight: 700;
+	}
+
+	.lede {
+		margin: 0.5rem 0 0;
+		font-size: 0.8rem;
+		font-weight: 600;
+		line-height: 1.4;
+		color: var(--ink-muted);
 	}
 
 	.error {

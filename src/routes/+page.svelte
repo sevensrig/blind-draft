@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import BidScreen from '$lib/components/BidScreen.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
+	import Seo from '$lib/components/Seo.svelte';
 	import SetupScreen from '$lib/components/SetupScreen.svelte';
 	import { other } from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
@@ -22,10 +23,11 @@
 	const seat = $derived(bot === undefined ? null : other(bot));
 </script>
 
-<svelte:head>
-	<title>$20 Draft Game — free two-player bidding party game</title>
-	<meta name="description" content={SITE_DESCRIPTION} />
-</svelte:head>
+<Seo
+	title="$20 Draft Game — free two-player bidding party game"
+	description={SITE_DESCRIPTION}
+	path="/"
+/>
 
 <main>
 	{#if phase === 'setup'}
