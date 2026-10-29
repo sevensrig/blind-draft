@@ -24,7 +24,7 @@
 </script>
 
 <Seo
-	title="$20 Draft Game — free two-player bidding party game"
+	title="$20 Draft Game — the TikTok draft game, free for two players"
 	description={SITE_DESCRIPTION}
 	path="/"
 />
