@@ -40,6 +40,14 @@ test('the FAQ page is accessible', async ({ page }) => {
 	await scan(page, 'FAQ page');
 });
 
+test('the tutorial is accessible, spotlight and all', async ({ page }) => {
+	await page.goto('/tutorial');
+	await waitForHydration(page);
+	await page.getByRole('button', { name: 'Got it' }).click();
+	await expect(page.getByRole('dialog')).toContainText('Your wallets');
+	await scan(page, 'tutorial');
+});
+
 /**
  * One category page, not all seventeen — they render from one component, so a
  * second scan would re-test the template rather than the content. NBA is the
