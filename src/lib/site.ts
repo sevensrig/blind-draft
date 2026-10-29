@@ -16,14 +16,18 @@ export const SITE_URL = 'https://www.20dollardraftgame.com';
 export const SITE_NAME = '$20 Draft Game';
 
 /**
- * The on-screen wordmark first, then the spelling the domain uses, then the name
- * this shipped under. Emitted as `alternateName` so every way people write this
- * resolves to one entity rather than looking like several games.
+ * The on-screen wordmark first, then the spelling the domain uses, then the two
+ * TikTok phrasings — the trend is where most people meet this game, and the
+ * sites outranking us all say so — then the name this shipped under. Emitted as
+ * `alternateName` so every way people write this resolves to one entity rather
+ * than looking like several games.
  */
 export const SITE_ALT_NAMES = [
 	'$20 Draft',
 	'20 Dollar Draft Game',
 	'Twenty Dollar Draft',
+	'$20 TikTok Draft Game',
+	'TikTok $20 Draft',
 	'$20 Blind Draft',
 	'$20 Budget Draft'
 ];
@@ -34,10 +38,10 @@ export const SITE_ALT_NAMES = [
  * third; the on-page rules block carries the long explanation.
  */
 export const SITE_DESCRIPTION =
-	'$20 Draft Game is a free two-player party game — the viral $20 draft, playable in any browser. You each get $20 and bid blind on what comes next.';
+	'$20 Draft Game is a free two-player party game — the $20 draft from TikTok, playable in any browser. You each get $20 and bid blind on what comes next.';
 
 /** Short form for the social card, where long copy gets truncated anyway. */
-export const SITE_TAGLINE = 'The viral $20 draft game. Two players, $20 each, bidding blind.';
+export const SITE_TAGLINE = 'The $20 draft game from TikTok. Two players, $20 each, bidding blind.';
 
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 export const OG_IMAGE_ALT =

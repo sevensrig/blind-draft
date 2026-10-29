@@ -62,6 +62,7 @@ test('exposes valid structured data for answer engines', async ({ page }) => {
 	// actually search doesn't fail the build.
 	expect(schema.alternateName).toContain('$20 Draft'); // the wordmark
 	expect(schema.alternateName).toContain('20 Dollar Draft Game'); // the domain
+	expect(schema.alternateName).toContain('$20 TikTok Draft Game'); // how people meet it
 	expect(schema.alternateName).toContain('$20 Blind Draft'); // what it shipped as
 	expect(schema.url).toBe(ORIGIN);
 	expect(schema.isAccessibleForFree).toBe(true);

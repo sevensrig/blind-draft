@@ -23,7 +23,7 @@
 
 <Seo
 	title="$20 Draft Game — how to play, rules and FAQ"
-	description="How to play the $20 draft game: the rules, how many people can play, what you can draft, and what happens when you spend your whole budget early. Free to play."
+	description="How to play the $20 TikTok draft game: the rules, how many people can play, what you can draft, and what happens if you spend your whole budget early."
 	path="/faq"
 	{schema}
 />
@@ -34,8 +34,8 @@
 	<header class="head">
 		<h1>How to play</h1>
 		<p class="lede">
-			Everything people ask about the $20 draft game, answered. If you just want to play, the game
-			is on the <a href="/">home page</a> — no account, nothing to install.
+			Everything people ask about the $20 draft game from TikTok, answered. If you just want to
+			play, the game is on the <a href="/">home page</a> — no account, nothing to install.
 		</p>
 	</header>
 

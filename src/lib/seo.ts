@@ -21,13 +21,19 @@ export interface Faq {
 export const FAQ: Faq[] = [
 	{
 		q: 'What is the $20 draft game?',
-		a: "The $20 draft game is a free two-player party game, also known as the 20 dollar draft game. You each get a $20 budget and bid against each other for items revealed one at a time — NBA players, movies, snacks, childhood throwbacks — until both rosters are full. Nobody knows what's coming next, which is the whole game."
+		a: "The $20 draft game is a free two-player party game, also known as the 20 dollar draft game or the $20 TikTok draft game. You each get a $20 budget and bid against each other for items revealed one at a time — NBA players, movies, snacks, childhood throwbacks — until both rosters are full. Nobody knows what's coming next, which is the whole game."
+	},
+	{
+		// The phrasing every page outranking us carries, asked the way people
+		// actually type it. Answered plainly rather than claiming any affiliation.
+		q: 'Is this the $20 draft game from TikTok?',
+		a: 'Yes — same game. The $20 draft spread on TikTok as two people splitting a $20 budget and bidding on whatever gets named next: NBA starting fives, snacks, childhood cartoons. This is that game, free in a browser, keeping track of the money and the rosters so nobody has to argue about who has how much left.'
 	},
 	{
 		// People search every spelling of this, and the game genuinely goes by all
 		// of them. One honest question beats sprinkling variants through the copy.
 		q: 'What else is this game called?',
-		a: 'The $20 draft, the 20 dollar draft game, the twenty dollar draft, the $20 blind draft, the $20 budget draft, the 20 dollar draft challenge, or just the $20 draft challenge. They all mean the same game: a $20 budget, two players, and blind bidding on whatever the deck turns over next.'
+		a: 'The $20 draft, the 20 dollar draft game, the twenty dollar draft, the $20 TikTok draft game, the TikTok $20 draft, the $20 blind draft, the $20 budget draft, the 20 dollar draft challenge, or just the $20 draft challenge. They all mean the same game: a $20 budget, two players, and blind bidding on whatever the deck turns over next.'
 	},
 	{
 		q: 'How do you play the $20 draft game?',
@@ -79,7 +85,7 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
 		description:
 			'Play the $20 draft game with NBA players. Bid blind on a starting five, current rosters or all-time legends, two players and $20 each. Free in your browser.',
 		intro:
-			"The NBA draft stocks a full starting five — point guard through centre — and the deck is built so a sensible lineup is always there if you can afford it. Any player can fill any open slot, so paying up for a second centre is your problem, not the game's."
+			"The NBA version is the one most people picture when they hear about the $20 draft on TikTok. It stocks a full starting five — point guard through centre — and the deck is built so a sensible lineup is always there if you can afford it. Any player can fill any open slot, so paying up for a second centre is your problem, not the game's."
 	},
 	nfl: {
 		title: 'NFL $20 Draft — QB, RB, two WR, flex',
