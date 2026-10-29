@@ -141,13 +141,13 @@
 		</button>
 	</header>
 
-	<div class="track" role="img" aria-label="Draft progress">
+	<div class="track" data-tour="track" role="img" aria-label="Draft progress">
 		{#each s.deck as entry, i (entry.id)}
 			<span class="tick" class:done={i < s.index} class:live={i === s.index}></span>
 		{/each}
 	</div>
 
-	<div class="players">
+	<div class="players" data-tour="players">
 		{#each [0, 1] as const as id (id)}
 			<PlayerStatus
 				player={s.players[id]}
@@ -159,12 +159,12 @@
 	</div>
 
 	{#if facedown}
-		<button class="item item--back" type="button" onclick={() => send({ type: 'reveal' })}>
+		<button class="item item--back" data-tour="card" type="button" onclick={() => send({ type: 'reveal' })}>
 			<span class="back__mark">?</span>
 			<span class="back__cue">Tap to reveal</span>
 		</button>
 	{:else if item}
-		<div class="item item--face" class:item--won={!!award}>
+		<div class="item item--face" data-tour="card" class:item--won={!!award}>
 			{#if item.position}
 				<span class="item__tag item__tag--pos">{item.position}</span>
 			{:else}
@@ -179,7 +179,7 @@
 
 	{#if award}
 		<div class="resolve">
-			<div class="stamp" style:--accent={award.playerId === 0 ? 'var(--p1)' : 'var(--p2)'}>
+			<div class="stamp" data-tour="stamp" style:--accent={award.playerId === 0 ? 'var(--p1)' : 'var(--p2)'}>
 				<span class="stamp__price">{award.free ? 'Free' : `$${award.price}`}</span>
 				<span class="stamp__to">
 					to {nameOf(award.playerId)}{s.config.positional ? ` · ${award.slotLabel}` : ''}
@@ -207,14 +207,14 @@
 					</div>
 				</div>
 			{/if}
-			<button class="btn btn--hot" type="button" onclick={() => send({ type: 'next' })}>
+			<button class="btn btn--hot" data-tour="next" type="button" onclick={() => send({ type: 'next' })}>
 				{lastItem ? 'See the results' : 'Next item'}
 			</button>
 		</div>
 	{:else if s.phase === 'resolve'}
 		{#if mode === 'contest'}
 			<div class="resolve">
-				<div class="standing" class:standing--idle={!s.bid}>
+				<div class="standing" data-tour="standing" class:standing--idle={!s.bid}>
 					{#if s.bid}
 						<span class="standing__amount">${s.bid.amount}</span>
 						<span class="standing__who">{nameOf(s.bid.holder)} leads</span>
@@ -237,6 +237,7 @@
 						<button
 							class="btn duel__btn"
 							class:duel__btn--holding={s.bid?.holder === id}
+							data-tour="bid-{id}"
 							style:--accent={id === 0 ? 'var(--p1)' : 'var(--p2)'}
 							type="button"
 							disabled={!canBid(s, id, amount) || !controls(id)}
@@ -251,6 +252,7 @@
 				<button
 					class="btn btn--hot"
 					class:sold--waiting={!!s.bid && !yours}
+					data-tour="sold"
 					type="button"
 					disabled={!canSell(s, conceder) || !yours}
 					onclick={() => send({ type: 'sold', player: conceder })}
@@ -298,7 +300,7 @@
 		{:else}
 			{@const heir = freeRecipient(s)}
 			<div class="resolve">
-				<p class="banner">
+				<p class="banner" data-tour="banner">
 					{#if mode === 'alternate'}
 						Both wallets are empty. The rest go out free, alternating.
 					{:else}
@@ -308,6 +310,7 @@
 				</p>
 				<button
 					class="btn btn--yellow"
+					data-tour="claim"
 					type="button"
 					disabled={!item || !canReceive(s, heir, item)}
 					onclick={() => send({ type: 'claim' })}

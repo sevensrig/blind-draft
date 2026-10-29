@@ -131,6 +131,7 @@
 			<span class="hero__rest">Draft</span>
 		</h1>
 		<p class="hero__tag">Nobody knows what's coming next. Bid anyway.</p>
+		<a class="tour" href="/tutorial">New here? Take the 1-minute tutorial</a>
 
 		<!-- Local play stays the default; a mode chooser first would cost every
 		     pass-and-play game a tap. Hidden when Supabase isn't configured. -->
@@ -410,6 +411,15 @@
 		font-size: 0.92rem;
 		font-weight: 700;
 		line-height: 1.3;
+	}
+
+	.tour {
+		display: block;
+		margin-top: 0.6rem;
+		font-size: 0.76rem;
+		font-weight: 900;
+		text-transform: uppercase;
+		color: var(--ink);
 	}
 
 	/* A signpost, not a second primary action. */
