@@ -81,11 +81,13 @@ export interface GameState {
 	/** The award being celebrated during the `award` phase. */
 	lastAward: Award | null;
 	history: Award[];
+	/** Undealt positional items, for `rebalance`. Absent in open rosters and older saves. */
+	bench?: Item[];
 }
 
 /** Plain serialisable data on purpose: these ship over the wire unchanged. */
 export type Action =
-	| { type: 'start'; config: GameConfig; names: [string, string]; deck: Item[] }
+	| { type: 'start'; config: GameConfig; names: [string, string]; deck: Item[]; bench?: Item[] }
 	| { type: 'reveal' }
 	/** Opens the bidding, or raises a standing bid. */
 	| { type: 'bid'; player: PlayerId; amount: number }

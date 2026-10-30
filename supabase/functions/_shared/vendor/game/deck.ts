@@ -274,3 +274,21 @@ export function buildDeck(
 	if (!sinkBadToTail(deck)) weightFinale(deck, rng);
 	return deck;
 }
+
+/**
+ * The positional items a deck left behind, shuffled. The engine swaps one in when
+ * a slot's last natural fit has gone elsewhere (see `rebalance` in the engine).
+ */
+export function buildBench(
+	pool: readonly Item[],
+	roster: SlotSpec[],
+	deck: readonly Item[],
+	rng: Rng = defaultRng
+): Item[] {
+	if (!isPositional(roster)) return [];
+	const dealt = new Set(deck.map((item) => item.id));
+	return shuffle(
+		pool.filter((item) => item.position && !dealt.has(item.id)),
+		rng
+	);
+}
