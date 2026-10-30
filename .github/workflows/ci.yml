@@ -88,6 +88,29 @@ jobs:
       - name: Coverage thresholds
         run: npm run coverage
 
+  # Coverage says every line of the rulebook runs; this says whether a test
+  # notices when one is wrong. Its own job because it takes minutes, and the
+  # score floor lives in stryker.config.mjs.
+  mutation:
+    name: Mutation tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Mutate the rulebook
+        run: npm run test:mutation
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: mutation-report
+          path: reports/mutation/
+          retention-days: 14
+
   component:
     name: Component and a11y tests
     runs-on: ubuntu-latest
@@ -189,7 +212,7 @@ jobs:
     name: Deploy Supabase
     # Migrations and functions have no preview environment and no easy rollback,
     # so nothing ships unless every other job passed.
-    needs: [static, unit, component, e2e, load]
+    needs: [static, unit, mutation, component, e2e, load]
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     # Two merges landing together must not race `db push`.
