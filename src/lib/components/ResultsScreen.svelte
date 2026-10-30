@@ -2,7 +2,7 @@
 	import { localMode, shareEvent, track } from '$lib/analytics';
 	import Icon from '$lib/components/Icon.svelte';
 	import { getCategory, getVariant } from '$lib/data';
-	import { buildDeck } from '$lib/game/deck';
+	import { buildBench, buildDeck } from '$lib/game/deck';
 	import { entryInSlot, totalSpent } from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
 	import type { GameState, Player } from '$lib/game/types';
@@ -41,11 +41,13 @@
 		const category = getCategory(s.config.categoryId);
 		const pool = s.config.customItems ?? (category ? getVariant(category, s.config.variantId).items : []);
 		if (!pool.length) return;
+		const deck = buildDeck(pool, s.config.roster);
 		game.dispatch({
 			type: 'start',
 			config: s.config,
 			names: [p1.name, p2.name],
-			deck: buildDeck(pool, s.config.roster)
+			deck,
+			bench: buildBench(pool, s.config.roster, deck)
 		});
 	}
 

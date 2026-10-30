@@ -1,4 +1,4 @@
-import type { Item, SlotSpec } from '$lib/data/types';
+import type { Item, SlotSpec, Tier } from '$lib/data/types';
 import { openRoster, slotSuits } from '$lib/data/types';
 import type { Action, Award, GameConfig, GameState, ItemMode, Player, PlayerId } from './types';
 
@@ -173,6 +173,73 @@ export function entryInSlot(
 }
 
 /* ------------------------------------------------------------------ *
+ * Rebalancing
+ * ------------------------------------------------------------------ */
+
+const TIER_RANK: Record<Tier, number> = { bad: 0, mid: 1, good: 2, great: 3 };
+
+/** Which card fills each slot in a largest natural pairing (Kuhn's augmenting paths). */
+function naturalMatching(cards: readonly Item[], slots: readonly SlotSpec[]): (number | null)[] {
+	const holder: (number | null)[] = slots.map(() => null);
+	const place = (card: number, seen: Set<number>): boolean => {
+		for (let s = 0; s < slots.length; s++) {
+			if (seen.has(s) || !slotSuits(slots[s], cards[card])) continue;
+			seen.add(s);
+			const held = holder[s];
+			if (held === null || place(held, seen)) {
+				holder[s] = card;
+				return true;
+			}
+		}
+		return false;
+	};
+	for (let card = 0; card < cards.length; card++) place(card, new Set());
+	return holder;
+}
+
+const matched = (holder: (number | null)[]) => holder.filter((card) => card !== null).length;
+
+/**
+ * Keeps every open slot fillable by someone who plays it. When the rest of the
+ * deck can no longer cover a slot (both QBs went to one roster, say), the card
+ * about to be revealed is swapped for a bench player who fits, at the tier the
+ * deck dealt. Only a card the deck can spare is swapped, so nobody else's slot
+ * is stranded by the fix. Placement stays free; this only changes what's dealt.
+ */
+function rebalance(state: GameState): GameState {
+	const bench = state.bench ?? [];
+	const current = currentItem(state);
+	if (bench.length === 0 || !current) return state;
+
+	const slots = [...openSlots(state, 0), ...openSlots(state, 1)];
+	const cards = state.deck.slice(state.index);
+	const best = matched(naturalMatching(cards, slots));
+	if (best === slots.length) return state;
+
+	const rest = naturalMatching(cards.slice(1), slots);
+	if (matched(rest) < best) return state;
+
+	const needed = slots.filter((_, s) => rest[s] === null);
+	const rank = TIER_RANK[current.tier];
+	// Same tier first, then the nearest one, leaning up rather than down.
+	const distance = (item: Item) =>
+		Math.abs(TIER_RANK[item.tier] - rank) * 2 + (TIER_RANK[item.tier] < rank ? 1 : 0);
+	const swap = bench
+		.filter((item) => needed.some((slot) => slotSuits(slot, item)))
+		.reduce<Item | null>(
+			(pick, item) => (!pick || distance(item) < distance(pick) ? item : pick),
+			null
+		);
+	if (!swap) return state;
+
+	return {
+		...state,
+		deck: state.deck.map((item, i) => (i === state.index ? swap : item)),
+		bench: [...bench.filter((item) => item.id !== swap.id), current]
+	};
+}
+
+/* ------------------------------------------------------------------ *
  * Reducer
  * ------------------------------------------------------------------ */
 
@@ -236,7 +303,8 @@ export function applyAction(state: GameState, action: Action): GameState {
 					blankPlayer(0, nameA.trim() || 'Player 1', action.config.budget),
 					blankPlayer(1, nameB.trim() || 'Player 2', action.config.budget)
 				],
-				deck: action.deck
+				deck: action.deck,
+				bench: action.bench ?? []
 			};
 		}
 
@@ -313,13 +381,13 @@ export function applyAction(state: GameState, action: Action): GameState {
 			if (state.phase !== 'award') return state;
 			const index = state.index + 1;
 			const done = index >= state.deck.length;
-			return {
+			return rebalance({
 				...state,
 				phase: done ? 'results' : 'reveal',
 				index,
 				bid: null,
 				lastAward: done ? state.lastAward : null
-			};
+			});
 		}
 
 		case 'reset':

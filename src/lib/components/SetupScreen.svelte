@@ -2,7 +2,7 @@
 	import { onMount } from 'svelte';
 	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
 	import { variant as buildVariant, type ItemSeed } from '$lib/data/types';
-	import { buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
+	import { buildBench, buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
@@ -103,9 +103,11 @@
 	function start() {
 		if (!category || !activeVariant || !canStart) return;
 		const roster = rosterTemplate;
+		const deck = buildDeck(poolItems, roster);
 		game.dispatch({
 			type: 'start',
-			deck: buildDeck(poolItems, roster),
+			deck,
+			bench: buildBench(poolItems, roster, deck),
 			names: [names[0], vsBot ? BOT_NAME : names[1]],
 			config: {
 				budget,

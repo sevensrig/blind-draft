@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { openRoster } from '$lib/data/types';
 import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
-import { buildDeck, deckSizeFor, maxSlotsFor, poolSupportsRoster } from './deck';
+import { buildBench, buildDeck, deckSizeFor, maxSlotsFor, poolSupportsRoster } from './deck';
 
 /** Deterministic RNG so a failure is reproducible. */
 function seeded(seed: number): () => number {
@@ -267,5 +267,22 @@ describe('positional decks', () => {
 		];
 		// Both players need a centre, so a single one still isn't enough.
 		expect(poolSupportsRoster(oneCenter, NBA_ROSTER)).toBe(false);
+	});
+});
+
+describe('buildBench', () => {
+	it('holds every positional item the deck left out', () => {
+		const gridiron = positionalPool(['QB', 'RB', 'WR', 'TE'], 4);
+		const roster: SlotSpec[] = [{ id: 'qb', label: 'QB', drafts: ['QB'] }];
+		const deck = buildDeck(gridiron, roster);
+		const bench = buildBench(gridiron, roster, deck);
+
+		expect(bench).toHaveLength(gridiron.length - deck.length);
+		expect(bench.some((item) => deck.includes(item))).toBe(false);
+	});
+
+	it('is empty for an open roster', () => {
+		const pool = positionalPool(['QB'], 4);
+		expect(buildBench(pool, openRoster(2), buildDeck(pool, openRoster(2)))).toEqual([]);
 	});
 });
