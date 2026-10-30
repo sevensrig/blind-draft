@@ -1,5 +1,7 @@
 import { gameEvent, track, trackTransition } from '$lib/analytics';
+import { canBid } from '$lib/game/engine';
 import type { Action } from '$lib/game/types';
+import { toGameState } from './adapt';
 import { RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
 import type { ConnectionStatus, PublicGameState } from './types';
@@ -157,6 +159,7 @@ class RemoteRoom {
 	async dispatch(action: Action): Promise<void> {
 		if (!this.#roomId) return;
 		this.#lastRejection = null;
+		const optimistic = this.#optimistic(action);
 
 		try {
 			const result = await callFunction<{ state: PublicGameState; version: number }>(
@@ -165,6 +168,8 @@ class RemoteRoom {
 			);
 			this.#apply(result.state, result.version);
 		} catch (error) {
+			// Nothing below replaced the guess (no state came back), so take it back.
+			if (optimistic && this.#state === optimistic.guess) this.#state = optimistic.prior;
 			if (error instanceof RemoteError) {
 				// `stale` and `illegal_action` carry the corrected state, so the loser
 				// of a race sees reality rather than a bid that never landed.
@@ -220,6 +225,19 @@ class RemoteRoom {
 		this.#version = 0;
 		this.#abandonedBy = null;
 		this.#lastRejection = null;
+	}
+
+	/**
+	 * Shows the caller's own bid before the server confirms it, since a bid only
+	 * touches `bid`. The version stays put, so the server's reply always replaces it.
+	 */
+	#optimistic(action: Action): { prior: PublicGameState; guess: PublicGameState } | null {
+		const prior = this.#state;
+		if (action.type !== 'bid' || !prior || action.player !== this.#seat) return null;
+		if (!canBid(toGameState(prior), action.player, action.amount)) return null;
+		this.#state = { ...prior, bid: { amount: action.amount, holder: action.player } };
+		// Read back: `$state` stores a proxy, and the revert compares by identity.
+		return { prior, guess: this.#state };
 	}
 
 	async #pull(): Promise<void> {

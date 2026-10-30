@@ -1,6 +1,6 @@
 import type { Action, GameState, PlayerId } from '../_shared/vendor/game/types.ts';
 import { applyAction } from '../_shared/vendor/game/engine.ts';
-import { serviceClient, withinRateLimit } from '../_shared/db.ts';
+import { serviceClient } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
 import { redact } from '../_shared/state.ts';
 
@@ -28,6 +28,8 @@ function actorMismatch(action: Action, seat: PlayerId): boolean {
 	return (action as { player?: PlayerId }).player !== seat;
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
 
@@ -47,57 +49,43 @@ Deno.serve(async (req) => {
 		return fail('bad_request', 'roomId, token and action are required');
 	}
 	if (!Number.isInteger(expected)) return fail('bad_request', 'A version is required');
+	// The RPC takes a uuid, and a malformed one would surface as a server error.
+	if (!UUID.test(roomId)) return fail('not_found', 'No game in that room');
 
 	const db = serviceClient();
 
-	// Looser than room creation: a fast bidding war is normal play, not abuse.
-	if (!(await withinRateLimit(db, actorOf(req, token), 'room_action', 120, 60))) {
-		return fail('rate_limited', 'Slow down a moment.');
+	const { data: context, error: contextError } = await db.rpc('room_action_context', {
+		p_room_id: roomId,
+		p_token: token,
+		p_actor: actorOf(req, token)
+	});
+
+	if (contextError || !context) {
+		console.error('room context failed', contextError);
+		return fail('server_error', 'Could not load that room');
 	}
+	// Looser than room creation: a fast bidding war is normal play, not abuse.
+	if (context.limited) return fail('rate_limited', 'Slow down a moment.');
 
 	// The token is the whole authorisation story: it proves which seat is asking.
-	const { data: player } = await db
-		.from('room_players')
-		.select('seat')
-		.eq('room_id', roomId)
-		.eq('token', token)
-		.maybeSingle();
+	if (context.seat === null) return fail('forbidden', 'You are not a player in this room');
+	const seat = context.seat as PlayerId;
 
-	if (!player) return fail('forbidden', 'You are not a player in this room');
-	const seat = player.seat as PlayerId;
-
-	/*
-	 * A closed room takes no more moves. The engine can't catch this —
-	 * abandonment lives on the room, not in `GameState`.
-	 *
-	 * Its own query, not an embedded resource above: a botched join returns no
-	 * row, which reads as "not a player here" and locks both players out.
-	 */
-	const { data: room } = await db.from('rooms').select('status').eq('id', roomId).maybeSingle();
-
-	if (!room) return fail('not_found', 'No game in that room');
-	if (room.status === 'abandoned') return fail('forbidden', 'That game has ended.');
+	// The engine can't catch this — abandonment lives on the room, not in `GameState`.
+	if (!context.status) return fail('not_found', 'No game in that room');
+	if (context.status === 'abandoned') return fail('forbidden', 'That game has ended.');
 
 	if (actorMismatch(action, seat)) {
 		return fail('forbidden', 'You can only act for your own seat');
 	}
 
-	const { data: game, error: loadError } = await db
-		.from('games')
-		.select('state, version')
-		.eq('room_id', roomId)
-		.maybeSingle();
-
-	if (loadError || !game) return fail('not_found', 'No game in that room');
-
-	const state = game.state as GameState;
+	if (!context.state) return fail('not_found', 'No game in that room');
+	const state = context.state as GameState;
+	const version = context.version as number;
 
 	// Behind already — don't even try the write.
-	if (game.version !== expected) {
-		return fail('stale', 'Someone got there first', {
-			state: redact(state, 2),
-			version: game.version
-		});
+	if (version !== expected) {
+		return fail('stale', 'Someone got there first', { state: redact(state, 2), version });
 	}
 
 	// `assign` moves a just-won item between slots; only its winner may do that.
@@ -112,52 +100,31 @@ Deno.serve(async (req) => {
 	if (next === state) {
 		return fail('illegal_action', 'That move is not legal right now', {
 			state: redact(state, 2),
-			version: game.version
+			version
 		});
 	}
 
-	const version = game.version + 1;
+	const publicState = redact(next, 2);
+	const { data: commit, error: writeError } = await db.rpc('commit_room_action', {
+		p_room_id: roomId,
+		p_expected: expected,
+		p_state: next,
+		p_public: publicState,
+		p_finished: next.phase === 'results'
+	});
 
-	// The atomic step. Conditional on the version we read.
-	const { data: written, error: writeError } = await db
-		.from('games')
-		.update({ state: next, version, updated_at: new Date().toISOString() })
-		.eq('room_id', roomId)
-		.eq('version', expected)
-		.select('version');
-
-	if (writeError) {
+	if (writeError || !commit) {
 		console.error('game write failed', writeError);
 		return fail('server_error', 'Could not apply that move');
 	}
 
-	// Zero rows means another request committed between our read and our write.
-	if (!written?.length) {
-		const { data: fresh } = await db
-			.from('games')
-			.select('state, version')
-			.eq('room_id', roomId)
-			.maybeSingle();
+	// Another request committed between our read and our write.
+	if (!commit.ok) {
 		return fail('stale', 'Someone got there first', {
-			state: fresh ? redact(fresh.state as GameState, 2) : null,
-			version: fresh?.version ?? null
+			state: commit.state ? redact(commit.state as GameState, 2) : null,
+			version: commit.version ?? null
 		});
 	}
 
-	// Only now is the redacted copy published — this is what clients read.
-	const publicState = redact(next, 2);
-	await db
-		.from('game_public')
-		.update({ payload: publicState, version, updated_at: new Date().toISOString() })
-		.eq('room_id', roomId);
-
-	await db
-		.from('rooms')
-		.update({
-			last_active_at: new Date().toISOString(),
-			...(next.phase === 'results' ? { status: 'finished' as const } : {})
-		})
-		.eq('id', roomId);
-
-	return json({ state: publicState, version });
+	return json({ state: publicState, version: commit.version });
 });
