@@ -18,6 +18,7 @@ const paths = [
 	'/',
 	'/faq',
 	'/online',
+	'/privacy',
 	...CATEGORIES.filter((entry) => CATEGORY_COPY[entry.id]).map((entry) => `/${entry.id}`)
 ];
 

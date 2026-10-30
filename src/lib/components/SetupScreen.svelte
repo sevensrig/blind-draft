@@ -367,7 +367,10 @@
 		<p class="prompt">Pick a category to start</p>
 	{/if}
 
-	<a class="feedback" href={FEEDBACK_URL} target="_blank" rel="noopener">Send feedback</a>
+	<footer class="feedback">
+		<a href={FEEDBACK_URL} target="_blank" rel="noopener">Send feedback</a>
+		<a class="privacy" href="/privacy">Privacy</a>
+	</footer>
 </div>
 
 <style>
@@ -812,12 +815,24 @@
 	}
 
 	.feedback {
-		align-self: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.4rem;
 		padding-bottom: 1rem;
+	}
+
+	.feedback a {
 		font-size: 0.72rem;
 		font-weight: 900;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--ink);
+	}
+
+	.feedback .privacy {
+		font-size: 0.64rem;
+		font-weight: 700;
+		color: var(--ink-muted);
 	}
 </style>
