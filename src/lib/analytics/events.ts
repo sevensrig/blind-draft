@@ -1,7 +1,7 @@
 import type { GameConfig, Phase } from '$lib/game/types';
 import type { ShareMethod } from '$lib/share';
 
-export type PlayMode = 'local' | 'online';
+export type PlayMode = 'local' | 'bot' | 'online';
 
 /** The slice of local and remote state the events read. */
 export interface GameSnapshot {
@@ -10,11 +10,21 @@ export interface GameSnapshot {
 	history: readonly unknown[];
 }
 
-export type GameEventName = 'game_started' | 'game_finished' | 'game_quit' | 'results_shared';
+export type GameEventName =
+	| 'game_started'
+	| 'game_finished'
+	| 'game_quit'
+	| 'results_shared'
+	| 'category_landing_start';
 
 export interface GameEvent {
 	name: GameEventName;
 	props: Record<string, string | number | boolean | null>;
+}
+
+/** Single-device games, split by whether the second seat is a bot. */
+export function localMode(...configs: GameConfig[]): PlayMode {
+	return configs.some((config) => config.bot !== undefined) ? 'bot' : 'local';
 }
 
 /** Category and settings only: player names and custom item text never leave the device. */
@@ -31,6 +41,15 @@ export function gameEvent(name: GameEventName, state: GameSnapshot, mode: PlayMo
 			items_played: state.history.length
 		}
 	};
+}
+
+/**
+ * The CTA on a category landing page. Separate from `game_started` on purpose:
+ * pairing the two is what says whether the SEO pages actually send anyone into a
+ * draft, which is the only reason those pages exist.
+ */
+export function categoryLandingEvent(categoryId: string): GameEvent {
+	return { name: 'category_landing_start', props: { category: categoryId } };
 }
 
 export function shareEvent(state: GameSnapshot, mode: PlayMode, method: ShareMethod): GameEvent {

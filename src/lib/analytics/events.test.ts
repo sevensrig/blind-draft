@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameConfig, Phase } from '$lib/game/types';
 import {
 	isoWeek,
+	localMode,
 	scrubDeep,
 	scrubText,
 	scrubUrl,
@@ -28,6 +29,15 @@ const at = (phase: Phase, played = 0): GameSnapshot => ({
 	phase,
 	config,
 	history: Array.from({ length: played })
+});
+
+describe('localMode', () => {
+	it('tags a game against the bot, including the quit back to setup', () => {
+		const vsBot = { ...config, bot: 1 } as GameConfig;
+		expect(localMode(config)).toBe('local');
+		expect(localMode(vsBot)).toBe('bot');
+		expect(localMode(vsBot, config)).toBe('bot');
+	});
 });
 
 describe('transitionEvent', () => {

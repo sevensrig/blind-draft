@@ -6,7 +6,6 @@
 		SITE_ALT_NAMES,
 		SITE_DESCRIPTION,
 		SITE_NAME,
-		SITE_TAGLINE,
 		SITE_URL
 	} from '$lib/site';
 
@@ -43,22 +42,17 @@
 	<link rel="icon" href="/favicon-96.png" sizes="96x96" type="image/png" />
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 	<meta name="theme-color" content="#fffdf5" />
-	<link rel="canonical" href={SITE_URL} />
 
-	<!-- Open Graph: what iMessage, Discord, Slack and most link previews read. -->
+	<!-- Site-wide only. Title, description, canonical and the per-page Open Graph
+	     pair live in `Seo.svelte`, so a category link unfurls as itself. -->
 	<meta property="og:type" content="website" />
 	<meta property="og:site_name" content={SITE_NAME} />
-	<meta property="og:title" content={SITE_NAME} />
-	<meta property="og:description" content={SITE_TAGLINE} />
-	<meta property="og:url" content={SITE_URL} />
 	<meta property="og:image" content={OG_IMAGE} />
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta property="og:image:alt" content={OG_IMAGE_ALT} />
 
 	<meta name="twitter:card" content="summary_large_image" />
-	<meta name="twitter:title" content={SITE_NAME} />
-	<meta name="twitter:description" content={SITE_TAGLINE} />
 	<meta name="twitter:image" content={OG_IMAGE} />
 	<meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
 

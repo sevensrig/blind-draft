@@ -2,11 +2,12 @@
 	import { onMount } from 'svelte';
 	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
 	import { variant as buildVariant, type ItemSeed } from '$lib/data/types';
-	import { buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
+	import { buildBench, buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
 	import { game } from '$lib/game/store.svelte';
+	import { CATEGORY_COPY } from '$lib/seo';
 	import { FEEDBACK_URL } from '$lib/site';
 	import Icon from './Icon.svelte';
 
@@ -17,8 +18,11 @@
 	const SLOT_CEILING = 10;
 	/** Enough to cover the smallest roster on both sides (3 slots each). */
 	const CUSTOM_MIN_ITEMS = 6;
+	const BOT_NAME = 'Bot';
 
 	let names = $state<[string, string]>(['', '']);
+	/** Player 2 is the bot, so one person can play alone. */
+	let vsBot = $state(false);
 	let budget = $state(DEFAULT_BUDGET);
 	let slots = $state(DEFAULT_SLOTS);
 	let categoryId = $state<string | null>(null);
@@ -81,6 +85,10 @@
 			customName = saved.name;
 			customText = saved.text;
 		}
+		// A landing page sends `?category=nba`, so arriving from one lands on that
+		// tile already selected. Unknown ids are ignored rather than cleared.
+		const wanted = new URLSearchParams(location.search).get('category');
+		if (wanted && getCategory(wanted)) categoryId = wanted;
 	});
 
 	$effect(() => {
@@ -95,10 +103,12 @@
 	function start() {
 		if (!category || !activeVariant || !canStart) return;
 		const roster = rosterTemplate;
+		const deck = buildDeck(poolItems, roster);
 		game.dispatch({
 			type: 'start',
-			deck: buildDeck(poolItems, roster),
-			names: [names[0], names[1]],
+			deck,
+			bench: buildBench(poolItems, roster, deck),
+			names: [names[0], vsBot ? BOT_NAME : names[1]],
 			config: {
 				budget,
 				slots: roster.length,
@@ -108,7 +118,8 @@
 				variantId: activeVariant.id,
 				categoryLabel: isCustom ? customLabel : category.label,
 				variantLabel: hasVariants(category) ? activeVariant.label : null,
-				...(isCustom ? { customItems: poolItems } : {})
+				...(isCustom ? { customItems: poolItems } : {}),
+				...(vsBot ? { bot: 1 as const } : {})
 			}
 		});
 	}
@@ -122,6 +133,7 @@
 			<span class="hero__rest">Draft</span>
 		</h1>
 		<p class="hero__tag">Nobody knows what's coming next. Bid anyway.</p>
+		<a class="tour" href="/tutorial">New here? Take the 1-minute tutorial</a>
 
 		<!-- Local play stays the default; a mode chooser first would cost every
 		     pass-and-play game a tap. Hidden when Supabase isn't configured. -->
@@ -132,8 +144,23 @@
 
 	<section class="block">
 		<h2 class="block__title">Who's playing</h2>
+		<div class="chips">
+			<button class="chip" class:chip--on={!vsBot} type="button" aria-pressed={!vsBot} onclick={() => (vsBot = false)}>
+				Pass &amp; play
+			</button>
+			<button class="chip" class:chip--on={vsBot} type="button" aria-pressed={vsBot} onclick={() => (vsBot = true)}>
+				<span class="chip__icon"><Icon name="robot" /></span>
+				Vs. the bot
+			</button>
+		</div>
 		<div class="names">
 			{#each [0, 1] as const as slot (slot)}
+				{#if slot === 1 && vsBot}
+					<div class="name" style:--accent="var(--p2)">
+						<span class="name__tag">Player 2</span>
+						<span class="name__bot">{BOT_NAME}</span>
+					</div>
+				{:else}
 				<label class="name" style:--accent={slot === 0 ? 'var(--p1)' : 'var(--p2)'}>
 					<span class="name__tag">Player {slot + 1}</span>
 					<input
@@ -145,6 +172,7 @@
 						spellcheck="false"
 					/>
 				</label>
+				{/if}
 			{/each}
 		</div>
 	</section>
@@ -286,12 +314,13 @@
 
 	<details class="rules">
 		<summary>How it works</summary>
-		<!-- Plain definition, and both names of the game: still prerendered inside
-		     the collapsed block, so it's indexable without competing on screen. -->
+		<!-- Plain definition, and the names the game goes by: still prerendered
+		     inside the collapsed block, so it's indexable without competing on
+		     screen. -->
 		<p class="rules__what">
-			$20 Draft Game is a free two-player party game played in a browser — the viral $20 draft
-			you've seen going around, sometimes called a blind draft. You each get a $20 budget and bid
-			against each other for items revealed one at a time.
+			$20 Draft Game is a free two-player party game played in a browser — the $20 TikTok draft
+			game you've seen going around, sometimes called a blind draft. You each get a $20 budget and
+			bid against each other for items revealed one at a time.
 		</p>
 		<ol>
 			<li>An item is revealed. Neither of you knew it was coming.</li>
@@ -306,6 +335,22 @@
 			<li>Both broke? The rest are handed out free, alternating, until both rosters are full.</li>
 		</ol>
 	</details>
+
+	<!-- Sits directly under the rules and matches them: one row expands, the other
+	     navigates, and they read as a pair. -->
+	<a class="rules rules--link" href="/faq">See common questions</a>
+
+	<!-- De-orphans the landing pages: without a link from here they'd rank on
+	     nothing, however good the copy is. Labelled as guides, because the tiles
+	     above are buttons that select a category and these are pages about it. -->
+	<nav class="browse" aria-label="Category guides">
+		<h2>Read about a category</h2>
+		<ul>
+			{#each CATEGORIES.filter((entry) => CATEGORY_COPY[entry.id]) as entry (entry.id)}
+				<li><a href="/{entry.id}">{entry.label}</a></li>
+			{/each}
+		</ul>
+	</nav>
 
 	<!-- Only docked once there's something to start: a sticky disabled button
 	     swallowed taps aimed at the tiles scrolled underneath it. -->
@@ -324,7 +369,10 @@
 		<p class="prompt">Pick a category to start</p>
 	{/if}
 
-	<a class="feedback" href={FEEDBACK_URL} target="_blank" rel="noopener">Send feedback</a>
+	<footer class="feedback">
+		<a href={FEEDBACK_URL} target="_blank" rel="noopener">Send feedback</a>
+		<a class="privacy" href="/privacy">Privacy</a>
+	</footer>
 </div>
 
 <style>
@@ -368,6 +416,15 @@
 		font-size: 0.92rem;
 		font-weight: 700;
 		line-height: 1.3;
+	}
+
+	.tour {
+		display: block;
+		margin-top: 0.6rem;
+		font-size: 0.76rem;
+		font-weight: 900;
+		text-transform: uppercase;
+		color: var(--ink);
 	}
 
 	/* A signpost, not a second primary action. */
@@ -431,6 +488,16 @@
 		font-weight: 900;
 	}
 
+	/* Same block as the input, but there's nothing to type. */
+	.name__bot {
+		padding: 0.6rem 0.55rem;
+		background: var(--accent);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+		font-size: 1rem;
+		font-weight: 900;
+	}
+
 	.name input:focus {
 		outline: none;
 		background: var(--accent);
@@ -462,6 +529,12 @@
 		font-size: 0.9rem;
 		font-variant-numeric: tabular-nums;
 		text-transform: uppercase;
+	}
+
+	.chip__icon {
+		display: inline-block;
+		margin-right: 0.3rem;
+		vertical-align: -0.12em;
 	}
 
 	/* Instant inversion, no easing. */
@@ -681,6 +754,45 @@
 		line-height: 1.35;
 	}
 
+	/* Same box as a collapsed `.rules`, so the two rows match exactly. */
+	.rules--link {
+		display: block;
+		font-size: 0.72rem;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
+	.browse h2 {
+		margin: 0 0 0.5rem;
+		font-size: 0.68rem;
+		font-weight: 900;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	.browse ul {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.35rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.browse a {
+		display: inline-block;
+		padding: 0.2rem 0.45rem;
+		border: var(--bw-thin) solid var(--ink);
+		background: var(--white);
+		font-size: 0.74rem;
+		font-weight: 700;
+		color: var(--ink);
+		text-decoration: none;
+	}
+
 	/* Floats over the grid, so it needs a hard opaque edge. */
 	.dock {
 		position: sticky;
@@ -705,12 +817,24 @@
 	}
 
 	.feedback {
-		align-self: center;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.4rem;
 		padding-bottom: 1rem;
+	}
+
+	.feedback a {
 		font-size: 0.72rem;
 		font-weight: 900;
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--ink);
+	}
+
+	.feedback .privacy {
+		font-size: 0.64rem;
+		font-weight: 700;
+		color: var(--ink-muted);
 	}
 </style>

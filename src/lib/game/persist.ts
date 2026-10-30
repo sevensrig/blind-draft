@@ -27,6 +27,7 @@ function isConfig(value: unknown): value is GameConfig {
 	const config = value as Partial<GameConfig>;
 	if (typeof config.budget !== 'number' || typeof config.slots !== 'number') return false;
 	if (!Array.isArray(config.roster) || config.roster.length === 0) return false;
+	if (config.bot !== undefined && config.bot !== 0 && config.bot !== 1) return false;
 	return config.roster.every((slot) => !!slot && typeof slot.id === 'string');
 }
 

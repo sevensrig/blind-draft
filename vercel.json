@@ -1,0 +1,13 @@
+{
+	"$schema": "https://openapi.vercel.sh/vercel.json",
+	"headers": [
+		{
+			"source": "/online/room",
+			"headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+		},
+		{
+			"source": "/online/rooms",
+			"headers": [{ "key": "X-Robots-Tag", "value": "noindex" }]
+		}
+	]
+}

@@ -1,5 +1,5 @@
 import { getCategory, getVariant, hasVariants, openRoster } from '../_shared/vendor/data/index.ts';
-import { buildDeck } from '../_shared/vendor/game/deck.ts';
+import { buildBench, buildDeck } from '../_shared/vendor/game/deck.ts';
 import { applyAction, defaultConfig, initialState } from '../_shared/vendor/game/engine.ts';
 import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
@@ -69,9 +69,11 @@ Deno.serve(async (req) => {
 	};
 
 	// The same engine the local game uses. The rulebook exists once.
+	const deck = buildDeck(variant.items, template);
 	const state = applyAction(initialState(), {
 		type: 'start',
-		deck: buildDeck(variant.items, template),
+		deck,
+		bench: buildBench(variant.items, template, deck),
 		names: [hostName, 'Player 2'],
 		config
 	});

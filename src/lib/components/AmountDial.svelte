@@ -18,7 +18,7 @@
 	const atMax = $derived(value >= max);
 </script>
 
-<div class="dial">
+<div class="dial" data-tour="dial">
 	<div class="row">
 		<button
 			class="knob"

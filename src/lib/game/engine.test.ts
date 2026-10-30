@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from '$lib/data';
-import { openRoster } from '$lib/data/types';
+import { openRoster, slotSuits } from '$lib/data/types';
 import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
-import { buildDeck } from './deck';
+import { buildBench, buildDeck } from './deck';
 import {
 	applyAction,
 	canReceive,
@@ -61,11 +61,13 @@ const deckOf = (positions: Position[]): Item[] =>
 function startGame(
 	deck: Item[],
 	roster: SlotSpec[] = openRoster(deck.length / 2),
-	budget = 20
+	budget = 20,
+	bench: Item[] = []
 ): GameState {
 	return applyAction(initialState(), {
 		type: 'start',
 		deck,
+		bench,
 		names: ['Ann', 'Bo'],
 		config: {
 			...defaultConfig(),
@@ -328,6 +330,53 @@ describe('positional rosters', () => {
 	});
 });
 
+describe('dealing around a stranded slot', () => {
+	const benched = (position: Position, tier: Tier): Item => ({
+		id: `bench-${position}-${tier}`,
+		name: `Bench ${position} ${tier}`,
+		tier,
+		position
+	});
+
+	/** Ann takes both quarterbacks, so Bo's QB slot has nothing left in the deck. */
+	function bothQuarterbacksToAnn(deck: Item[], bench: Item[]): GameState {
+		return winItem(winItem(startGame(deck, NFL_ROSTER, 20, bench), 0), 0);
+	}
+
+	it('deals a quarterback at the same tier once none are left for an open QB slot', () => {
+		const deck = deckOf(['QB', 'QB', 'RB', 'WR', 'WR', 'TE', 'RB', 'WR', 'WR', 'TE']);
+		const bench = [benched('QB', 'great'), benched('QB', 'mid'), benched('RB', 'mid')];
+		const state = bothQuarterbacksToAnn(deck, bench);
+
+		expect(state.deck[2]).toEqual(benched('QB', 'mid'));
+		// The card it replaced goes back on the bench, unseen.
+		expect(state.bench).toContainEqual(deck[2]);
+		expect(state.bench).not.toContainEqual(benched('QB', 'mid'));
+	});
+
+	it('falls back to the nearest tier when the dealt one has no fit', () => {
+		const deck = deckOf(['QB', 'QB', 'RB', 'WR', 'WR', 'TE', 'RB', 'WR', 'WR', 'TE']);
+		const state = bothQuarterbacksToAnn(deck, [benched('QB', 'bad'), benched('QB', 'good')]);
+
+		expect(state.deck[2]).toEqual(benched('QB', 'good'));
+	});
+
+	it("never swaps a card someone else's slot still depends on", () => {
+		// The lone RB is Bo's only natural running back, so it stays and a later card gives way.
+		const deck = deckOf(['QB', 'QB', 'RB', 'WR', 'WR', 'WR', 'WR', 'TE', 'TE', 'TE']);
+		const state = bothQuarterbacksToAnn(deck, [benched('QB', 'mid')]);
+
+		expect(state.deck[2]).toEqual(deck[2]);
+	});
+
+	it('leaves the deck alone when the bench has nobody who fits', () => {
+		const deck = deckOf(['QB', 'QB', 'RB', 'WR', 'WR', 'TE', 'RB', 'WR', 'WR', 'TE']);
+		const state = bothQuarterbacksToAnn(deck, [benched('RB', 'mid')]);
+
+		expect(state.deck).toEqual(deck);
+	});
+});
+
 /* ------------------------------------------------------------------ *
  * Whole-game fuzz: no line of play may strand an unfillable roster.
  * ------------------------------------------------------------------ */
@@ -406,10 +455,15 @@ describe('full games across every category', () => {
 			const aggression = run / 40;
 
 			const deck = buildDeck(variant.items, template, rng);
-			const end = autoPlay(startGame(deck, template, budget), rng, aggression);
+			const bench = buildBench(variant.items, template, deck, rng);
+			const end = autoPlay(startGame(deck, template, budget, bench), rng, aggression);
 
 			expect(end.phase).toBe('results');
 			expect(end.history).toHaveLength(deck.length);
+			// The last slot filled always gets someone who plays it.
+			const last = end.history.at(-1)!;
+			const lastSlot = template.find((slot) => slot.id === last.slotId)!;
+			expect(slotSuits(lastSlot, last.item)).toBe(true);
 
 			for (const player of end.players) {
 				expect(player.roster).toHaveLength(template.length);
@@ -428,7 +482,7 @@ describe('full games across every category', () => {
 			// Every dealt item ends up owned exactly once.
 			const owned = end.players.flatMap((player) => player.roster.map((entry) => entry.item.id));
 			expect(new Set(owned).size).toBe(deck.length);
-			expect(new Set(owned)).toEqual(new Set(deck.map((item) => item.id)));
+			expect(new Set(owned)).toEqual(new Set(end.deck.map((item) => item.id)));
 		}
 	});
 

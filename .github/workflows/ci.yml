@@ -4,18 +4,19 @@ name: CI
 # broken on `main` for six days before this existed, because nothing ran it but a
 # human remembering to.
 #
-# Four jobs rather than one, so a red X says *what* broke without opening the
-# log, and the slow one (e2e) doesn't hold up typecheck and lint.
+# Separate jobs rather than one, so a red X says *what* broke without opening the
+# log, and the slow ones (e2e, load) don't hold up typecheck and lint.
 #
-# CI only — no deploy job. Vercel ships the frontend on `main`, and the database
-# and Edge Functions go out by hand. A deploy job was written and pulled back
-# out: Supabase access tokens must carry an expiry, so it would have become a red
-# `main` months later with nothing actually wrong. Tracked for a revisit.
+# Vercel ships the frontend on `main`; `deploy` ships the database and Edge
+# Functions once everything else is green. Its token expires by design, so
+# `supabase-token.yml` warns two weeks ahead instead of letting `main` go red.
 
 on:
   pull_request:
   push:
     branches: [main]
+  # Re-deploys `main` after a token rotation, without a commit to trigger it.
+  workflow_dispatch:
 
 # A second push makes the first run irrelevant. `main` is exempt: those runs are
 # the record of what landed.
@@ -123,27 +124,8 @@ jobs:
       # A local stack, so the remote specs actually run. Without it they skip and
       # a green run means nothing for the two-device paths; `REQUIRE_SUPABASE`
       # below turns that skip into a failure.
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-
-      - name: Start Supabase
-        run: supabase start
-
-      - name: Serve the Edge Functions
-        run: |
-          supabase functions serve --no-verify-jwt > /tmp/functions.log 2>&1 &
-          for i in $(seq 1 60); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' \
-              -X POST http://127.0.0.1:54321/functions/v1/leave-room \
-              -H 'content-type: application/json' -d '{}' || true)
-            # 400 is the endpoint rejecting an empty body, i.e. it's alive.
-            if [ "$code" = "400" ]; then echo "functions ready"; exit 0; fi
-            sleep 2
-          done
-          echo "::error::Edge Functions did not come up"
-          cat /tmp/functions.log
-          exit 1
+      - id: stack
+        uses: ./.github/actions/supabase-stack
 
       # Without these `remoteEnabled` is false, the online entry point hides
       # itself, and the remote specs have nothing to drive.
@@ -151,7 +133,7 @@ jobs:
         run: |
           {
             echo "PUBLIC_SUPABASE_URL=http://127.0.0.1:54321"
-            echo "PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r .ANON_KEY)"
+            echo "PUBLIC_SUPABASE_ANON_KEY=${{ steps.stack.outputs.anon-key }}"
           } >> .env
 
       # `build` + `preview`, never `vite dev` — the worst bug this app has
@@ -173,3 +155,104 @@ jobs:
             playwright-report/
             test-results/
           retention-days: 7
+
+  load:
+    name: Load test remote play
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: stack
+        uses: ./.github/actions/supabase-stack
+
+      - uses: grafana/setup-k6-action@v1
+
+      # Thresholds live in load/game.js. Absolute numbers are this runner's, not
+      # production's; what it guards is errors, races and big regressions.
+      - name: Two-player games under load
+        env:
+          SUPABASE_ANON_KEY: ${{ steps.stack.outputs.anon-key }}
+        run: k6 run --summary-export=load-summary.json load/game.js
+
+      - name: Edge Function logs
+        if: failure()
+        run: cat /tmp/functions.log || true
+
+      - uses: actions/upload-artifact@v5
+        if: always()
+        with:
+          name: load-summary
+          path: load-summary.json
+          retention-days: 14
+
+  deploy:
+    name: Deploy Supabase
+    # Migrations and functions have no preview environment and no easy rollback,
+    # so nothing ships unless every other job passed.
+    needs: [static, unit, component, e2e, load]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Two merges landing together must not race `db push`.
+    concurrency:
+      group: deploy-supabase
+      cancel-in-progress: false
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_TOKEN_EXPIRES: ${{ vars.SUPABASE_TOKEN_EXPIRES }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      # Against the push's `before`, not HEAD~1, so a multi-commit push can't hide
+      # a migration in an earlier commit. A manual run always deploys.
+      - name: Did anything server-side change?
+        id: changed
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] \
+            || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null \
+            || ! git diff --quiet "$BEFORE" "$GITHUB_SHA" -- supabase/; then
+            echo "result=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=false" >> "$GITHUB_OUTPUT"
+            echo "No changes under supabase/ — nothing to deploy."
+          fi
+
+      - uses: supabase/setup-cli@v1
+        if: steps.changed.outputs.result == 'true'
+        with:
+          version: latest
+
+      - name: Check the token
+        if: steps.changed.outputs.result == 'true'
+        # Only block on a token that's actually dead, not one that's merely close.
+        env:
+          WARN_DAYS: 0
+        run: scripts/check-supabase-token.sh
+
+      - name: Check the database password
+        if: steps.changed.outputs.result == 'true'
+        run: |
+          if [ -z "$SUPABASE_DB_PASSWORD" ]; then
+            echo "::error::Missing repository secret: SUPABASE_DB_PASSWORD"
+            exit 1
+          fi
+
+      # Migrations before functions: a function may read a column the migration adds.
+      - name: Push migrations
+        if: steps.changed.outputs.result == 'true'
+        run: supabase db push --project-ref "$SUPABASE_PROJECT_REF"
+
+      # All of them: they share `_shared/`, so one function's directory not moving
+      # doesn't mean it didn't change.
+      - name: Deploy Edge Functions
+        if: steps.changed.outputs.result == 'true'
+        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Confirm migrations are in sync
+        if: steps.changed.outputs.result == 'true'
+        run: supabase migration list --project-ref "$SUPABASE_PROJECT_REF"
