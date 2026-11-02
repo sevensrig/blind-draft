@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import BidScreen from '$lib/components/BidScreen.svelte';
+	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
 	import { toGameState } from '$lib/remote/adapt';
@@ -140,6 +141,7 @@
 		<button class="btn btn--hot" type="button" onclick={leave} disabled={leaving}>
 			Back to online
 		</button>
+		<FeedbackPrompt />
 	</div>
 {:else if waiting}
 	<!-- Both join methods: a code reads out loud, a link sends. -->
