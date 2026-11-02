@@ -243,15 +243,16 @@ jobs:
           fi
 
       # Migrations before functions: a function may read a column the migration adds.
+      # `--yes` on both: the CLI asks before touching production, and CI has no terminal.
       - name: Push migrations
         if: steps.changed.outputs.result == 'true'
-        run: supabase db push --project-ref "$SUPABASE_PROJECT_REF"
+        run: supabase db push --project-ref "$SUPABASE_PROJECT_REF" --yes
 
       # All of them: they share `_shared/`, so one function's directory not moving
       # doesn't mean it didn't change.
       - name: Deploy Edge Functions
         if: steps.changed.outputs.result == 'true'
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF"
+        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" --yes
 
       - name: Confirm migrations are in sync
         if: steps.changed.outputs.result == 'true'
