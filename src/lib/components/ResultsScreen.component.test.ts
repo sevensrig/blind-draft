@@ -4,6 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import { totalSpent } from '$lib/game/engine';
 import { game } from '$lib/game/store.svelte';
 import { shareText } from '$lib/share/text';
+import { FEEDBACK_URL } from '$lib/site';
 import { finishedGame } from '$lib/testing/fixtures';
 import ResultsScreen from './ResultsScreen.svelte';
 
@@ -94,6 +95,15 @@ describe('ResultsScreen', () => {
 
 		await page.getByRole('button', { name: /New setup/ }).click();
 		expect(game.state.phase).toBe('setup');
+	});
+
+	it('asks for feedback in a new tab', async () => {
+		game.replace(finishedGame({ slots: 3 }));
+		render(ResultsScreen);
+
+		const link = page.getByRole('link', { name: 'Send feedback' });
+		await expect.element(link).toHaveAttribute('href', FEEDBACK_URL);
+		await expect.element(link).toHaveAttribute('target', '_blank');
 	});
 
 	describe('sharing', () => {

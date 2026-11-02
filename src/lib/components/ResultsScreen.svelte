@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { localMode, shareEvent, track } from '$lib/analytics';
+	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { getCategory, getVariant } from '$lib/data';
 	import { buildBench, buildDeck } from '$lib/game/deck';
@@ -170,6 +171,8 @@
 			{leaveLabel}
 		</button>
 	</div>
+
+	<FeedbackPrompt />
 </div>
 
 <style>
