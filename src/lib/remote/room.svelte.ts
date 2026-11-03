@@ -2,7 +2,7 @@ import { gameEvent, track, trackTransition } from '$lib/analytics';
 import { canBid } from '$lib/game/engine';
 import type { Action } from '$lib/game/types';
 import { toGameState } from './adapt';
-import { RemoteError, callFunction, supabase } from './client';
+import { LOBBY_HOSTS, RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
 import type { ConnectionStatus, PublicGameState } from './types';
 
@@ -26,6 +26,8 @@ class RemoteRoom {
 	#abandonedBy = $state<0 | 1 | null>(null);
 
 	#channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
+	/** Our presence on `LOBBY_HOSTS`, held only while a public lobby waits. */
+	#lobby: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 
 	get roomId() {
 		return this.#roomId;
@@ -151,6 +153,7 @@ class RemoteRoom {
 				if (this.#status !== 'ended') {
 					this.#status = this.bothSeated ? 'live' : 'waiting';
 				}
+				if (this.#status === 'waiting') void this.#advertise(roomId);
 			}
 		});
 	}
@@ -190,6 +193,7 @@ class RemoteRoom {
 	}
 
 	disconnect(): void {
+		this.#unadvertise();
 		if (this.#channel) {
 			void supabase().removeChannel(this.#channel);
 			this.#channel = null;
@@ -274,6 +278,37 @@ class RemoteRoom {
 		if (this.#status === 'connecting' || this.#status === 'waiting') {
 			this.#status = this.bothSeated ? 'live' : 'waiting';
 		}
+		if (this.bothSeated) this.#unadvertise();
+	}
+
+	/**
+	 * Tells the rooms browser somebody is really in this lobby. Presence rather
+	 * than a heartbeat write: the socket closing is what takes us off, so a closed
+	 * tab or a dead connection drops the room without anyone having to say so.
+	 */
+	async #advertise(roomId: string): Promise<void> {
+		if (this.#lobby) return;
+		// Only a public room has a listing. A private room's id is its invite, so
+		// it must never go out on a channel anyone can listen to.
+		const { data } = await supabase()
+			.from('public_room_listings')
+			.select('room_id')
+			.eq('room_id', roomId)
+			.maybeSingle();
+		if (!data || this.#lobby || this.#roomId !== roomId || this.#status !== 'waiting') return;
+
+		const lobby = supabase().channel(LOBBY_HOSTS, { config: { presence: { key: roomId } } });
+		this.#lobby = lobby;
+		// Also fires on every reconnect, which is what puts a host back on the list.
+		lobby.subscribe(async (status) => {
+			if (status === 'SUBSCRIBED') await lobby.track({ at: Date.now() });
+		});
+	}
+
+	#unadvertise(): void {
+		if (!this.#lobby) return;
+		void supabase().removeChannel(this.#lobby);
+		this.#lobby = null;
 	}
 
 	/**

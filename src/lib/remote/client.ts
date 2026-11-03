@@ -19,6 +19,13 @@ let cached: SupabaseClient | null = null;
 const SUPABASE_URL = env.PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = env.PUBLIC_SUPABASE_ANON_KEY;
 
+/**
+ * Presence channel for hosts sitting in a public lobby, keyed by room id. A
+ * listing outlives its host — a dropped room is kept for them to come back to —
+ * so the rooms browser shows only listings with someone present here.
+ */
+export const LOBBY_HOSTS = 'lobby-hosts';
+
 /** True when the deploy has Supabase wired up. Remote play hides itself if not. */
 export const remoteEnabled = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
 

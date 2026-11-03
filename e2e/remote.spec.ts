@@ -325,6 +325,31 @@ test('leaving a lobby drops it from the public rooms browser', async ({ browser 
 	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toHaveCount(0, { timeout: 15_000 });
 });
 
+test('a lobby whose host drops off leaves the rooms browser', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+
+	const browser2 = await (await browser.newContext()).newPage();
+	await browser2.goto('/online/rooms');
+	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toBeVisible({ timeout: 15_000 });
+
+	// No "Leave room": the room stays open server-side for the host to come back
+	// to, so only their presence going away can take it off the list.
+	await host.close();
+	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toHaveCount(0, { timeout: 30_000 });
+
+	// A fresh load agrees — the open listing alone isn't enough to show it.
+	await browser2.reload();
+	await expect(browser2.getByText(/Nothing open right now|Join/).first()).toBeVisible({
+		timeout: 15_000
+	});
+	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toHaveCount(0);
+});
+
 test('the deck never reaches a client', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 	await host.getByRole('button', { name: /^Foods/ }).click();
