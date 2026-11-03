@@ -3,7 +3,10 @@
 export const CORS = {
 	'Access-Control-Allow-Origin': '*',
 	'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-player-token',
-	'Access-Control-Allow-Methods': 'POST, OPTIONS'
+	'Access-Control-Allow-Methods': 'POST, OPTIONS',
+	// Without it browsers re-preflight every few seconds, and each preflight is a
+	// full function invocation (~230ms hosted).
+	'Access-Control-Max-Age': '86400'
 };
 
 export function json(body: unknown, status = 200): Response {

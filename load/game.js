@@ -130,15 +130,19 @@ function nextMoves(state) {
 
 	if (!state.bid) {
 		const opener = Math.random() < 0.5 ? 0 : 1;
-		const amount = Math.min(state.players[opener].money, 1 + Math.floor(Math.random() * 3));
+		const roll = 1 + Math.floor(Math.random() * 3);
 		// Sometimes both open at once, which is the race the version column settles.
+		// Clamped to the poorer wallet, not the opener's: a seat bidding over its
+		// own money is refused as `illegal_action`, which is the server being
+		// right and the script being wrong, and nothing about the race.
 		if (Math.random() < 0.3) {
+			const amount = Math.min(a.money, b.money, roll);
 			return [
 				{ type: 'bid', player: 0, amount },
 				{ type: 'bid', player: 1, amount }
 			];
 		}
-		return [{ type: 'bid', player: opener, amount }];
+		return [{ type: 'bid', player: opener, amount: Math.min(state.players[opener].money, roll) }];
 	}
 
 	const challenger = state.bid.holder === 0 ? 1 : 0;
