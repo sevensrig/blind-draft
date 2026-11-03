@@ -2,18 +2,26 @@
 	import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
-	import { RemoteError, supabase } from '$lib/remote/client';
+	import { LOBBY_HOSTS, RemoteError, supabase } from '$lib/remote/client';
 	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
 	import type { RoomListing } from '$lib/remote/types';
 	import { SITE_NAME } from '$lib/site';
 
 	/**
-	 * Live list of open public rooms. `public_room_listings` holds only category,
-	 * budget and roster size, and rooms leave it the moment they fill or start —
-	 * so "open" needs no filtering here.
+	 * Live list of open public rooms that someone is actually waiting in.
+	 * `public_room_listings` says a room is public and open, but a lobby whose
+	 * host dropped stays open for them to come back to — so a listing is shown
+	 * only while its host is present on `LOBBY_HOSTS`.
 	 */
-	let rooms = $state<RoomListing[]>([]);
+	let listings = $state<Record<string, RoomListing>>({});
+	let hosted = $state<string[]>([]);
+	const rooms = $derived(
+		hosted
+			.map((id) => listings[id])
+			.filter((entry): entry is RoomListing => !!entry)
+			.sort((a, b) => b.created_at.localeCompare(a.created_at))
+	);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let joining = $state<string | null>(null);
@@ -24,41 +32,65 @@
 	let name = $state('');
 
 	let channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
+	/** Present ids already looked up, so a key with no listing isn't fetched every sync. */
+	const looked = new Set<string>();
 
-	onMount(async () => {
+	const COLUMNS = 'room_id, category_label, variant_label, budget, slots, created_at';
+
+	onMount(() => {
 		try {
 			const client = supabase();
-			const { data, error: failure } = await client
-				.from('public_room_listings')
-				.select('room_id, category_label, variant_label, budget, slots, created_at')
-				.order('created_at', { ascending: false })
-				.limit(50);
-
-			if (failure) throw new Error(failure.message);
-			rooms = (data ?? []) as RoomListing[];
-
 			channel = client
-				.channel('lobby')
+				.channel(LOBBY_HOSTS)
+				.on('presence', { event: 'sync' }, () => {
+					const ids = Object.keys(channel?.presenceState() ?? {});
+					hosted = ids;
+					void lookUp(ids.filter((id) => !looked.has(id)));
+				})
 				.on(
 					'postgres_changes',
 					{ event: '*', schema: 'public', table: 'public_room_listings' },
 					(payload) => {
 						if (payload.eventType === 'DELETE') {
 							const gone = (payload.old as { room_id?: string }).room_id;
-							rooms = rooms.filter((entry) => entry.room_id !== gone);
+							if (gone) delete listings[gone];
 							return;
 						}
 						const row = payload.new as RoomListing;
-						rooms = [row, ...rooms.filter((entry) => entry.room_id !== row.room_id)];
+						listings[row.room_id] = row;
 					}
-				);
-			await channel.subscribe();
+				)
+				.subscribe((status) => {
+					if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+						error = 'Could not load rooms';
+						loading = false;
+					}
+				});
 		} catch (failure) {
+			error = failure instanceof Error ? failure.message : 'Could not load rooms';
+			loading = false;
+		}
+	});
+
+	/** Fetches the listings for hosts we haven't seen yet. The first sync ends "Looking…". */
+	async function lookUp(ids: string[]): Promise<void> {
+		try {
+			if (ids.length > 0) {
+				for (const id of ids) looked.add(id);
+				const { data, error: failure } = await supabase()
+					.from('public_room_listings')
+					.select(COLUMNS)
+					.in('room_id', ids);
+				if (failure) throw new Error(failure.message);
+				for (const row of (data ?? []) as RoomListing[]) listings[row.room_id] = row;
+			}
+		} catch (failure) {
+			for (const id of ids) looked.delete(id);
 			error = failure instanceof Error ? failure.message : 'Could not load rooms';
 		} finally {
 			loading = false;
 		}
-	});
+	}
 
 	onDestroy(() => {
 		if (channel) void supabase().removeChannel(channel);
