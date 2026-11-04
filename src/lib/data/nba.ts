@@ -18,6 +18,7 @@ export const NBA_CURRENT: ItemSeed[] = [
 	{ name: 'Jalen Brunson', tier: 'good', position: 'PG' },
 	{ name: 'Tyrese Haliburton', tier: 'good', position: 'PG' },
 	{ name: 'Devin Booker', tier: 'good', position: 'SG' },
+	{ name: 'Jaylen Brown', tier: 'good', position: 'SG' },
 	{ name: 'Anthony Davis', tier: 'good', position: 'PF' },
 	{ name: 'Domantas Sabonis', tier: 'good', position: 'C' },
 	{ name: 'Karl-Anthony Towns', tier: 'good', position: 'C' },
