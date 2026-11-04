@@ -11,6 +11,10 @@
 	onMount(() => {
 		// Picks a game back up if the phone reloaded mid-draft.
 		game.hydrate();
+		// Sent here to play the bot, an old results sheet is in the way. A draft
+		// still in progress is kept — that's someone's game, not a leftover.
+		const wantsBot = new URLSearchParams(location.search).get('opponent') === 'bot';
+		if (wantsBot && game.state.phase === 'results') game.dispatch({ type: 'reset' });
 		// Marks the client bundle as alive. The page is prerendered, so a dead
 		// hydration still renders perfectly with every control inert — a failure
 		// this app has shipped. The E2E suite waits on this before its first tap.

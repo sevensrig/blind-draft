@@ -39,6 +39,25 @@
 		room.state && room.seat !== null ? room.state.players[room.seat === 0 ? 1 : 0].name : 'They'
 	);
 
+	/** How long a host sits alone before being offered the bot instead. */
+	const BOT_NUDGE_MS = 60_000;
+	let lonely = $state(false);
+
+	$effect(() => {
+		// Restarts if the lobby is left and re-entered, so a reconnect isn't
+		// greeted by a nudge it didn't earn.
+		lonely = false;
+		if (!waiting) return;
+		const timer = setTimeout(() => (lonely = true), BOT_NUDGE_MS);
+		return () => clearTimeout(timer);
+	});
+
+	/** Same category, so the switch costs nothing but the opponent. */
+	const botHref = $derived.by(() => {
+		const category = room.state?.config.categoryId;
+		return `/?opponent=bot${category ? `&category=${encodeURIComponent(category)}` : ''}`;
+	});
+
 	onMount(async () => {
 		// Already seated? Reuse it. Everyone else arrived on an invite link.
 		const seat = recallSeat(roomId);
@@ -99,11 +118,11 @@
 	 */
 	let leaving = $state(false);
 
-	async function leave() {
+	async function leave(to = '/online') {
 		if (leaving) return;
 		leaving = true;
 		await room.leave();
-		await goto('/online');
+		await goto(to);
 	}
 </script>
 
@@ -138,7 +157,7 @@
 	<div class="shell centre">
 		<span class="eyebrow">Game over</span>
 		<p class="status status--bad" role="alert">{opponentName} left the draft.</p>
-		<button class="btn btn--hot" type="button" onclick={leave} disabled={leaving}>
+		<button class="btn btn--hot" type="button" onclick={() => leave()} disabled={leaving}>
 			Back to online
 		</button>
 		<FeedbackPrompt />
@@ -159,15 +178,30 @@
 		<button class="btn btn--hot" type="button" onclick={copyLink}>
 			{copied ? 'Link copied' : 'Copy invite link'}
 		</button>
-		<button class="btn btn--ghost" type="button" onclick={leave} disabled={leaving}>
+		<button class="btn btn--ghost" type="button" onclick={() => leave()} disabled={leaving}>
 			{leaving ? 'Leaving…' : 'Leave room'}
 		</button>
+
+		{#if lonely}
+			<!-- Closes the room on the way out, so nobody joins a host who's gone. -->
+			<div class="nudge" role="status">
+				<p>Still nobody? Play the bot instead.</p>
+				<button
+					class="btn btn--yellow"
+					type="button"
+					onclick={() => leave(botHref)}
+					disabled={leaving}
+				>
+					Play vs. the bot
+				</button>
+			</div>
+		{/if}
 	</div>
 {:else if view}
 	{#if away}
 		<p class="away" role="status">
 			Your opponent dropped out. They may be reconnecting — you can wait, or end it.
-			<button type="button" onclick={leave} disabled={leaving}>End the game</button>
+			<button type="button" onclick={() => leave()} disabled={leaving}>End the game</button>
 		</p>
 	{/if}
 
@@ -175,7 +209,7 @@
 		<ResultsScreen
 			{view}
 			onRunItBack={null}
-			onLeave={leave}
+			onLeave={() => leave()}
 			leaveLabel="Leave room"
 		/>
 	{:else}
@@ -184,7 +218,7 @@
 			{view}
 			seat={room.seat}
 			dispatch={(action) => void room.dispatch(action)}
-			onQuit={leave}
+			onQuit={() => leave()}
 		/>
 	{/if}
 
@@ -254,6 +288,23 @@
 		letter-spacing: 0.2em;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.nudge {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+		margin-top: 0.6rem;
+		padding: 0.8rem;
+		background: var(--white);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.nudge p {
+		margin: 0;
+		font-size: 0.85rem;
+		font-weight: 800;
 	}
 
 	/* Sits above the board without shifting it. */
