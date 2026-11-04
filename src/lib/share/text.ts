@@ -31,6 +31,16 @@ export function verdict(state: GameState, board: Scoreboard | null): string {
 	return `${state.players[board.winner].name} wins`;
 }
 
+const title = (state: GameState) => `$20 Draft · ${headline(state)}`;
+
+const closer = (state: GameState, board: Scoreboard | null) =>
+	board ? `${verdict(state, board)}. Play: ${SHARE_HOST}` : `Who won? Play: ${SHARE_HOST}`;
+
+/** The text that rides with the card: the card already shows the rosters. */
+export function shareCaption(state: GameState): string {
+	return [title(state), closer(state, scoreGame(state))].join('\n');
+}
+
 /** Plain text for chats that drop the image: one line per player. */
 export function shareText(state: GameState): string {
 	const board = scoreGame(state);
@@ -41,8 +51,5 @@ export function shareText(state: GameState): string {
 		const score = board ? ` (${board.players[player.id].total} pts)` : '';
 		return `${player.name}${score}: ${picks.join(', ')}`;
 	});
-	const close = board
-		? `${verdict(state, board)}. Play: ${SHARE_HOST}`
-		: `Who won? Play: ${SHARE_HOST}`;
-	return [`$20 Draft · ${headline(state)}`, ...lines, close].join('\n');
+	return [title(state), ...lines, closer(state, board)].join('\n');
 }

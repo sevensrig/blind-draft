@@ -32,20 +32,15 @@ const fromRanks = (ranks: Record<string, number>) =>
 	Object.fromEntries(Object.entries(ranks).map(([name, rank]) => [name, 101 - rank]));
 
 /** Outside rankings (higher is better), blended with stats where a pool has them. */
-const RATINGS: Record<string, { source: string; ratings: Record<string, number> }> = {
-	'nba-current': { source: '2K ratings', ratings: NBA_CURRENT_2K },
-	'nba-all-time': { source: "B/R's all-time top 100", ratings: fromRanks(NBA_ALL_TIME_BR) },
-	'nfl-current': { source: 'the NFL Top 100', ratings: fromRanks(NFL_CURRENT_TOP100) },
-	'nfl-all-time': { source: "CBS's all-time top 100", ratings: fromRanks(NFL_ALL_TIME_CBS) }
+const RATINGS: Record<string, Record<string, number>> = {
+	'nba-current': NBA_CURRENT_2K,
+	'nba-all-time': fromRanks(NBA_ALL_TIME_BR),
+	'nfl-current': fromRanks(NFL_CURRENT_TOP100),
+	'nfl-all-time': fromRanks(NFL_ALL_TIME_CBS)
 };
 
 export function ratingTable(variantId: string): Record<string, number> | null {
-	return RATINGS[variantId]?.ratings ?? null;
-}
-
-/** Where the outside ranking came from, for the results screen. */
-export function ratingSource(variantId: string): string | null {
-	return RATINGS[variantId]?.source ?? null;
+	return RATINGS[variantId] ?? null;
 }
 
 const PLACES: Record<string, Record<string, number>> = { 'nfl-current': NFL_CURRENT_PLACES };

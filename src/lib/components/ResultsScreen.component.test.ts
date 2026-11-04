@@ -6,7 +6,7 @@ import { totalSpent } from '$lib/game/engine';
 import { scoreGame } from '$lib/game/score';
 import { game } from '$lib/game/store.svelte';
 import type { Player } from '$lib/game/types';
-import { shareText } from '$lib/share/text';
+import { shareCaption, shareText } from '$lib/share/text';
 import { FEEDBACK_URL } from '$lib/site';
 import { finishedGame } from '$lib/testing/fixtures';
 import ResultsScreen from './ResultsScreen.svelte';
@@ -94,7 +94,7 @@ describe('ResultsScreen', () => {
 		});
 		render(ResultsScreen);
 
-		await expect.element(page.getByText(/2K ratings/)).toBeVisible();
+		await expect.element(page.getByText(/real stats and expert opinions/)).toBeVisible();
 		await expect.element(page.getByText(/ REB /)).not.toBeInTheDocument();
 		expect(document.querySelectorAll('.pick__pts')).toHaveLength(6);
 		for (const tag of document.querySelectorAll('.pick__steal')) {
@@ -196,7 +196,7 @@ describe('ResultsScreen', () => {
 			vi.restoreAllMocks();
 		});
 
-		it('shares the card image and text through the share sheet when files are supported', async () => {
+		it('shares the card image with just the verdict and link when files are supported', async () => {
 			const share = vi.fn().mockResolvedValue(undefined);
 			stub('share', share);
 			stub('canShare', () => true);
@@ -210,12 +210,12 @@ describe('ResultsScreen', () => {
 
 			expect(share).toHaveBeenCalledOnce();
 			const [data] = share.mock.calls[0];
-			expect(data.text).toBe(shareText(finished));
+			expect(data.text).toBe(shareCaption(finished));
 			expect(data.files).toHaveLength(1);
 			expect(data.files[0].type).toBe('image/png');
 		});
 
-		it('falls back to text when the device can share but not files', async () => {
+		it('falls back to the full rosters as text when the device can share but not files', async () => {
 			const share = vi.fn().mockResolvedValue(undefined);
 			stub('share', share);
 			stub('canShare', () => false);

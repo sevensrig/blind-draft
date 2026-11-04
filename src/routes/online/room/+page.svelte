@@ -386,7 +386,7 @@
 		gap: 0.15rem;
 		padding: 0.8rem;
 		margin-bottom: 0.3rem;
-		background: var(--yellow);
+		background: var(--white);
 		border: var(--bw) solid var(--ink);
 		box-shadow: var(--shadow-sm);
 	}
