@@ -160,6 +160,31 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	await expect(guest.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
 });
 
+test('a host can open a room on their own typed list', async ({ browser }) => {
+	const options = ['Pizza', 'Sushi', 'Tacos', 'Ramen', 'Burgers', 'Wings'];
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+
+	await host.getByRole('button', { name: /^Make Your Own/ }).click();
+	const create = host.getByRole('button', { name: /Create room/ });
+	await expect(create).toBeDisabled();
+	await host.getByPlaceholder('Custom Draft').fill('Dinner Picks');
+	await host.locator('textarea').fill(options.join('\n'));
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await create.click();
+	await host.waitForURL(/\/online\/room\?id=/);
+
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await guest.waitForURL(/\/online\/room\?id=/);
+
+	await host.getByRole('button', { name: /Tap to reveal/ }).click({ timeout: 15_000 });
+	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
+	expect(options).toContain((await guest.locator('.item__name').textContent())?.trim());
+	await expect(guest.getByText('Dinner Picks')).toBeVisible();
+});
+
 /*
  * Quitting used to do nothing that mattered: the Quit button sent
  * `{ type: 'reset' }`, a legal engine action, so the server wrote a blank

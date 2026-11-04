@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
-	import { variant as buildVariant, type ItemSeed } from '$lib/data/types';
+	import { CUSTOM_MIN_ITEMS, blockedEntry, customSeeds as parseCustom } from '$lib/data/custom';
+	import { variant as buildVariant } from '$lib/data/types';
 	import { buildBench, buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
@@ -10,6 +11,7 @@
 	import { game } from '$lib/game/store.svelte';
 	import { CATEGORY_COPY } from '$lib/seo';
 	import { FEEDBACK_URL } from '$lib/site';
+	import CustomListForm from './CustomListForm.svelte';
 	import Icon from './Icon.svelte';
 
 	const BUDGET_PRESETS = [10, 20, 50];
@@ -17,8 +19,6 @@
 	const BUDGET_MIN = 5;
 	const BUDGET_MAX = 200;
 	const SLOT_CEILING = 10;
-	/** Enough to cover the smallest roster on both sides (3 slots each). */
-	const CUSTOM_MIN_ITEMS = 6;
 	const BOT_NAME = 'Bot';
 
 	let names = $state<[string, string]>(['', '']);
@@ -42,24 +42,7 @@
 	/** Positional categories lock the roster; everything else stays adjustable. */
 	const template = $derived(category?.roster ?? null);
 
-	/**
-	 * One item per line. Blanks and repeats are dropped, not flagged — this gets
-	 * pasted from notes apps. Everything is `mid`: tiers curate a large pool, and
-	 * the player handed over the exact list.
-	 */
-	const customSeeds = $derived.by(() => {
-		const seen = new Set<string>();
-		const seeds: ItemSeed[] = [];
-		for (const line of customText.split('\n')) {
-			const name = line.trim();
-			if (!name) continue;
-			const key = name.toLowerCase();
-			if (seen.has(key)) continue;
-			seen.add(key);
-			seeds.push({ name, tier: 'mid' });
-		}
-		return seeds;
-	});
+	const customSeeds = $derived(parseCustom(customText.split('\n')));
 	const customItems = $derived(buildVariant('custom', 'Custom', customSeeds).items);
 	const poolItems = $derived(isCustom ? customItems : (activeVariant?.items ?? []));
 
@@ -76,7 +59,8 @@
 	const customLabel = $derived(customName.trim() || 'Custom Draft');
 	const canStart = $derived(
 		!!category &&
-			(!isCustom || customSeeds.length >= CUSTOM_MIN_ITEMS) &&
+			(!isCustom ||
+				(customSeeds.length >= CUSTOM_MIN_ITEMS && !blockedEntry(customName, customSeeds))) &&
 			poolItems.length >= deckSizeFor(effectiveSlots)
 	);
 
@@ -248,39 +232,7 @@
 		<!-- Above the grid: below fourteen tiles this toggle was off-screen and
 		     looked like it hadn't appeared at all. -->
 		{#if isCustom}
-			<div class="custom">
-				<label class="custom__field">
-					<span class="eyebrow">Category name</span>
-					<input
-						type="text"
-						bind:value={customName}
-						placeholder="Custom Draft"
-						maxlength="28"
-						autocomplete="off"
-					/>
-				</label>
-
-				<label class="custom__field">
-					<span class="eyebrow">Draft options — one per line</span>
-					<textarea
-						bind:value={customText}
-						rows="7"
-						placeholder={'Pizza\nSushi\nTacos\nRamen\nBurgers\nWings'}
-						autocomplete="off"
-						spellcheck="false"
-					></textarea>
-				</label>
-
-				<p class="custom__count" class:custom__count--short={customSeeds.length < CUSTOM_MIN_ITEMS}>
-					{#if customSeeds.length < CUSTOM_MIN_ITEMS}
-						{customSeeds.length}/{CUSTOM_MIN_ITEMS} options — add
-						{CUSTOM_MIN_ITEMS - customSeeds.length} more to start
-					{:else}
-						{customSeeds.length} options · {deckSizeFor(effectiveSlots)} get drafted, picked at
-						random each game
-					{/if}
-				</p>
-			</div>
+			<CustomListForm bind:name={customName} bind:text={customText} drafted={deckSizeFor(effectiveSlots)} />
 		{/if}
 
 		{#if category && hasVariants(category)}
@@ -667,67 +619,6 @@
 		background: var(--violet);
 		border: var(--bw) solid var(--ink);
 		box-shadow: var(--shadow-sm);
-	}
-
-	.custom {
-		display: flex;
-		flex-direction: column;
-		gap: 0.6rem;
-		padding: 0.7rem 0.6rem;
-		background: var(--yellow);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.custom__field {
-		display: flex;
-		flex-direction: column;
-		gap: 0.25rem;
-	}
-
-	.custom input,
-	.custom textarea {
-		width: 100%;
-		padding: 0.5rem 0.55rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
-		font-size: 0.95rem;
-		font-weight: 800;
-	}
-
-	.custom textarea {
-		font-size: 0.9rem;
-		line-height: 1.5;
-		/* Vertical only — horizontal would break the tile grid beside it. */
-		resize: vertical;
-	}
-
-	.custom input:focus,
-	.custom textarea:focus {
-		outline: var(--bw-thin) solid var(--ink);
-		outline-offset: 2px;
-	}
-
-	.custom input::placeholder,
-	.custom textarea::placeholder {
-		color: var(--ink-muted);
-		font-weight: 700;
-	}
-
-	.custom__count {
-		margin: 0;
-		font-size: 0.68rem;
-		font-weight: 900;
-		letter-spacing: 0.04em;
-		text-transform: uppercase;
-	}
-
-	/* Sits on yellow, so the warning inverts rather than going red. */
-	.custom__count--short {
-		align-self: flex-start;
-		padding: 0.15rem 0.35rem;
-		background: var(--ink);
-		color: var(--cream);
 	}
 
 	.rules {

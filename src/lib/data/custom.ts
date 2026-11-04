@@ -1,0 +1,31 @@
+import { containsSlur } from './moderation';
+import type { ItemSeed } from './types';
+
+/** Enough to cover the smallest roster on both sides (3 slots each). */
+export const CUSTOM_MIN_ITEMS = 6;
+export const CUSTOM_NAME_MAX = 28;
+
+/**
+ * One item per line. Blanks and repeats are dropped, not flagged — this gets
+ * pasted from notes apps. Everything is `mid`: tiers curate a large pool, and
+ * the player handed over the exact list. Shared with `create-room`, so an online
+ * custom room parses exactly like a local one.
+ */
+export function customSeeds(lines: Iterable<string>): ItemSeed[] {
+	const seen = new Set<string>();
+	const seeds: ItemSeed[] = [];
+	for (const line of lines) {
+		const name = line.trim();
+		if (!name) continue;
+		const key = name.toLowerCase();
+		if (seen.has(key)) continue;
+		seen.add(key);
+		seeds.push({ name, tier: 'mid' });
+	}
+	return seeds;
+}
+
+/** The first entry that's a slur — the category name or an option — if any. */
+export function blockedEntry(name: string, seeds: ItemSeed[]): string | null {
+	return [name, ...seeds.map((seed) => seed.name)].find(containsSlur) ?? null;
+}
