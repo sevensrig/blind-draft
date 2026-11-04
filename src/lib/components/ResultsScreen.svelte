@@ -276,7 +276,7 @@
 
 	.roster__head {
 		display: flex;
-		align-items: baseline;
+		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
 		padding-bottom: 0.45rem;
@@ -287,16 +287,19 @@
 	.crown {
 		display: inline-block;
 		margin-right: 0.3rem;
-		font-size: 0.95rem;
-		vertical-align: -0.05em;
+		font-size: 0.75em;
+		vertical-align: 0.05em;
 	}
 
 	.crown :global(.icon) {
 		display: inline-block;
 	}
 
+	/* As tall as the two-line totals beside it, so the name owns the header. */
 	.roster__head h2 {
-		font-size: 1.1rem;
+		min-width: 0;
+		font-size: 1.9rem;
+		line-height: 1;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
