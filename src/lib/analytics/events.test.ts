@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameConfig, Phase } from '$lib/game/types';
 import {
 	botSuggestionEvent,
+	botWaitEvent,
 	isoWeek,
 	localMode,
 	scrubDeep,
@@ -197,5 +198,18 @@ describe('botSuggestionEvent', () => {
 			category: null,
 			waited_seconds: null
 		});
+	});
+});
+
+describe('botWaitEvent', () => {
+	it('records which game the host picked once someone joined', () => {
+		expect(botWaitEvent('bot_wait_resolved', 'foods', 4, 'room')).toEqual({
+			name: 'bot_wait_resolved',
+			props: { category: 'foods', bot_items_played: 4, choice: 'room' }
+		});
+	});
+
+	it('has no choice yet when the modal first shows', () => {
+		expect(botWaitEvent('bot_wait_interrupted', 'foods', 0).props.choice).toBeNull();
 	});
 });

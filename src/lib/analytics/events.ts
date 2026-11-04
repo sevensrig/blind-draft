@@ -17,7 +17,9 @@ export type GameEventName =
 	| 'results_shared'
 	| 'category_landing_start'
 	| 'bot_suggestion_shown'
-	| 'bot_suggestion_clicked';
+	| 'bot_suggestion_clicked'
+	| 'bot_wait_interrupted'
+	| 'bot_wait_resolved';
 
 export interface GameEvent {
 	name: GameEventName;
@@ -70,6 +72,23 @@ export function botSuggestionEvent(
 	waitedSeconds: number | null = null
 ): GameEvent {
 	return { name, props: { source, category, waited_seconds: waitedSeconds } };
+}
+
+/** What a host playing the bot in their lobby did when somebody joined. */
+export type BotWaitChoice = 'room' | 'bot';
+
+/**
+ * Someone joined while the host was playing the bot. Interrupted without a
+ * resolved means the tab closed on the modal; `room` over `bot` says whether
+ * waiting with the bot actually delivers people to a human game.
+ */
+export function botWaitEvent(
+	name: 'bot_wait_interrupted' | 'bot_wait_resolved',
+	category: string | null,
+	botItemsPlayed: number,
+	choice: BotWaitChoice | null = null
+): GameEvent {
+	return { name, props: { category, bot_items_played: botItemsPlayed, choice } };
 }
 
 export function shareEvent(state: GameSnapshot, mode: PlayMode, method: ShareMethod): GameEvent {

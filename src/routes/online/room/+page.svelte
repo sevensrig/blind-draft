@@ -7,7 +7,10 @@
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
 	import { track } from '$lib/analytics';
-	import { botSuggestionEvent } from '$lib/analytics/events';
+	import { botSuggestionEvent, botWaitEvent, type BotWaitChoice } from '$lib/analytics/events';
+	import { getCategory, getVariant } from '$lib/data';
+	import { buildBench, buildDeck } from '$lib/game/deck';
+	import { game } from '$lib/game/store.svelte';
 	import { toGameState } from '$lib/remote/adapt';
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, recallSeat, rememberName } from '$lib/remote/identity';
@@ -61,17 +64,70 @@
 
 	const nudgeCategory = $derived(room.state?.config.categoryId ?? null);
 
+	/**
+	 * A bot game played on this page, against the local store, so the room stays
+	 * connected — and listed — the whole time. Navigating to `/` would drop the
+	 * host's presence and take the room off the browser.
+	 */
+	let botting = $state(false);
+	const botGame = $derived(botting && game.state.phase !== 'setup');
+	/** Somebody took the second seat mid bot game: time to choose. */
+	const joinedMidBot = $derived(botGame && !waiting && !ended && view !== null);
+
+	/** Same category and settings as the room, so the switch costs nothing. */
 	function playBot() {
+		const state = room.state;
+		if (!state || room.seat === null) return;
+		const config = { ...state.config, bot: 1 as const };
+		const category = getCategory(config.categoryId);
+		const pool =
+			config.customItems ?? (category ? getVariant(category, config.variantId).items : []);
+		if (!pool.length) return;
+
 		const waited = Math.round((Date.now() - waitingSince) / 1000);
 		track(botSuggestionEvent('bot_suggestion_clicked', 'waiting_room', nudgeCategory, waited));
-		void leave(botHref);
+		const deck = buildDeck(pool, config.roster);
+		game.dispatch({
+			type: 'start',
+			config,
+			names: [state.players[room.seat].name, 'Bot'],
+			deck,
+			bench: buildBench(pool, config.roster, deck)
+		});
+		botting = true;
 	}
 
-	/** Same category, so the switch costs nothing but the opponent. */
-	const botHref = $derived.by(() => {
-		const category = nudgeCategory;
-		return `/?opponent=bot${category ? `&category=${encodeURIComponent(category)}` : ''}`;
+	/** Drops the bot game. Counts as a bot quit, which is what it is. */
+	function stopBot() {
+		botting = false;
+		if (game.state.config.bot !== undefined && game.state.phase !== 'setup') {
+			game.dispatch({ type: 'reset' });
+		}
+	}
+
+	$effect(() => {
+		if (joinedMidBot) {
+			track(botWaitEvent('bot_wait_interrupted', nudgeCategory, game.state.history.length));
+		}
 	});
+
+	let joinDialog = $state<HTMLDialogElement | null>(null);
+	$effect(() => {
+		// `showModal`, not `open`: it traps focus and inerts the bot board behind it.
+		if (joinedMidBot && joinDialog && !joinDialog.open) joinDialog.showModal();
+	});
+
+	function chooseAfterJoin(choice: BotWaitChoice) {
+		track(botWaitEvent('bot_wait_resolved', nudgeCategory, game.state.history.length, choice));
+		joinDialog?.close();
+		if (choice === 'room') {
+			stopBot();
+			return;
+		}
+		// The bot game is saved, so the home page picks it straight back up.
+		botting = false;
+		void leave('/');
+	}
 
 	onMount(async () => {
 		// Already seated? Reuse it. Everyone else arrived on an invite link.
@@ -136,6 +192,7 @@
 	async function leave(to = '/online') {
 		if (leaving) return;
 		leaving = true;
+		if (botting) stopBot();
 		await room.leave();
 		await goto(to);
 	}
@@ -177,6 +234,43 @@
 		</button>
 		<FeedbackPrompt />
 	</div>
+{:else if botGame}
+	{#if waiting}
+		<p class="waitbar" role="status">
+			Your room's still open. We'll call you back when someone joins.
+			<button type="button" onclick={stopBot}>Back to the lobby</button>
+		</p>
+	{/if}
+
+	<!-- No `view`: these read the local store, where the bot game lives. -->
+	{#if game.state.phase === 'results'}
+		<ResultsScreen onLeave={stopBot} leaveLabel="Back to the lobby" />
+	{:else}
+		<BidScreen seat={0} onQuit={stopBot} />
+	{/if}
+
+	<!-- Escape is swallowed: closing without a choice would strand the guest. -->
+	<dialog
+		bind:this={joinDialog}
+		class="joined"
+		aria-labelledby="joined-title"
+		oncancel={(event) => event.preventDefault()}
+	>
+		<span class="eyebrow">Your room filled</span>
+		<h2 id="joined-title">{opponentName} joined</h2>
+		<p>They're waiting on the draft. Jump in, or stay with the bot and close the room.</p>
+		<button class="btn btn--hot" type="button" onclick={() => chooseAfterJoin('room')}>
+			Play {opponentName}
+		</button>
+		<button
+			class="btn btn--ghost"
+			type="button"
+			onclick={() => chooseAfterJoin('bot')}
+			disabled={leaving}
+		>
+			Keep playing the bot
+		</button>
+	</dialog>
 {:else if waiting}
 	<!-- Both join methods: a code reads out loud, a link sends. -->
 	<div class="shell lobby">
@@ -197,19 +291,19 @@
 			{leaving ? 'Leaving…' : 'Leave room'}
 		</button>
 
+		<!-- The room stays open underneath, so this never costs the host a guest. -->
+		{#snippet botButton()}
+			<button class="btn btn--yellow" type="button" onclick={playBot} disabled={leaving}>
+				Play the bot while you wait
+			</button>
+		{/snippet}
 		{#if lonely}
-			<!-- Closes the room on the way out, so nobody joins a host who's gone. -->
 			<div class="nudge" role="status">
-				<p>Still nobody? Play the bot instead.</p>
-				<button
-					class="btn btn--yellow"
-					type="button"
-					onclick={playBot}
-					disabled={leaving}
-				>
-					Play vs. the bot
-				</button>
+				<p>Still nobody? Play the bot while you wait.</p>
+				{@render botButton()}
 			</div>
+		{:else}
+			{@render botButton()}
 		{/if}
 	</div>
 {:else if view}
@@ -320,6 +414,61 @@
 		margin: 0;
 		font-size: 0.85rem;
 		font-weight: 800;
+	}
+
+	.waitbar {
+		position: sticky;
+		top: 0;
+		z-index: 3;
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+		margin: 0;
+		padding: 0.6rem 0.8rem;
+		background: var(--yellow);
+		border-bottom: var(--bw) solid var(--ink);
+		font-size: 0.78rem;
+		font-weight: 800;
+	}
+
+	.waitbar button {
+		padding: 0.25rem 0.5rem;
+		background: var(--white);
+		border: var(--bw-thin) solid var(--ink);
+		font-size: 0.66rem;
+		font-weight: 900;
+		text-transform: uppercase;
+	}
+
+	.joined {
+		width: min(22rem, calc(100vw - 2rem));
+		padding: 1.2rem;
+		background: var(--cream);
+		color: var(--ink);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.joined[open] {
+		display: flex;
+		flex-direction: column;
+		gap: 0.6rem;
+	}
+
+	.joined::backdrop {
+		background: rgb(0 0 0 / 0.55);
+	}
+
+	.joined h2 {
+		margin: 0;
+		font-size: 1.5rem;
+	}
+
+	.joined p {
+		margin: 0 0 0.3rem;
+		font-size: 0.85rem;
+		font-weight: 700;
 	}
 
 	/* Sits above the board without shifting it. */
