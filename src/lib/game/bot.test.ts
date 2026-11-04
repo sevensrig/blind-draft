@@ -13,7 +13,6 @@ import {
 	itemMode,
 	maxBid,
 	minBid,
-	other,
 	slotsLeft,
 	solventPlayer
 } from './engine';
