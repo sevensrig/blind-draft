@@ -325,6 +325,68 @@ test('leaving a lobby drops it from the public rooms browser', async ({ browser 
 	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toHaveCount(0, { timeout: 15_000 });
 });
 
+test('a host plays the bot while waiting and hops back in when someone joins', async ({
+	browser
+}) => {
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+
+	await host.getByRole('button', { name: 'Play the bot while you wait' }).click();
+	await expect(host.getByText(/still open/)).toBeVisible();
+	await expect(host.getByRole('button', { name: /Tap to reveal/ })).toBeVisible();
+
+	// Same page, same socket: the room is still listed while the host plays.
+	const browser2 = await (await browser.newContext()).newPage();
+	await browser2.goto('/online/rooms');
+	await expect(browser2.locator(`[data-room-id="${roomId}"]`)).toBeVisible({ timeout: 15_000 });
+
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await guest.waitForURL(/\/online\/room\?id=/);
+
+	const modal = host.getByRole('dialog', { name: 'Alex joined' });
+	await expect(modal).toBeVisible({ timeout: 15_000 });
+	await scan(host, 'join modal');
+	await modal.getByRole('button', { name: 'Play Alex' }).click();
+
+	// Back on the room's board, seat for seat with the guest.
+	await expect(modal).toHaveCount(0);
+	await host.getByRole('button', { name: /Tap to reveal/ }).click();
+	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
+	expect((await guest.locator('.item__name').textContent())?.trim()).toBe(
+		(await host.locator('.item__name').textContent())?.trim()
+	);
+});
+
+test('a host who stays with the bot closes the room on the guest', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+
+	await host.getByRole('button', { name: 'Play the bot while you wait' }).click();
+	await host.getByRole('button', { name: /Tap to reveal/ }).click();
+	const card = (await host.locator('.item__name').textContent())?.trim();
+
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+
+	await host.getByRole('button', { name: 'Keep playing the bot' }).click();
+	await host.waitForURL((url) => url.pathname === '/', { timeout: 20_000 });
+	// The bot game carries over mid-card rather than starting again.
+	await expect(host.locator('.item__name')).toHaveText(card ?? '');
+	await expect(guest.getByText(/Sri left the draft/)).toBeVisible({ timeout: 20_000 });
+});
+
 test('a lobby whose host drops off leaves the rooms browser', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
