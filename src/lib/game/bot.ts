@@ -9,6 +9,7 @@ import {
 	slotsLeft,
 	solventPlayer
 } from './engine';
+import { itemPoints, TIER_POINTS } from './score';
 import type { Action, GameState, PlayerId } from './types';
 
 /**
@@ -16,12 +17,13 @@ import type { Action, GameState, PlayerId } from './types';
  * do right now and how long it sits on it first, or null to wait. The human still paces the game (reveal, next,
  * claim); the bot only bids, concedes, buys and passes for its own seat.
  *
- * It sees what a seasoned player would: the current card's tier, every card
- * already revealed, both wallets and rosters, and the rough deck curve. It never
- * reads `deck` past `index` — that would be reading the blind order.
+ * It sees what a seasoned fan would: what the current card will score, every
+ * card already revealed, both wallets and rosters, and the rough deck curve. It
+ * never reads `deck` past `index` — that would be reading the blind order.
+ *
+ * Knowing the points doesn't make it a calculator: it still has taste, still
+ * loses its head over the odd card, and never hunts steals. Beatable on purpose.
  */
-
-const TIER_WEIGHT: Record<Tier, number> = { bad: 0.35, mid: 0.9, good: 1.35, great: 2.2 };
 
 /** `deck.ts`'s curve on average: ~17.5% great, at most one bad, good ~30% of the rest. */
 function expectedCounts(size: number): Record<Tier, number> {
@@ -33,12 +35,16 @@ function expectedCounts(size: number): Record<Tier, number> {
 
 /** A card that would sit out of position is still worth having, just less. */
 const OUT_OF_POSITION = 0.8;
+/** Over a fair price on purpose: the leak a patient player can beat it through. */
+const TASTE = [1.2, 1.6] as const;
 /** How often a card sends the bot wild, and how far past its limit it goes. */
-const WILD_ODDS = 0.12;
+const WILD_ODDS = 0.2;
 const WILD_BOOST = [1.3, 2] as const;
 /** Per raise past the second, on good and great cards only; capped. Doesn't stack with wild. */
 const HEAT_PER_RAISE = 0.08;
 const HEAT_CAP = 1.3;
+/** Facing a broke opponent, buys at $1 anything at least this close to an average card. */
+const SOLO_BUY_WORTH = 0.75;
 
 /**
  * Chance of opening instantly, after 2s, after 5s, or never (leaving it to the
@@ -79,10 +85,21 @@ function noise(...parts: (string | number)[]): number {
 /** The first card is revealed before the bot ever acts, so it's fair game as a seed. */
 const gameSeed = (state: GameState) => state.deck[0]?.id ?? '';
 
+/** The points band a card plays like, which for sports can differ from its tier. */
+function band(state: GameState, item: Item): Tier {
+	const points = itemPoints(item, state.config);
+	return points >= 85 ? 'great' : points >= 60 ? 'good' : points >= 30 ? 'mid' : 'bad';
+}
+
+const prized = (state: GameState, item: Item) => {
+	const tier = band(state, item);
+	return tier === 'good' || tier === 'great';
+};
+
 /**
- * How the current card compares to what's probably still to come. Expected tier
- * counts for this deck size, minus what's been revealed: if the greats are gone,
- * a good card is the best left and worth more.
+ * The card's points against what's probably still to come: expected tier counts
+ * for this deck size, minus what's been revealed. If the greats are gone, a good
+ * card is the best left and worth more.
  */
 function relativeWorth(state: GameState, item: Item): number {
 	const seen: Record<Tier, number> = { bad: 0, mid: 0, good: 0, great: 0 };
@@ -94,10 +111,10 @@ function relativeWorth(state: GameState, item: Item): number {
 	for (const tier of Object.keys(expected) as Tier[]) {
 		const left = Math.max(0, expected[tier] - seen[tier]);
 		count += left;
-		weight += left * TIER_WEIGHT[tier];
+		weight += left * TIER_POINTS[tier];
 	}
-	const average = count > 0 ? weight / count : TIER_WEIGHT.mid;
-	return TIER_WEIGHT[item.tier] / average;
+	const average = count > 0 ? weight / count : TIER_POINTS.mid;
+	return itemPoints(item, state.config) / average;
 }
 
 function fitsPosition(state: GameState, seat: PlayerId, item: Item): boolean {
@@ -106,7 +123,7 @@ function fitsPosition(state: GameState, seat: PlayerId, item: Item): boolean {
 }
 
 export function isWild(state: GameState, item: Item): boolean {
-	return item.tier !== 'bad' && noise(item.id, gameSeed(state), 'wild') < WILD_ODDS;
+	return band(state, item) !== 'bad' && noise(item.id, gameSeed(state), 'wild') < WILD_ODDS;
 }
 
 /**
@@ -120,7 +137,7 @@ export function botLimit(
 	context: BotContext = { raises: 0 }
 ): number {
 	const perSlot = state.players[seat].money / Math.max(1, slotsLeft(state, seat));
-	const taste = 1.1 + 0.4 * noise(item.id, gameSeed(state));
+	const taste = TASTE[0] + (TASTE[1] - TASTE[0]) * noise(item.id, gameSeed(state));
 	let value = perSlot * relativeWorth(state, item) * taste;
 
 	if (!fitsPosition(state, seat, item)) value *= OUT_OF_POSITION;
@@ -128,7 +145,7 @@ export function botLimit(
 	if (isWild(state, item)) {
 		const [low, high] = WILD_BOOST;
 		value *= low + (high - low) * noise(item.id, gameSeed(state), 'boost');
-	} else if (item.tier === 'good' || item.tier === 'great') {
+	} else if (prized(state, item)) {
 		// A war over a card it already rates means it's worth fighting for. A war over
 		// a mid card is the human overpaying, and the bot lets them.
 		value *= Math.min(HEAT_CAP, 1 + HEAT_PER_RAISE * Math.max(0, context.raises - 2));
@@ -142,7 +159,7 @@ export function openingDelay(state: GameState, item: Item): number | null {
 	if (isWild(state, item)) return OPENING_DELAYS[0];
 	const roll = noise(item.id, gameSeed(state), 'open');
 	let edge = 0;
-	for (const [i, odds] of OPENING_ODDS[item.tier].entries()) {
+	for (const [i, odds] of OPENING_ODDS[band(state, item)].entries()) {
 		edge += odds;
 		if (roll < edge) return OPENING_DELAYS[i] ?? null;
 	}
@@ -162,11 +179,11 @@ export function botAction(
 
 	if (mode === 'solo') {
 		if (solventPlayer(state) !== seat) return null;
-		// The opponent is broke, so anything passed now just fills their roster and
-		// pushes the leftovers to the bot for free. Only pay for the good stuff.
+		// A pass hands the opponent the card free and fills their roster sooner,
+		// which pushes the leftovers to the bot. Worth it only for a weak card.
 		return think(
 			item,
-			item.tier === 'good' || item.tier === 'great'
+			relativeWorth(state, item) >= SOLO_BUY_WORTH
 				? { type: 'buy', player: seat, amount: 1 }
 				: { type: 'decline', player: seat }
 		);
