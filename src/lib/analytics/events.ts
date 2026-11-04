@@ -15,7 +15,9 @@ export type GameEventName =
 	| 'game_finished'
 	| 'game_quit'
 	| 'results_shared'
-	| 'category_landing_start';
+	| 'category_landing_start'
+	| 'bot_suggestion_shown'
+	| 'bot_suggestion_clicked';
 
 export interface GameEvent {
 	name: GameEventName;
@@ -50,6 +52,24 @@ export function gameEvent(name: GameEventName, state: GameSnapshot, mode: PlayMo
  */
 export function categoryLandingEvent(categoryId: string): GameEvent {
 	return { name: 'category_landing_start', props: { category: categoryId } };
+}
+
+/** Where the "play the bot instead" nudge appeared. */
+export type BotSuggestionSource = 'waiting_room' | 'empty_lobby';
+
+/**
+ * The nudge toward the bot, shown and tapped. Clicked over shown is the take-up
+ * rate; a `game_started` with mode `bot` soon after says it became a real game.
+ * `waited_seconds` is how long a host sat alone, so a later tap reads as
+ * patience running out rather than an instant bail.
+ */
+export function botSuggestionEvent(
+	name: 'bot_suggestion_shown' | 'bot_suggestion_clicked',
+	source: BotSuggestionSource,
+	category: string | null,
+	waitedSeconds: number | null = null
+): GameEvent {
+	return { name, props: { source, category, waited_seconds: waitedSeconds } };
 }
 
 export function shareEvent(state: GameSnapshot, mode: PlayMode, method: ShareMethod): GameEvent {

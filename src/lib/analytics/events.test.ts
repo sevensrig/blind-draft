@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { GameConfig, Phase } from '$lib/game/types';
 import {
+	botSuggestionEvent,
 	isoWeek,
 	localMode,
 	scrubDeep,
@@ -179,5 +180,22 @@ describe('analytics configuration', () => {
 		expect(source).toMatch(/localStorage\.setItem\(WEEK_KEY, week\)/);
 		// Initial-URL person properties ride at the top level, outside `properties`.
 		expect(source).toMatch(/event\.\$set_once = scrubDeep/);
+	});
+});
+
+describe('botSuggestionEvent', () => {
+	it('carries where the nudge was and how long the host waited', () => {
+		expect(botSuggestionEvent('bot_suggestion_clicked', 'waiting_room', 'nba', 74)).toEqual({
+			name: 'bot_suggestion_clicked',
+			props: { source: 'waiting_room', category: 'nba', waited_seconds: 74 }
+		});
+	});
+
+	it('leaves the wait empty where nobody was waiting', () => {
+		expect(botSuggestionEvent('bot_suggestion_shown', 'empty_lobby', null).props).toEqual({
+			source: 'empty_lobby',
+			category: null,
+			waited_seconds: null
+		});
 	});
 });
