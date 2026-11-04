@@ -1,477 +1,114 @@
-# $20 Draft Game
+<div align="center">
 
-A two-player $20 draft. One phone, one shuffled deck of items nobody has seen,
-and a budget you can absolutely set on fire chasing the first thing you like.
+<a href="https://www.20dollardraftgame.com/"><img src="docs/readme/banner.svg" alt="$20 Draft: two players, $20 each, bidding blind" width="100%"></a>
 
-Two names, one game. **$20 Draft** is the wordmark on screen and on the results
-card — short enough to read as a brand on a screenshot. **$20 draft game** is
-what people search for, so that's the name in page titles, Open Graph and
-structured data. Both are declared, plus **$20 Blind Draft** as the name this
-shipped under, so old links resolve to the same entity. `SITE_NAME` /
-`SITE_ALT_NAMES` in `src/lib/site.ts` are the only place any of them is defined.
+<br>
 
-Pass-and-play, or one person holds the phone as game master and taps in bids for
-two people arguing out loud. Same mode either way. Or play alone against a bot,
-which bids from what it can see (the card, both wallets, what's already gone by)
-and never from the deck order.
+<a href="https://www.20dollardraftgame.com/"><img src="https://img.shields.io/badge/%E2%96%B6%20PLAY%20NOW-20dollardraftgame.com-6bcf7d?style=for-the-badge&labelColor=000000" alt="Play now at 20dollardraftgame.com"></a>
 
-## Running it
+<img src="https://img.shields.io/badge/price-free-ffd93d?style=flat-square&labelColor=000000" alt="Free">
+<img src="https://img.shields.io/badge/account-not%20needed-c4b5fd?style=flat-square&labelColor=000000" alt="No account needed">
+<img src="https://img.shields.io/badge/categories-17-8ecae6?style=flat-square&labelColor=000000" alt="17 categories">
+<img src="https://img.shields.io/badge/modes-local%20%C2%B7%20online%20%C2%B7%20bot-ff6b6b?style=flat-square&labelColor=000000" alt="Local, online and bot modes">
+<a href="https://github.com/sevensrig/blind-draft/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/sevensrig/blind-draft/ci.yml?branch=main&style=flat-square&labelColor=000000&label=CI" alt="CI status"></a>
 
-```bash
-npm install
-```
+### The $20 draft from TikTok, as a real game.
 
-```bash
-npm run dev
-```
+Two players. $20 each. A deck nobody has seen.<br>
+**Do you blow it all on the first card, or wait for something better?**
 
-`npm run check` is the single pre-push command: typecheck, lint, then every test.
-See [Testing and quality tooling](#testing-and-quality-tooling) for the rest.
+</div>
 
-## Deploying
+<br>
 
-Push it to Vercel. `@sveltejs/adapter-auto` detects the platform and there is
-nothing to configure. The page is prerendered (`src/routes/+layout.ts`) and all
-state lives in the browser, so the deploy is a static shell — no server, no
-database, and no runtime network calls beyond the analytics below.
-Building locally prints
-"Could not detect a supported production environment", which is just
-adapter-auto saying your laptop isn't Vercel; the build itself is fine.
+<table>
+<tr>
+<td width="33%" align="center"><img src="docs/readme/setup.png" alt="Setup screen: pick names, budget and category"></td>
+<td width="33%" align="center"><img src="docs/readme/bid.png" alt="Bid screen: Shai Gilgeous-Alexander on the block, Alex leading at $4"></td>
+<td width="33%" align="center"><img src="docs/readme/results.png" alt="Results: both rosters with prices paid and points"></td>
+</tr>
+<tr>
+<td align="center"><b>1 · Pick a category</b><br><sub>NBA, movies, snacks, or your own list</sub></td>
+<td align="center"><b>2 · Bid blind</b><br><sub>raise, hold, or go all in</sub></td>
+<td align="center"><b>3 · Argue about it</b><br><sub>scored rosters, ready to share</sub></td>
+</tr>
+</table>
 
-### Web Analytics
+## 🃏 How it plays
 
-`src/routes/+layout.ts` calls `injectAnalytics` from `@vercel/analytics`, which
-fires one pageview per route. It sends `url.pathname` and never the query string,
-so the room id in `/online/room?id=…` stays on the device.
+> [!TIP]
+> **The whole game in one line:** a card flips, you both bid, highest bid takes it, repeat until both rosters are full.
 
-It has to be **enabled in the Vercel dashboard** under Analytics. Until it is,
-`/_vercel/insights/script.js` 404s and every visitor gets a console log saying
-so. The same 404 happens against `npm run preview` and the E2E suite, which
-serve the built app without Vercel in front of it — expected there, and nothing
-asserts on it.
+- 💸 **Bid blind.** Either player opens at $1. Raises go back and forth until someone stops.
+- 🔥 **Go broke if you want.** Nothing stops you spending $19 on the first card you love. Once you're out, your opponent names their price on everything after.
+- 🏆 **Build the better lineup.** Rosters are scored on real stats and expert opinion, with a bonus for steals. Then you screenshot it and argue.
 
-Vercel only counts pageviews, and local play never leaves `/`, so its bounce
-rate counts a full game as a bounce. Game events go to PostHog instead.
+## 🎮 Ways to play
 
-### Product analytics and error tracking
+<table>
+<tr>
+<td width="33%" valign="top">
 
-Both are PostHog. It switches on from `PUBLIC_POSTHOG_KEY` (see `.env.example`)
-and stays off without it, which is how tests and local dev run. The SDK is
-loaded lazily from `src/hooks.client.ts`, so a deploy without the key ships
-none of it.
+### 📱 One phone
+Pass it back and forth, or one person runs the game while two people shout bids across the room.
 
-**PostHog** (`src/lib/analytics/`) gets pageviews plus three events, fired from
-the two state seams (`store.svelte.ts`, `room.svelte.ts`) rather than from
-components:
+</td>
+<td width="33%" valign="top">
 
-| Event | When |
+### 🌐 Online
+Two phones, two places. Share a room code or browse open rooms and jump in.
+
+</td>
+<td width="33%" valign="top">
+
+### 🤖 Vs. the bot
+Plays from what it can see: the card, both wallets, what's gone by. Never the deck.
+
+</td>
+</tr>
+</table>
+
+## 🗂️ Categories
+
+| | |
 | --- | --- |
-| `game_started` | Local: setup is submitted. Online: the second seat fills. |
-| `game_finished` | The results screen is reached. |
-| `game_quit` | A game is abandoned before results. |
+| 🏀 **Sports** | NBA · NFL · MLB · NHL, current or all-time. NBA and NFL draft a real starting lineup by position. |
+| 📺 **Nostalgia** | Childhood cartoons · TV shows · childhood stuff · fictional duos |
+| 🎬 **Screen & people** | Iconic movies · celebrities |
+| 🍕 **Food** | Foods · drinks · desserts · pizza toppings · Trader Joe's |
+| ☀️ **Just vibes** | Your perfect life · the perfect summer day |
+| ✏️ **Make your own** | Type any list and draft it |
 
-Each carries `mode` (`local`/`bot`/`online`), `category`, `variant`, `budget`,
-`slots` and `items_played`. Online games are counted once per device, so one
-game between two players shows up twice. No player names or custom-category
-text are sent. Autocapture and session replay are off, and `cookieless_mode`
-writes no cookies or storage, so there's no consent banner: PostHog counts
-visitors with a daily-rotating server-side hash instead. **Cookieless mode has to
-be enabled in the PostHog project settings too, or every event is dropped.**
-Daily hashing can't dedupe across days, so a `weekly_visitor` event fires once
-per device per ISO week: localStorage holds only the week label
-(`blind-draft:visit-week:v1`), never an id. Count those events for weekly unique
-devices.
-`before_send` strips the query string from every
-same-site URL, so room ids stay on the device. The flags request is off for the
-same reason: it carries the initial URL.
+## ⚙️ Under the hood
 
-**Errors** go to PostHog's error tracking as `$exception` events: uncaught
-errors and rejections, plus anything SvelteKit's `handleError` catches. They
-share a session with the game events, so a crash can be read alongside the
-`game_quit` that followed it. The same `before_send` scrubs them, recursively,
-because stack frames and messages nest URLs. Stack traces are minified; no
-source maps are uploaded.
+<div align="center">
 
-### Keeping Supabase awake
+<img src="https://img.shields.io/badge/SvelteKit-000000?style=for-the-badge&logo=svelte&logoColor=ff3e00" alt="SvelteKit">
+<img src="https://img.shields.io/badge/TypeScript-000000?style=for-the-badge&logo=typescript&logoColor=3178c6" alt="TypeScript">
+<img src="https://img.shields.io/badge/Supabase-000000?style=for-the-badge&logo=supabase&logoColor=3ecf8e" alt="Supabase">
+<img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=ffffff" alt="Vercel">
+<img src="https://img.shields.io/badge/Playwright-000000?style=for-the-badge&logo=playwright&logoColor=2ead33" alt="Playwright">
+<img src="https://img.shields.io/badge/Vitest-000000?style=for-the-badge&logo=vitest&logoColor=6e9f18" alt="Vitest">
+<img src="https://img.shields.io/badge/PostHog-000000?style=for-the-badge&logo=posthog&logoColor=f9bd2b" alt="PostHog">
 
-A free-tier project pauses after roughly a week idle, which breaks remote play.
-`.github/workflows/supabase-keepalive.yml` runs every third day and reads
-`public_room_listings` over PostgREST, so Postgres does real work rather than
-just the edge. It prevents a pause; it can't undo one — reviving a paused project
-is a button in the Supabase dashboard.
+</div>
 
-It needs `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` as repository
-secrets, **created by hand** — the Supabase/Vercel integration only fills
-Vercel's own env vars, nothing syncs into Actions. Without them the job exits at
-its guard and never sends a ping, which is how the project came to be asleep
-once already (issue #17). "Not configured" means missing secrets; "Ping failed"
-means Supabase didn't answer 200.
+Built solo and shipped to real players.
 
-### Deploying Supabase
+- 🧠 **One pure rules engine.** The whole rulebook is a single reducer. The UI only dispatches actions, so the same engine runs local games, the bot, and online rooms.
+- 🔒 **Online play that can't be peeked.** Supabase Edge Functions own the game state, Realtime keeps both phones in sync, and row-level security means neither player can see the deck.
+- 🧪 **Tested like it matters.** 100% line coverage on the engine, a fuzz suite that plays hundreds of full games, component tests in real Chromium, Playwright runs against the production build, axe accessibility checks, and k6 load tests on the backend.
+- 🕵️ **Privacy-first analytics.** PostHog in cookieless mode: no consent banner, and player names and room codes never leave the device.
+- 🎨 **Neo-brutalist design.** Hard shadows, thick borders, and every colour checked for WCAG AA contrast.
 
-The `deploy` job in `ci.yml` runs on `main` after every other job passes, and
-only when something under `supabase/` changed: `supabase db push`, then
-`supabase functions deploy` (migrations first, because a function may read a
-column the migration adds). Running CI by hand on `main` (Actions → CI → Run
-workflow) always deploys, which is how to retry after rotating the token.
+> Want to run it locally or contribute? See **[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)**.
 
-It needs three repository secrets, `SUPABASE_ACCESS_TOKEN`,
-`SUPABASE_PROJECT_REF` and `SUPABASE_DB_PASSWORD`, plus a repository
-**variable** `SUPABASE_TOKEN_EXPIRES` holding the token's expiry as
-`YYYY-MM-DD`. Supabase won't issue a token without an expiry, and its API won't
-say when a token expires, so the date is recorded by hand.
-`supabase-token.yml` checks every Monday and fails from two weeks out, and
-GitHub emails the failure. To rotate: make a new token at
-<https://supabase.com/dashboard/account/tokens>, update the secret and the date,
-and re-run the token check.
+## 💬 Feedback
 
-## How a game plays
+Hated a card? Missing a category?
+**[Send feedback](https://docs.google.com/forms/d/e/1FAIpQLScjDk1NuuvdJtVEwnNNnEWmG6MmhVPZ3vgq9xIG12fiyQrRoQ/viewform)** or **[open an issue](https://github.com/sevensrig/blind-draft/issues)**.
 
-1. **Setup** — names, budget (default $20), roster slots each (default 5), and a
-   category. Sports categories have a Current / All-Time toggle.
-2. **Deck** — exactly `2 x slots` items are sampled and shuffled, so the deck
-   covers both rosters precisely and every item ends up owned.
-3. **Reveal** — tap the card. Neither player knew what was coming.
-4. **Bid** — no turn order. Either player opens at $1 or more, then it's raises
-   of at least $1 back and forth until one stops. Tap *Sold* to close it.
-5. **Broke** — nothing stops you bidding to $0 with slots still empty. That is
-   the point. Once you're out, your opponent just names a price on everything
-   after; anything they pass on is yours for free.
-6. **Both broke** — the rest are handed out free, strictly alternating.
-7. **Results** — both rosters with prices paid, laid out to screenshot.
-
-## Positional rosters (NBA and NFL)
-
-Those two categories lock the roster and draft by position:
-
-- **NBA** — a starting five: PG, SG, SF, PF, C.
-- **NFL** — QB, RB, WR, WR, FLEX.
-
-The positions shape the **deck**, not the rules. A starting-five deck stocks
-exactly two players for each slot, so a realistic five is always buildable. But
-**any player can go in any open slot** — a won player lands in the slot they
-naturally suit, and the winner can move them anywhere still open, so starting
-Shaq at point guard is one tap.
-
-That's deliberate: gating slots by position would mean the second centre could
-only ever go to whoever still needed one, handing out half the deck uncontested
-and draining the bidding of tension. Free placement keeps every item contested
-and turns "where do I put him" into its own decision.
-
-Everything else — budget, the fallback rules, the deck curve — behaves the same.
-`FLEX` and `WR` are just labels; they don't restrict anything.
-
-Three spec gaps were resolved by decision rather than guess, and are worth
-knowing because they shape the endgame:
-
-- The `good` tier splits the 60–70% middle band with `mid`, weighted so `mid`
-  still dominates (it's the hesitation zone).
-- If one roster fills while items remain, the other player takes the rest
-  **free** — there is nothing left to compete over.
-- Opening a bid is **mandatory** while both players are solvent. Deck size
-  equals total roster slots, so every item must find an owner.
-
-## Editing the content
-
-One file per category in `src/lib/data/`, each a plain array you can edit by
-hand:
-
-```ts
-export const FOODS: ItemSeed[] = [
-	{ name: 'Wood-fired pizza', tier: 'great' },
-	{ name: 'Grilled cheese', tier: 'mid' }
-];
-```
-
-`tier` is one of `bad | mid | good | great` and is **never shown to players** —
-it only shapes the deck curve. An item's real value is whatever someone bids.
-Ids are generated from the name, so you only write names and tiers.
-
-NBA and NFL items carry a `position` too (`{ name, tier, position }`). Keep at
-least ~8 per position in each pool: the deck needs two of every position, and
-`npm test` fails if a pool can't supply them. NFL pools are offence-only, since
-the requested roster has no defensive slot.
-
-Every pool holds roughly 47–55 items so repeated games in one category don't
-repeat themselves. Keep at least ~8 per tier and you'll stay clear of the
-curve's fallbacks; `npm test` fuzzes 40 full games per pool and will tell you if
-a pool gets too thin to fill both rosters.
-
-Two content rules matter more than anything else, because both were learned the
-hard way:
-
-1. **Recognition is the floor, in every tier.** An item nobody at the table
-   recognizes kills the round — there's nothing to argue about. `bad` means
-   *famous and disappointing*, never unknown. Luke Kennard is a good `bad` card;
-   an obscure bench player is not a card at all.
-2. **Keep names to 1–4 words.** These get shouted across a room. "Baja Blast"
-   works; "iced coffee you forgot about for three hours" dies out loud.
-
-The audience is 14–26, so the nostalgia window is roughly a 2008–2020 childhood
-and all-time sports pools should stick to legends whose names are genuinely
-universal.
-
-To add a category, create the data file and add one entry to `CATEGORIES` in
-`src/lib/data/index.ts`. Two or more `variants` automatically renders a toggle.
-
-Real-people categories are names-only as plain text by design — no photos,
-logos, or team branding.
-
-## Code layout
-
-```
-src/lib/data/      content pools, one file per category
-src/lib/game/
-  types.ts         GameState + the Action union
-  engine.ts        the entire rulebook as one pure reducer
-  deck.ts          sampling, the tier curve, finale weighting
-  store.svelte.ts  the only seam between UI and rules
-  persist.ts       localStorage, so a mid-game refresh doesn't lose the draft
-src/lib/components/  SetupScreen, BidScreen, ResultsScreen
-```
-
-`engine.ts` is pure and knows nothing about Svelte or the DOM. Components never
-mutate state; they read `game.state` and call `game.dispatch(action)`.
-
-### Tier 2: two devices over Supabase
-
-The seam is deliberate. Actions are plain serialisable data and the reducer is
-pure, so adding real-time 2-device play means changing one file:
-
-- `dispatch()` broadcasts the action (or writes it to a table) instead of
-  applying it locally.
-- A subscription calls the existing `game.replace(state)` with whatever the
-  server says is authoritative.
-
-No component changes, because no component knows how state travels. The rules
-stay in one testable place either way.
-
-## Testing and quality tooling
-
-```bash
-npm run check
-```
-
-That's typecheck + lint + every test, and it's the one command worth running
-before you push. The pieces individually:
-
-| Script                  | What it does                                                |
-| ----------------------- | ----------------------------------------------------------- |
-| `npm run typecheck`     | `tsc --noEmit` for modules, `svelte-check` for `.svelte`     |
-| `npm run lint`          | Biome on `.ts`/`.js`/`.json`                                 |
-| `npm run format`        | Biome (everything) + Prettier (`.svelte` only), write mode   |
-| `npm run format:check`  | Same pair, check-only                                        |
-| `npm run test:unit`     | Vitest, the game engine in Node                              |
-| `npm run test:component`| Vitest browser mode, components in real Chromium             |
-| `npm run test:e2e`      | Playwright, full journeys against the built app              |
-| `npm run test:a11y`     | axe at both levels, for iterating on a11y alone              |
-| `npm run test`          | unit → component → e2e (a11y included in the last two)       |
-| `npm run coverage`      | Coverage report, scoped to the engine                        |
-| `npm run test:load`     | k6 against the local Supabase stack (needs `k6`, see below)  |
-
-### The shape of the suite
-
-**Unit (Vitest, Node).** The rulebook is a pure reducer, so this is where the
-tricky rules live: deck size and tier ratios across hundreds of builds, the
-probabilistic polarised ending, bid/raise/sold resolution, both fallback rules,
-and a fuzz suite that plays 40 full games per content pool sweeping budgets,
-roster sizes and bidding aggression. The fuzz test is the one that actually
-guarantees no line of play can strand a player with an unfillable roster.
-
-**Component (`vitest-browser-svelte`, real Chromium).** Real browser rather than
-jsdom, so computed styles and pointer events are genuine — which matters because
-the axe contrast checks need real rendering. Components read the shared store, so
-tests seed state via `game.replace()`, the same seam Tier 2 would use for
-server-pushed state. Fixtures in `src/lib/testing/fixtures.ts` are built by
-running real actions through the reducer, so a fixture can't describe a state the
-rules wouldn't produce.
-
-**E2E (Playwright).** Runs against `build` + `preview`, not `vite dev`. That's
-deliberate: the worst bug this app has shipped was a hydration crash visible only
-in the built output, where the prerendered HTML rendered perfectly and every
-control was dead. The journeys cover a full game, both fallback paths, setup
-choices changing the game shape, a positional draft, mid-game reload recovery,
-and quitting.
-
-### Load testing
-
-`load/game.js` is a [k6](https://k6.io) script: each virtual user plays a whole
-two-player game through the Edge Functions, both seats refetching `game_public`
-after every move the way clients do on a broadcast nudge. About 30% of openings
-fire both bids at once, so the optimistic `version` check gets exercised under
-load; the run fails unless exactly one of each pair wins.
-
-```bash
-brew install k6
-npx supabase start && npx supabase functions serve --no-verify-jwt
-SUPABASE_ANON_KEY=<printed anon key> npm run test:load
-```
-
-`PROFILE=stress` ramps to 100 concurrent games instead of the CI profile's 10,
-and is expected to cross the thresholds: on a laptop the local Edge Runtime
-starts answering 503 and `room-action` p95 nears 2s around there.
-CI runs the default profile against its own local stack; the thresholds at the
-top of the script are what make it pass or fail. Its latency numbers describe a
-GitHub runner, not production, so they catch regressions rather than measure
-the hosted project.
-
-Each seat gets its own fake `x-forwarded-for`, since that's what the rate
-limiter buckets by and real players don't share an IP. The script refuses to
-run against anything but localhost without `ALLOW_REMOTE=1`, because the hosted
-project is a shared free tier.
-
-### Coverage
-
-Scoped to `src/lib/game/**` rather than a repo-wide number, which would just be
-padded by markup and config. Lines and functions are held at **100%** — every
-function in the rulebook executes. Statements and branches sit slightly lower
-(engine 90/87) because the reducer is full of defensive guards for states it
-can't actually reach; forcing those to 100 would mean asserting against
-impossible inputs, which tests the guard rather than the game. `store.svelte.ts`
-is excluded from this Node run and covered by the component and E2E suites.
-
-### Accessibility
-
-axe-core runs at two levels, and violations are treated as bugs rather than
-suppressed:
-
-- **Component level** — each component scanned in isolation, so a violation
-  points at the component that owns it. Includes the states where regressions
-  hide: a standing bid disabling and inverting the holder's button, the
-  broke-player fallback, the award slot picker.
-- **Page level** — the assembled routes via `@axe-core/playwright`, where
-  document-scoped rules (landmarks, headings, title) actually apply.
-
-This found two real WCAG AA failures on first run, both mine: de-emphasised text
-using `opacity` on black landed at 3.36:1 and 3.94:1 against the cream
-background, under the 4.5:1 minimum. Fixed by adding an `--ink-muted` token that
-measures ~5:1. **Don't reach for `opacity` to mute text in this palette** — it
-looks fine and quietly fails.
-
-### Known gap: Biome doesn't lint `.svelte`
-
-Biome's Svelte support is **experimental**. It has no parser for Svelte template
-syntax, so it can't see `{#if}` / `{#each}` blocks, and the docs recommend
-disabling `noUnusedVariables`, `noUnusedImports`, `useConst` and `useImportType`
-for `.svelte` files — which is most of the value.
-
-Rather than pretend, the split is explicit:
-
-- **Biome** owns `.ts` / `.js` / `.json`: lint and format, full recommended rule
-  set. Verified by planting violations and confirming they're caught.
-- **Prettier + `prettier-plugin-svelte`** owns `.svelte` files, formatting only.
-  `.prettierignore` restricts it to `src/**/*.svelte` so the two never fight.
-
-The honest consequence: **`.svelte` markup gets no linting**, only formatting.
-Biome's accessibility rules are also JSX/HTML-attribute oriented, so with all
-markup living in excluded `.svelte` files they contribute effectively nothing
-here — a11y coverage comes from axe at two levels plus `svelte-check`, which does
-report Svelte's own `a11y_*` warnings on markup. Treat that as the a11y linter.
-
-Worth revisiting once Biome ships a real Svelte parser; at that point Prettier
-can probably go.
-
-## Metadata and sharing
-
-`src/lib/site.ts` holds the origin, description and card paths. **`SITE_URL` is the
-only thing to change when the real domain is set** — the canonical link, Open
-Graph tags, JSON-LD and sitemap all read from it, and `robots.txt` and
-`sitemap.xml` are prerendered routes rather than static files precisely so a
-hardcoded domain can't rot in a corner.
-
-The social card is generated, not hand-drawn:
-
-```bash
-node scripts/generate-og.mjs
-```
-
-That renders HTML with the app's own tokens and screenshots it to
-`static/og.png` at 1200x630 using the Playwright browser already installed for
-the E2E suite. Re-run it after a palette change so the card doesn't drift from
-the app.
-
-Two deliberate choices worth knowing. Nothing player-entered goes in the page
-head — a custom category name is arbitrary text and belongs nowhere near
-metadata. And `robots.txt` disallows nothing, AI crawlers included: being
-readable by them is the whole on-site half of getting cited by answer engines.
-
-`e2e/metadata.spec.ts` covers all of it against the built output, because
-metadata is uniquely prone to silent rot — nothing on screen breaks when an OG
-tag disappears, and the cost only shows up as a dead link preview months later.
-
-## Styling
-
-Neo-brutalism: cream canvas, 4px black borders, hard offset shadows with no
-blur, zero radius, no gradients, and a mechanical press that slides a control
-onto its own shadow. Palette and rules follow the "Neo Brutalism (Mobile)" spec
-from [ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill).
-
-### The accent palette
-
-Six accents, every one carrying black text at well over 4.5:1 — that's what lets
-the system put ink straight onto colour with no light/dark variants:
-
-| Token      | Colour        | Means                                          |
-| ---------- | ------------- | ---------------------------------------------- |
-| `--red`    | Hot red       | Live tick, positions, alerts, the online chip  |
-| `--yellow` | Vivid yellow  | Player 2, tags and badges                      |
-| `--violet` | Soft violet   | Player 1, face-down card, rule banners         |
-| `--green`  | Pastel green  | Primary buttons, food and drink categories     |
-| `--blue`   | Pastel blue   | Money (`--money`), sports categories           |
-| `--orange` | Vivid orange  | The top-price stat                             |
-
-Three conventions worth keeping:
-
-- **Primary buttons are green, never red.** Red reads as stop or delete, which made
-  the most important control on every screen the one players hesitated over. Red
-  still carries the live progress tick, position tags, error banners and the small
-  "play online" chip — things that report or point somewhere else rather than being
-  the action on the screen. Don't put it back on a `.btn`.
-- **Money is `--money`, and nothing else may use it.** It covers the standing bid
-  and the amount dial. It's blue now; it was green until the buttons took green,
-  which put two greens on the bid screen. Yellow did this job even earlier, as well
-  as being Player 2's identity, which made the bid screen ambiguous — the same
-  colour meant both "Alex" and "dollars". The rule that survives every reshuffle is
-  that money owns one colour outright.
-- **Watch how far the money colour spreads.** Blue is `--money` and also the four
-  sports categories, which is the one place a colour does double duty. It's fine
-  while the categories only appear on setup and money only appears on the bid
-  screen; `--orange` exists as the place to move something if that stops being
-  true.
-- **Categories carry their own accent**, set as a required `accent` field on each
-  entry in `src/lib/data/index.ts` and grouped by theme (sports blue, childhood
-  violet, screen and people red, food and drink green, abstract yellow). Tiles
-  stay white with a coloured icon chip and flood with their own accent when
-  selected. The field is required, so a new category can't ship colourless.
-
-If you add an accent, add it to `:root` in `src/app.css` and run
-`npm run test:a11y` — axe checks contrast at both component and page level and
-will fail if the new colour can't carry black text.
-
-One deviation: that spec asks for Space Grotesk, but loading a web font would be
-a runtime network request, which this build rules out. Space Grotesk sits first
-in the stack so it's used when installed locally, otherwise the heavy system
-face carries it.
-
-### Icons
-
-Category tiles use Font Awesome Free glyphs, but **inlined as SVG paths** rather
-than loaded as a webfont or from a CDN. `src/lib/icons.ts` is generated by
-`node scripts/extract-icons.mjs`, which reads the real SVG source out of the
-`@fortawesome/fontawesome-free` devDependency and writes out just the paths we
-use — 8KB for fourteen icons, against roughly 1.4MB of font files plus a CSS
-framework for the same result. Nothing from the package reaches the browser.
-
-Same reasoning as the font decision: a CDN `<link>` would be a third-party
-runtime request. Inlining also means the glyphs inherit `currentColor`, so they
-sit on the accent chips as plain black ink like everything else in this style.
-
-To add or change an icon, edit the `WANTED` list in the script, re-run it, and
-point the category's `icon` field at the new name. `Icon.svelte` renders them
-`aria-hidden` by default, since every current use sits beside a visible text
-label and announcing "basketball" before "NBA Players" is just noise.
-
-**Attribution** — Font Awesome Free icons are
-[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), © Fonticons, Inc.
-Icon paths in `src/lib/icons.ts` are used under that licence; the Font Awesome
-code is MIT.
+<div align="center">
+<br>
+<a href="https://www.20dollardraftgame.com/"><img src="https://img.shields.io/badge/%E2%96%B6%20START%20A%20DRAFT-6bcf7d?style=for-the-badge&labelColor=000000" alt="Start a draft"></a>
+</div>
