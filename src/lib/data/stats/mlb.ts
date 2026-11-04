@@ -1,0 +1,110 @@
+import type { StatTable } from './types';
+
+/** 2026 regular season. */
+export const MLB_CURRENT_STATS: StatTable = {
+	'Shohei Ohtani': { kind: 'mlb-bat', avg: 0.275, hr: 30, rbi: 81, ops: 0.889 },
+	'Aaron Judge': { kind: 'mlb-bat', avg: 0.331, hr: 53, rbi: 114, ops: 1.145 }, // 2025
+	'Juan Soto': { kind: 'mlb-bat', avg: 0.275, hr: 27, rbi: 68, ops: 0.908 },
+	'Bobby Witt Jr.': { kind: 'mlb-bat', avg: 0.281, hr: 18, rbi: 54, ops: 0.8 },
+	'Paul Skenes': { kind: 'mlb-pitch', w: 10, era: 3.82, so: 200, ip: 174.1 },
+	'Tarik Skubal': { kind: 'mlb-pitch', w: 12, era: 2.72, so: 186, ip: 158.2 },
+	'Jose Ramirez': { kind: 'mlb-bat', avg: 0.235, hr: 12, rbi: 53, ops: 0.688 },
+	'Mookie Betts': { kind: 'mlb-bat', avg: 0.257, hr: 23, rbi: 69, ops: 0.78 },
+	'Freddie Freeman': { kind: 'mlb-bat', avg: 0.288, hr: 16, rbi: 70, ops: 0.792 },
+	'Elly De La Cruz': { kind: 'mlb-bat', avg: 0.283, hr: 30, rbi: 79, ops: 0.88 },
+	'Ronald Acuna Jr.': { kind: 'mlb-bat', avg: 0.255, hr: 20, rbi: 55, ops: 0.796 },
+	'Bryce Harper': { kind: 'mlb-bat', avg: 0.269, hr: 29, rbi: 87, ops: 0.865 },
+	'Vladimir Guerrero Jr.': { kind: 'mlb-bat', avg: 0.26, hr: 9, rbi: 57, ops: 0.688 },
+	'Fernando Tatis Jr.': { kind: 'mlb-bat', avg: 0.289, hr: 25, rbi: 83, ops: 0.828 },
+	'Yordan Alvarez': { kind: 'mlb-bat', avg: 0.316, hr: 42, rbi: 106, ops: 1.033 },
+	'Francisco Lindor': { kind: 'mlb-bat', avg: 0.225, hr: 21, rbi: 49, ops: 0.732 },
+	'Julio Rodriguez': { kind: 'mlb-bat', avg: 0.247, hr: 22, rbi: 71, ops: 0.708 },
+	'Kyle Tucker': { kind: 'mlb-bat', avg: 0.233, hr: 17, rbi: 70, ops: 0.715 },
+	'Corbin Carroll': { kind: 'mlb-bat', avg: 0.239, hr: 22, rbi: 78, ops: 0.795 },
+	'Gunnar Henderson': { kind: 'mlb-bat', avg: 0.225, hr: 24, rbi: 59, ops: 0.712 },
+	'Corey Seager': { kind: 'mlb-bat', avg: 0.227, hr: 20, rbi: 51, ops: 0.736 },
+	'Adley Rutschman': { kind: 'mlb-bat', avg: 0.242, hr: 13, rbi: 60, ops: 0.741 },
+	'Ketel Marte': { kind: 'mlb-bat', avg: 0.249, hr: 22, rbi: 76, ops: 0.748 },
+	'Zack Wheeler': { kind: 'mlb-pitch', w: 14, era: 3.0, so: 193, ip: 162.0 },
+	'Pete Alonso': { kind: 'mlb-bat', avg: 0.267, hr: 43, rbi: 113, ops: 0.885 },
+	'Mike Trout': { kind: 'mlb-bat', avg: 0.242, hr: 22, rbi: 54, ops: 0.803 },
+	'Jose Altuve': { kind: 'mlb-bat', avg: 0.25, hr: 16, rbi: 50, ops: 0.701 },
+	'Manny Machado': { kind: 'mlb-bat', avg: 0.217, hr: 30, rbi: 91, ops: 0.71 },
+	'Rafael Devers': { kind: 'mlb-bat', avg: 0.258, hr: 37, rbi: 98, ops: 0.865 },
+	'Trea Turner': { kind: 'mlb-bat', avg: 0.242, hr: 19, rbi: 58, ops: 0.675 },
+	'Bo Bichette': { kind: 'mlb-bat', avg: 0.26, hr: 18, rbi: 78, ops: 0.702 },
+	'Matt Olson': { kind: 'mlb-bat', avg: 0.251, hr: 41, rbi: 93, ops: 0.823 },
+	'Marcus Semien': { kind: 'mlb-bat', avg: 0.215, hr: 15, rbi: 49, ops: 0.62 },
+	// biome-ignore lint/suspicious/noApproximativeNumericConstant: a real OPS, not ln 2
+	'Christian Yelich': { kind: 'mlb-bat', avg: 0.235, hr: 12, rbi: 59, ops: 0.693 },
+	'Salvador Perez': { kind: 'mlb-bat', avg: 0.229, hr: 21, rbi: 78, ops: 0.657 },
+	'Jazz Chisholm Jr.': { kind: 'mlb-bat', avg: 0.231, hr: 19, rbi: 55, ops: 0.711 },
+	'Jeremy Pena': { kind: 'mlb-bat', avg: 0.277, hr: 22, rbi: 56, ops: 0.802 },
+	'Clayton Kershaw': { kind: 'mlb-pitch', w: 11, era: 3.36, so: 84, ip: 112.2 }, // 2025
+	'Gerrit Cole': { kind: 'mlb-pitch', w: 10, era: 3.61, so: 131, ip: 127.0 },
+	'Spencer Strider': { kind: 'mlb-pitch', w: 7, era: 4.45, so: 131, ip: 125.1 }, // 2025
+	'Aaron Nola': { kind: 'mlb-pitch', w: 7, era: 4.67, so: 177, ip: 175.1 },
+	'Joey Gallo': { kind: 'mlb-bat', avg: 0.161, hr: 10, rbi: 27, ops: 0.613 }, // 2024
+	'Anthony Rendon': { kind: 'mlb-bat', avg: 0.218, hr: 0, rbi: 14, ops: 0.574 }, // 2024
+	'Kris Bryant': { kind: 'mlb-bat', avg: 0.233, hr: 10, rbi: 31, ops: 0.68 }, // 2023
+	'Javier Baez': { kind: 'mlb-bat', avg: 0.257, hr: 12, rbi: 57, ops: 0.68 }, // 2025
+	'Cody Bellinger': { kind: 'mlb-bat', avg: 0.264, hr: 17, rbi: 73, ops: 0.767 },
+	'Giancarlo Stanton': { kind: 'mlb-bat', avg: 0.273, hr: 24, rbi: 66, ops: 0.944 }, // 2025
+	'Trevor Story': { kind: 'mlb-bat', avg: 0.263, hr: 25, rbi: 96, ops: 0.741 }, // 2025
+	'Nolan Arenado': { kind: 'mlb-bat', avg: 0.255, hr: 30, rbi: 86, ops: 0.806 },
+	'Anthony Volpe': { kind: 'mlb-bat', avg: 0.212, hr: 19, rbi: 72, ops: 0.663 } // 2025
+};
+
+/** Career regular season. */
+export const MLB_ALL_TIME_STATS: StatTable = {
+	'Babe Ruth': { kind: 'mlb-bat', avg: 0.342, hr: 714, rbi: 2213, ops: 1.164 },
+	'Jackie Robinson': { kind: 'mlb-bat', avg: 0.313, hr: 141, rbi: 765, ops: 0.887 },
+	'Hank Aaron': { kind: 'mlb-bat', avg: 0.305, hr: 755, rbi: 2297, ops: 0.929 },
+	'Willie Mays': { kind: 'mlb-bat', avg: 0.301, hr: 660, rbi: 1909, ops: 0.941 },
+	'Barry Bonds': { kind: 'mlb-bat', avg: 0.298, hr: 762, rbi: 1996, ops: 1.051 },
+	'Ken Griffey Jr.': { kind: 'mlb-bat', avg: 0.284, hr: 630, rbi: 1836, ops: 0.908 },
+	'Mickey Mantle': { kind: 'mlb-bat', avg: 0.298, hr: 536, rbi: 1509, ops: 0.978 },
+	'Ted Williams': { kind: 'mlb-bat', avg: 0.344, hr: 521, rbi: 1839, ops: 1.116 },
+	'Lou Gehrig': { kind: 'mlb-bat', avg: 0.34, hr: 493, rbi: 1995, ops: 1.079 },
+	'Derek Jeter': { kind: 'mlb-bat', avg: 0.31, hr: 260, rbi: 1311, ops: 0.817 },
+	'Roberto Clemente': { kind: 'mlb-bat', avg: 0.317, hr: 240, rbi: 1305, ops: 0.834 },
+	'Pedro Martinez': { kind: 'mlb-pitch', w: 219, era: 2.93, so: 3154, ip: 2827.1 },
+	'Sandy Koufax': { kind: 'mlb-pitch', w: 165, era: 2.76, so: 2396, ip: 2324.1 },
+	'Rickey Henderson': { kind: 'mlb-bat', avg: 0.279, hr: 297, rbi: 1115, ops: 0.82 },
+	'Nolan Ryan': { kind: 'mlb-pitch', w: 324, era: 3.19, so: 5714, ip: 5386.0 },
+	'Ichiro Suzuki': { kind: 'mlb-bat', avg: 0.311, hr: 117, rbi: 780, ops: 0.757 },
+	'David Ortiz': { kind: 'mlb-bat', avg: 0.286, hr: 541, rbi: 1768, ops: 0.932 },
+	'Mariano Rivera': { kind: 'mlb-pitch', w: 82, era: 2.21, so: 1173, ip: 1283.2 },
+	'Randy Johnson': { kind: 'mlb-pitch', w: 303, era: 3.29, so: 4875, ip: 4135.1 },
+	'Greg Maddux': { kind: 'mlb-pitch', w: 355, era: 3.16, so: 3371, ip: 5008.1 },
+	'Albert Pujols': { kind: 'mlb-bat', avg: 0.296, hr: 703, rbi: 2218, ops: 0.918 },
+	'Alex Rodriguez': { kind: 'mlb-bat', avg: 0.295, hr: 696, rbi: 2086, ops: 0.93 },
+	'Cal Ripken Jr.': { kind: 'mlb-bat', avg: 0.276, hr: 431, rbi: 1695, ops: 0.787 },
+	'Frank Thomas': { kind: 'mlb-bat', avg: 0.301, hr: 521, rbi: 1704, ops: 0.974 },
+	'Bo Jackson': { kind: 'mlb-bat', avg: 0.25, hr: 141, rbi: 415, ops: 0.783 },
+	'Sammy Sosa': { kind: 'mlb-bat', avg: 0.273, hr: 609, rbi: 1667, ops: 0.878 },
+	'Mark McGwire': { kind: 'mlb-bat', avg: 0.263, hr: 583, rbi: 1414, ops: 0.982 },
+	'Chipper Jones': { kind: 'mlb-bat', avg: 0.303, hr: 468, rbi: 1623, ops: 0.93 },
+	'Mike Piazza': { kind: 'mlb-bat', avg: 0.308, hr: 427, rbi: 1335, ops: 0.922 },
+	'Ozzie Smith': { kind: 'mlb-bat', avg: 0.262, hr: 28, rbi: 793, ops: 0.665 },
+	'Reggie Jackson': { kind: 'mlb-bat', avg: 0.262, hr: 563, rbi: 1702, ops: 0.846 },
+	'Roger Clemens': { kind: 'mlb-pitch', w: 354, era: 3.12, so: 4672, ip: 4916.2 },
+	'Justin Verlander': { kind: 'mlb-pitch', w: 266, era: 3.33, so: 3560, ip: 3576.2 },
+	'Max Scherzer': { kind: 'mlb-pitch', w: 225, era: 3.29, so: 3557, ip: 3047.2 },
+	'Miguel Cabrera': { kind: 'mlb-bat', avg: 0.306, hr: 511, rbi: 1881, ops: 0.9 },
+	'Jim Thome': { kind: 'mlb-bat', avg: 0.276, hr: 612, rbi: 1699, ops: 0.956 },
+	'Vladimir Guerrero': { kind: 'mlb-bat', avg: 0.318, hr: 449, rbi: 1496, ops: 0.932 },
+	'Tony Gwynn': { kind: 'mlb-bat', avg: 0.338, hr: 135, rbi: 1138, ops: 0.847 },
+	'Joe DiMaggio': { kind: 'mlb-bat', avg: 0.325, hr: 361, rbi: 1537, ops: 0.977 },
+	'CC Sabathia': { kind: 'mlb-pitch', w: 251, era: 3.74, so: 3093, ip: 3577.1 },
+	'Buster Posey': { kind: 'mlb-bat', avg: 0.302, hr: 158, rbi: 729, ops: 0.832 },
+	'Deion Sanders': { kind: 'mlb-bat', avg: 0.263, hr: 39, rbi: 168, ops: 0.711 },
+	'Bartolo Colon': { kind: 'mlb-pitch', w: 247, era: 4.12, so: 2535, ip: 3461.2 },
+	'Pablo Sandoval': { kind: 'mlb-bat', avg: 0.278, hr: 153, rbi: 639, ops: 0.773 },
+	'Ryan Howard': { kind: 'mlb-bat', avg: 0.258, hr: 382, rbi: 1194, ops: 0.858 },
+	'Tim Lincecum': { kind: 'mlb-pitch', w: 110, era: 3.74, so: 1736, ip: 1682.0 },
+	'Alfonso Soriano': { kind: 'mlb-bat', avg: 0.27, hr: 412, rbi: 1159, ops: 0.819 },
+	'Prince Fielder': { kind: 'mlb-bat', avg: 0.283, hr: 319, rbi: 1028, ops: 0.888 },
+	'Yasiel Puig': { kind: 'mlb-bat', avg: 0.277, hr: 132, rbi: 415, ops: 0.823 },
+	'Jacoby Ellsbury': { kind: 'mlb-bat', avg: 0.284, hr: 104, rbi: 512, ops: 0.759 }
+};

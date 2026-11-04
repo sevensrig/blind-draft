@@ -15,7 +15,7 @@ test('plays a full draft against the bot', async ({ page }) => {
 	// `isEnabled` waits for the element to exist, so check it's there first.
 	const ready = async (name: RegExp) =>
 		(await button(name).isVisible()) && (await button(name).isEnabled());
-	const results = page.getByRole('heading', { name: 'Bot' });
+	const results = page.getByRole('heading', { name: 'Bot', exact: true });
 
 	// A plain human: opens when nobody has, lets the bot have anything it raises on.
 	for (let step = 0; step < 400 && !(await results.isVisible()); step++) {

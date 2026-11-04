@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, type Page, test } from '@playwright/test';
 import { playRound, playToResults, setUpGame, waitForHydration } from './helpers';
 
 /**
@@ -154,7 +154,7 @@ test('results sheet is accessible', async ({ page }) => {
 	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
 	await playToResults(page, { winner: 'Sri' });
 
-	await expect(page.getByText('Rosters are full')).toBeVisible();
+	await expect(page.getByRole('button', { name: /Share results/ })).toBeVisible();
 	await scan(page, 'results sheet');
 });
 

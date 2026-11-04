@@ -4,12 +4,14 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { getCategory, getVariant } from '$lib/data';
 	import { buildBench, buildDeck } from '$lib/game/deck';
+	import { ratingSource, statTable } from '$lib/data/stats';
 	import { entryInSlot, totalSpent } from '$lib/game/engine';
+	import { scoreGame, type PickScore } from '$lib/game/score';
 	import { game } from '$lib/game/store.svelte';
 	import type { GameState, Player } from '$lib/game/types';
 	import { shareResults } from '$lib/share';
 	import { cardFile } from '$lib/share/card';
-	import { shareText } from '$lib/share/text';
+	import { shareText, stealLabel, verdict } from '$lib/share/text';
 
 	interface Props {
 		/** Remote play supplies the server's state; local play uses the store. */
@@ -33,6 +35,13 @@
 		)
 	);
 	const freebies = $derived(s.history.filter((award) => award.free).length);
+
+	const board = $derived(scoreGame(s));
+	const scoreOf = (player: Player) => board?.players[player.id];
+	const pickFor = (player: Player, slotId: string): PickScore | undefined =>
+		scoreOf(player)?.picks.find((pick) => pick.entry.slotId === slotId);
+	/* Per-pick points only for stat-ranked picks; elsewhere they'd just read out the hidden tier. */
+	const itemised = $derived(!!board && !!statTable(s.config.variantId));
 
 	/**
 	 * Same names and settings, brand new blind order. A custom game carries its
@@ -85,7 +94,7 @@
 	<div class="sheet">
 		<header class="sheet__head">
 			<span class="stampline">$20 Draft</span>
-			<h1>Rosters are full</h1>
+			<h1>{verdict(s, board)}</h1>
 			<p class="sheet__sub">
 				{s.config.categoryLabel}{s.config.variantLabel
 					? ` · ${s.config.variantLabel}`
@@ -95,16 +104,26 @@
 
 		<div class="rosters">
 			{#each s.players as player (player.id)}
+				{@const score = scoreOf(player)}
 				<section
 					class="roster"
+					class:roster--won={board?.winner === player.id}
 					style:--accent={accentFor(player)}
 					style:--tilt={tiltFor(player)}
 				>
 					<header class="roster__head">
-						<h2>{player.name}</h2>
+						<h2>
+							{#if board?.winner === player.id}<span class="crown"><Icon name="crown" /></span>{/if}
+							{player.name}
+						</h2>
 						<div class="roster__totals">
-							<span class="spent">${totalSpent(player)}</span>
-							<span class="left">${player.money} left</span>
+							{#if score}
+								<span class="spent">{score.total} pts</span>
+								<span class="left">${totalSpent(player)} spent · ${player.money} left</span>
+							{:else}
+								<span class="spent">${totalSpent(player)}</span>
+								<span class="left">${player.money} left</span>
+							{/if}
 						</div>
 					</header>
 
@@ -112,6 +131,7 @@
 					<ol class="picks">
 						{#each s.config.roster as slot (slot.id)}
 							{@const entry = entryInSlot(s, player.id, slot.id)}
+							{@const pick = pickFor(player, slot.id)}
 							{#if entry}
 								<li class="pick">
 									{#if s.config.positional}
@@ -121,9 +141,15 @@
 										{entry.free ? 'Free' : `$${entry.price}`}
 									</span>
 									<span class="pick__name">
-										{entry.item.name}
+										<span>{entry.item.name}</span>
 										{#if entry.item.note}<i>{entry.item.note}</i>{/if}
+										{#if itemised && pick?.steal}
+											<i class="pick__steal">{stealLabel(pick.steal)}</i>
+										{/if}
 									</span>
+									{#if itemised && pick}
+										<span class="pick__pts">{pick.total}<small> pts</small></span>
+									{/if}
 								</li>
 							{/if}
 						{/each}
@@ -148,15 +174,19 @@
 		</footer>
 	</div>
 
-	<p class="verdict">No scores here — argue about who won.</p>
+	<p class="verdict">
+		{#if !board}
+			No scores here — argue about who won.
+		{:else if ratingSource(s.config.variantId)}
+			Points from real stats and {ratingSource(s.config.variantId)}, plus a bonus for steals.
+		{:else if itemised}
+			Points from real stats, plus a bonus for steals.
+		{:else}
+			Points from our rankings, plus a bonus for steals.
+		{/if}
+	</p>
 
 	<div class="actions">
-		<button class="btn btn--yellow" type="button" onclick={share}>
-			<span class="share__label"><Icon name="arrow-up-from-bracket" /> Share results</span>
-			<span class="btn__sub" aria-live="polite">
-				{copied ? 'Copied — paste it anywhere' : 'post the rosters, start the argument'}
-			</span>
-		</button>
 		{#if onRunItBack !== null}
 			<button class="btn btn--hot" type="button" onclick={onRunItBack ?? runItBack}>
 				Run it back
@@ -169,6 +199,12 @@
 			onclick={onLeave ?? (() => game.dispatch({ type: 'reset' }))}
 		>
 			{leaveLabel}
+		</button>
+		<button class="btn btn--yellow" type="button" onclick={share}>
+			<span class="share__label"><Icon name="arrow-up-from-bracket" /> Share results</span>
+			<span class="btn__sub" aria-live="polite">
+				{copied ? 'Copied — paste it anywhere' : 'post the rosters, start the argument'}
+			</span>
 		</button>
 	</div>
 
@@ -233,6 +269,11 @@
 		transform: rotate(var(--tilt));
 	}
 
+	/* The winner is the one raised card, so the screenshot answers "who won?". */
+	.roster--won {
+		box-shadow: var(--shadow-lg);
+	}
+
 	.roster__head {
 		display: flex;
 		align-items: baseline;
@@ -241,6 +282,17 @@
 		padding-bottom: 0.45rem;
 		margin-bottom: 0.5rem;
 		border-bottom: var(--bw-thin) solid var(--ink);
+	}
+
+	.crown {
+		display: inline-block;
+		margin-right: 0.3rem;
+		font-size: 0.95rem;
+		vertical-align: -0.05em;
+	}
+
+	.crown :global(.icon) {
+		display: inline-block;
 	}
 
 	.roster__head h2 {
@@ -332,6 +384,27 @@
 		font-style: normal;
 		font-weight: 700;
 		letter-spacing: 0.04em;
+	}
+
+	.pick__steal {
+		text-transform: uppercase;
+	}
+
+	.pick__pts {
+		flex: none;
+		margin-left: auto;
+		min-width: 2.4rem;
+		padding: 0.1rem 0.25rem;
+		background: var(--ink);
+		color: var(--cream);
+		font-size: 0.78rem;
+		font-weight: 900;
+		text-align: center;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.pick__pts small {
+		font-size: 0.55rem;
 	}
 
 	.stats {

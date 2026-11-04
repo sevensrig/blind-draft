@@ -1,6 +1,9 @@
+import { statTable } from '$lib/data/stats';
 import { totalSpent } from '$lib/game/engine';
+import { type Scoreboard, scoreGame } from '$lib/game/score';
 import type { GameState, Player } from '$lib/game/types';
-import { SHARE_HOST, headline, orderedPicks, priceLabel } from './text';
+import { ICONS } from '$lib/icons';
+import { headline, orderedPicks, priceLabel, SHARE_HOST, verdict } from './text';
 
 /** 4:5 portrait: the tallest ratio Instagram and TikTok show uncropped in a feed. */
 export const CARD_WIDTH = 1080;
@@ -60,14 +63,17 @@ function ellipsize(ctx: Ctx, text: string, maxWidth: number): string {
 	return `${cut.trimEnd()}…`;
 }
 
-/** Most even two-line split by words, or null for a single word. */
+/** Most even two-line split at a space or after a hyphen, or null for a single word. */
 function splitTwo(ctx: Ctx, text: string): [string, string] | null {
-	const words = text.split(' ');
+	const words = text.match(/[^ -]+(?:-| |$)/g) ?? [];
 	if (words.length < 2) return null;
 	let best: [string, string] | null = null;
 	let bestWidth = Number.POSITIVE_INFINITY;
 	for (let i = 1; i < words.length; i++) {
-		const pair: [string, string] = [words.slice(0, i).join(' '), words.slice(i).join(' ')];
+		const pair: [string, string] = [
+			words.slice(0, i).join('').trim(),
+			words.slice(i).join('').trim()
+		];
 		const width = Math.max(...pair.map((line) => ctx.measureText(line).width));
 		if (width < bestWidth) [best, bestWidth] = [pair, width];
 	}
@@ -100,11 +106,23 @@ function fitName(
 	return { size: min, lines: [ellipsize(ctx, text, maxWidth)] };
 }
 
+/** Draws a Font Awesome glyph from `$lib/icons`, `size` px tall, in the current fill. */
+function drawIcon(ctx: Ctx, name: keyof typeof ICONS, x: number, y: number, size: number) {
+	const icon = ICONS[name];
+	const scale = size / Number(icon.viewBox.split(' ')[3]);
+	ctx.save();
+	ctx.translate(x, y);
+	ctx.scale(scale, scale);
+	ctx.fill(new Path2D(icon.path));
+	ctx.restore();
+}
+
 function drawRoster(
 	ctx: Ctx,
 	p: Palette,
 	state: GameState,
 	player: Player,
+	board: Scoreboard | null,
 	x: number,
 	y: number,
 	w: number,
@@ -116,7 +134,18 @@ function drawRoster(
 	ctx.rotate(tilt);
 	ctx.translate(-w / 2, -h / 2);
 
-	block(ctx, p, 0, 0, w, h, player.id === 0 ? p.p1 : p.p2, 6, 10);
+	const score = board?.players[player.id];
+	block(
+		ctx,
+		p,
+		0,
+		0,
+		w,
+		h,
+		player.id === 0 ? p.p1 : p.p2,
+		6,
+		board?.winner === player.id ? 18 : 10
+	);
 
 	const pad = 20;
 	const inner = w - pad * 2;
@@ -125,15 +154,27 @@ function drawRoster(
 
 	// Totals first, so the name knows how much room is left.
 	ctx.textAlign = 'right';
+	const big = score ? `${score.total} PTS` : `$${totalSpent(player)}`;
+	const small = score ? `$${totalSpent(player)} SPENT` : `$${player.money} LEFT`;
 	setFont(ctx, p, 44, 900, -1);
-	ctx.fillText(`$${totalSpent(player)}`, w - pad, pad + 40);
+	ctx.fillText(big, w - pad, pad + 40);
+	const bigWidth = ctx.measureText(big).width;
 	setFont(ctx, p, 18, 800, 1);
-	ctx.fillText(`$${player.money} LEFT`, w - pad, pad + 66);
-	const totalsWidth = Math.max(110, ctx.measureText(`$${player.money} LEFT`).width);
+	ctx.fillText(small, w - pad, pad + 66);
+	const totalsWidth = Math.max(110, bigWidth, ctx.measureText(small).width);
 
 	ctx.textAlign = 'left';
 	setFont(ctx, p, 44, 900, -1);
-	ctx.fillText(ellipsize(ctx, player.name.toUpperCase(), inner - totalsWidth - 16), pad, pad + 48);
+	let nameX0 = pad;
+	if (board?.winner === player.id) {
+		drawIcon(ctx, 'crown', pad, pad + 14, 38);
+		nameX0 += 50;
+	}
+	ctx.fillText(
+		ellipsize(ctx, player.name.toUpperCase(), inner - totalsWidth - 16 - (nameX0 - pad)),
+		nameX0,
+		pad + 48
+	);
 
 	const ruleY = pad + 84;
 	ctx.fillRect(pad, ruleY, inner, 4);
@@ -145,6 +186,8 @@ function drawRoster(
 	const priceW = 84;
 	const slotW = state.config.positional ? 64 : 0;
 	const nameX = pad + slotW + (slotW ? 10 : 0) + priceW + 12;
+	// Mirrors the page: per-pick points only where they come from stats.
+	const ptsW = score && statTable(state.config.variantId) ? 62 : 0;
 
 	picks.forEach((entry, i) => {
 		const rowY = listTop + i * rowH;
@@ -174,9 +217,19 @@ function drawRoster(
 		}
 		ctx.fillText(priceLabel(entry).toUpperCase(), priceX + priceW / 2, mid + 1);
 
+		const pick = score?.picks.find((scored) => scored.entry.slotId === entry.slotId);
+		if (pick && ptsW) {
+			ctx.fillStyle = p.ink;
+			ctx.fillRect(w - pad - ptsW, rowY, ptsW, chipH);
+			ctx.fillStyle = p.cream;
+			setFont(ctx, p, 28, 900);
+			ctx.fillText(String(pick.total), w - pad - ptsW / 2, mid + 1);
+		}
+
 		ctx.fillStyle = p.ink;
 		ctx.textAlign = 'left';
-		const fit = fitName(ctx, p, entry.item.name.toUpperCase(), w - pad - nameX, rowH - 6, 32, 18);
+		const nameW = w - pad - nameX - (ptsW ? ptsW + 8 : 0);
+		const fit = fitName(ctx, p, entry.item.name.toUpperCase(), nameW, rowH - 6, 32, 16);
 		const lineH = fit.size * 1.02;
 		const firstY = mid - ((fit.lines.length - 1) * lineH) / 2;
 		for (const [n, line] of fit.lines.entries()) ctx.fillText(line, nameX, firstY + n * lineH + 1);
@@ -208,6 +261,14 @@ function drawStat(
 	ctx.fillText(value, x + pad, y + pad + 82);
 	setFont(ctx, p, 22, 800, 0.5);
 	ctx.fillText(ellipsize(ctx, detail.toUpperCase(), w - pad * 2), x + pad, y + h - pad);
+}
+
+/** Shrinks to fit, then truncates: a long winner's name can't overflow the sheet. */
+function ellipsizeTitle(ctx: Ctx, p: Palette, text: string, maxWidth: number): string {
+	let size = 92;
+	do setFont(ctx, p, size--, 900, -2);
+	while (ctx.measureText(text).width > maxWidth && size > 40);
+	return ellipsize(ctx, text, maxWidth);
 }
 
 /** Draws the results sheet as a postable image, mirroring the on-screen one. */
@@ -248,12 +309,11 @@ export function renderCard(
 	ctx.fillText('$20 DRAFT', 15, 24);
 	ctx.restore();
 
+	const board = scoreGame(state);
+	const title = ellipsizeTitle(ctx, p, verdict(state, board).toUpperCase(), inner);
 	ctx.fillStyle = p.ink;
 	ctx.textBaseline = 'alphabetic';
-	let size = 92;
-	do setFont(ctx, p, size--, 900, -2);
-	while (ctx.measureText('ROSTERS ARE FULL').width > inner && size > 40);
-	ctx.fillText('ROSTERS ARE FULL', left, margin + pad + 140);
+	ctx.fillText(title, left, margin + pad + 140);
 
 	setFont(ctx, p, 26, 800, 1);
 	ctx.fillText(
@@ -271,7 +331,7 @@ export function renderCard(
 	ctx.textBaseline = 'middle';
 	setFont(ctx, p, 30, 900, 2);
 	ctx.fillText(
-		`WHO WON?  ·  ${SHARE_HOST.toUpperCase()}`,
+		`${board ? 'PLAY' : 'WHO WON?'}  ·  ${SHARE_HOST.toUpperCase()}`,
 		margin + sheetW / 2,
 		bandY + bandH / 2 + 1
 	);
@@ -319,6 +379,7 @@ export function renderCard(
 			p,
 			state,
 			player,
+			board,
 			left + player.id * (rosterW + gap),
 			rosterY,
 			rosterW,

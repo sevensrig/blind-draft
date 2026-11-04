@@ -1,8 +1,11 @@
-import { page } from 'vitest/browser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
+import { getCategory, getVariant } from '$lib/data';
 import { totalSpent } from '$lib/game/engine';
+import { scoreGame } from '$lib/game/score';
 import { game } from '$lib/game/store.svelte';
+import type { Player } from '$lib/game/types';
 import { shareText } from '$lib/share/text';
 import { FEEDBACK_URL } from '$lib/site';
 import { finishedGame } from '$lib/testing/fixtures';
@@ -19,9 +22,9 @@ describe('ResultsScreen', () => {
 		game.replace(finished);
 		render(ResultsScreen);
 
-		await expect.element(page.getByText('Rosters are full')).toBeVisible();
-		await expect.element(page.getByRole('heading', { name: 'Sri' })).toBeVisible();
-		await expect.element(page.getByRole('heading', { name: 'Alex' })).toBeVisible();
+		await expect.element(page.getByRole('heading', { level: 1 })).toBeVisible();
+		await expect.element(page.getByRole('heading', { name: 'Sri', exact: true })).toBeVisible();
+		await expect.element(page.getByRole('heading', { name: 'Alex', exact: true })).toBeVisible();
 
 		// `.first()` because a name can legitimately show twice: once in the roster
 		// list and again in the "Top price" stat.
@@ -43,11 +46,69 @@ describe('ResultsScreen', () => {
 
 		for (const player of finished.players) {
 			const spent = totalSpent(player);
-			await expect.element(page.getByText(`$${spent}`, { exact: true }).first()).toBeVisible();
-			await expect.element(page.getByText(`$${player.money} left`)).toBeVisible();
+			await expect
+				.element(page.getByText(`$${spent} spent · $${player.money} left`).first())
+				.toBeVisible();
 			// Money is conserved, which is what the sheet is claiming.
 			expect(spent + player.money).toBe(20);
 		}
+	});
+
+	it('scores both rosters and names the winner', async () => {
+		const finished = finishedGame({ slots: 3, names: ['Sri', 'Alex'] });
+		game.replace(finished);
+		render(ResultsScreen);
+
+		const board = scoreGame(finished)!;
+		for (const player of finished.players) {
+			const total = board.players[player.id].total;
+			await expect.element(page.getByText(`${total} pts`, { exact: true }).first()).toBeVisible();
+		}
+		const title =
+			board.winner === null ? 'Dead even' : `${finished.players[board.winner].name} wins`;
+		await expect.element(page.getByRole('heading', { level: 1, name: title })).toBeVisible();
+	});
+
+	it('crowns the winner and shows only roster totals outside sports', async () => {
+		const finished = finishedGame({ slots: 3, names: ['Sri', 'Alex'] });
+		game.replace(finished);
+		render(ResultsScreen);
+
+		await expect.element(page.getByRole('heading', { level: 1 })).toBeVisible();
+		const winner = scoreGame(finished)!.winner;
+		expect(document.querySelectorAll('.crown')).toHaveLength(winner === null ? 0 : 1);
+		expect(document.querySelectorAll('.pick__pts, .pick__steal')).toHaveLength(0);
+	});
+
+	it('itemises sports picks with points and an unnumbered steal tag, but no stat line', async () => {
+		const finished = finishedGame({ slots: 3, names: ['Sri', 'Alex'] });
+		const deck = getVariant(getCategory('nba')!, 'nba-current').items.slice(0, 6);
+		const swap = (player: Player): Player => ({
+			...player,
+			roster: player.roster.map((entry, i) => ({ ...entry, item: deck[player.id * 3 + i] }))
+		});
+		game.replace({
+			...finished,
+			config: { ...finished.config, categoryId: 'nba', variantId: 'nba-current' },
+			players: [swap(finished.players[0]), swap(finished.players[1])]
+		});
+		render(ResultsScreen);
+
+		await expect.element(page.getByText(/2K ratings/)).toBeVisible();
+		await expect.element(page.getByText(/ REB /)).not.toBeInTheDocument();
+		expect(document.querySelectorAll('.pick__pts')).toHaveLength(6);
+		for (const tag of document.querySelectorAll('.pick__steal')) {
+			expect(tag.textContent?.trim()).toMatch(/^(\+ steal|− overpay)$/);
+		}
+	});
+
+	it('keeps the argue-about-it sheet for a custom list', async () => {
+		const finished = finishedGame({ slots: 3, names: ['Sri', 'Alex'] });
+		game.replace({ ...finished, config: { ...finished.config, customItems: finished.deck } });
+		render(ResultsScreen);
+
+		await expect.element(page.getByRole('heading', { name: 'Rosters are full' })).toBeVisible();
+		await expect.element(page.getByText(/argue about who won/)).toBeVisible();
 	});
 
 	it('reports the top price paid across the draft', async () => {
