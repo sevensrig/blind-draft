@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { scoreGame } from '$lib/game/score';
 import { finishedGame } from '$lib/testing/fixtures';
-import { orderedPicks, SHARE_HOST, shareText } from './text';
+import { orderedPicks, SHARE_HOST, shareCaption, shareText } from './text';
 
 describe('shareText', () => {
 	it('headlines the category and budget, then one line per player, then the link', () => {
@@ -45,6 +45,13 @@ describe('shareText', () => {
 		const state = finishedGame({ slots: 3 });
 		state.config = { ...state.config, categoryLabel: 'NBA', variantLabel: 'All-Time' };
 		expect(shareText(state)).toMatch(/^\$20 Draft · NBA \(All-Time\) · \$20 each/);
+	});
+
+	it('keeps the caption for image shares to the headline, verdict and link', () => {
+		const state = finishedGame({ slots: 3, names: ['Sri', 'Alex'] });
+		const lines = shareText(state).split('\n');
+		expect(shareCaption(state)).toBe(`${lines[0]}\n${lines.at(-1)}`);
+		expect(shareCaption(state)).not.toContain(state.players[0].roster[0].item.name);
 	});
 
 	it('links the bare domain, never a room', () => {

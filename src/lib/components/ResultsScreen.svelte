@@ -4,14 +4,14 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { getCategory, getVariant } from '$lib/data';
 	import { buildBench, buildDeck } from '$lib/game/deck';
-	import { ratingSource, statTable } from '$lib/data/stats';
+	import { ratingTable, statTable } from '$lib/data/stats';
 	import { entryInSlot, totalSpent } from '$lib/game/engine';
 	import { scoreGame, type PickScore } from '$lib/game/score';
 	import { game } from '$lib/game/store.svelte';
 	import type { GameState, Player } from '$lib/game/types';
 	import { shareResults } from '$lib/share';
 	import { cardFile } from '$lib/share/card';
-	import { shareText, stealLabel, verdict } from '$lib/share/text';
+	import { shareCaption, shareText, stealLabel, verdict } from '$lib/share/text';
 
 	interface Props {
 		/** Remote play supplies the server's state; local play uses the store. */
@@ -76,7 +76,7 @@
 	let copied = $state(false);
 
 	async function share() {
-		const method = await shareResults(shareText(s), image);
+		const method = await shareResults(shareText(s), image, shareCaption(s));
 		if (!method) return;
 		track(shareEvent(s, view ? 'online' : localMode(s.config), method));
 		if (method === 'clipboard') {
@@ -177,8 +177,8 @@
 	<p class="verdict">
 		{#if !board}
 			No scores here — argue about who won.
-		{:else if ratingSource(s.config.variantId)}
-			Points from real stats and {ratingSource(s.config.variantId)}, plus a bonus for steals.
+		{:else if ratingTable(s.config.variantId)}
+			Points based on real stats and expert opinions, plus a bonus for steals.
 		{:else if itemised}
 			Points from real stats, plus a bonus for steals.
 		{:else}
