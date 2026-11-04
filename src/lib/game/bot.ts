@@ -36,7 +36,7 @@ function expectedCounts(size: number): Record<Tier, number> {
 /** A card that would sit out of position is still worth having, just less. */
 const OUT_OF_POSITION = 0.8;
 /** Over a fair price on purpose: the leak a patient player can beat it through. */
-const TASTE = [1.2, 1.6] as const;
+const TASTE = [1.1, 1.5] as const;
 /** How often a card sends the bot wild, and how far past its limit it goes. */
 const WILD_ODDS = 0.2;
 const WILD_BOOST = [1.3, 2] as const;
