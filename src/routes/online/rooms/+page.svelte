@@ -177,8 +177,9 @@
 		{#if loading}
 			<p class="empty">Looking…</p>
 		{:else if rooms.length === 0}
-			<p class="empty">Nothing open right now. Start one and share the link.</p>
-			<a class="btn btn--hot" href="/online">Start a room</a>
+			<p class="empty">Nothing open right now. Play the bot, or start a room and share the link.</p>
+			<a class="btn btn--hot" href="/?opponent=bot">Play vs. the bot</a>
+			<a class="btn btn--ghost" href="/online">Start a room</a>
 		{:else}
 			<ul class="list">
 				{#each rooms as listing (listing.room_id)}

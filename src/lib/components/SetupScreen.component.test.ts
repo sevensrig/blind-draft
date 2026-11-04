@@ -46,6 +46,23 @@ describe('SetupScreen', () => {
 		expect(game.state.config.slots).toBe(5);
 	});
 
+	it('opens on the bot with the online name when sent with ?opponent=bot', async () => {
+		localStorage.setItem('blind-draft:name:v1', 'Sri');
+		history.replaceState(null, '', '?opponent=bot&category=foods');
+		try {
+			render(SetupScreen);
+			await expect
+				.element(page.getByRole('button', { name: 'Vs. the bot' }))
+				.toHaveAttribute('aria-pressed', 'true');
+			await expect.element(page.getByPlaceholder('Player 1')).toHaveValue('Sri');
+			await page.getByRole('button', { name: /Start the draft/ }).click();
+			expect(game.state.config.bot).toBe(1);
+			expect(game.state.config.categoryId).toBe('foods');
+		} finally {
+			history.replaceState(null, '', location.pathname);
+		}
+	});
+
 	it('seats the bot as player 2 when playing solo', async () => {
 		render(SetupScreen);
 

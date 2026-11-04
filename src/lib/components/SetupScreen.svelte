@@ -6,6 +6,7 @@
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
+	import { recallName } from '$lib/remote/identity';
 	import { game } from '$lib/game/store.svelte';
 	import { CATEGORY_COPY } from '$lib/seo';
 	import { FEEDBACK_URL } from '$lib/site';
@@ -87,8 +88,15 @@
 		}
 		// A landing page sends `?category=nba`, so arriving from one lands on that
 		// tile already selected. Unknown ids are ignored rather than cleared.
-		const wanted = new URLSearchParams(location.search).get('category');
+		const params = new URLSearchParams(location.search);
+		const wanted = params.get('category');
 		if (wanted && getCategory(wanted)) categoryId = wanted;
+		// Online pages nudge a lonely player here with `?opponent=bot`; the name
+		// they already typed there comes along so they don't type it twice.
+		if (params.get('opponent') === 'bot') {
+			vsBot = true;
+			names[0] = recallName();
+		}
 	});
 
 	$effect(() => {
