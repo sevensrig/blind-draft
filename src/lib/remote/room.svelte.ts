@@ -77,6 +77,8 @@ class RemoteRoom {
 		slots: number;
 		visibility: 'public' | 'private';
 		name: string;
+		customName?: string;
+		customItems?: string[];
 	}): Promise<{ roomId: string; code: string }> {
 		const result = await callFunction<{ roomId: string; code: string; seat: 0 }>('create-room', {
 			...options,

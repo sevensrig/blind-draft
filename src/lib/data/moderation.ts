@@ -1,0 +1,184 @@
+/**
+ * Slur filter for player-typed text. Swearing and sexual words are allowed on
+ * purpose; this only catches slurs, including leetspeak, lookalike letters,
+ * stretched letters ("niiigger") and spaced or dotted spellings ("f.a.g").
+ *
+ * Shared with `create-room`, which enforces it: the client check is only for
+ * feedback.
+ */
+
+/**
+ * Matched inside a word. Six letters or more are also matched across word gaps
+ * ("towel head"); shorter ones aren't, or "Chef Aggie" would trip `fagg`.
+ */
+const EMBEDDED = [
+	'nigg',
+	'niglet',
+	'fagg',
+	'faggot',
+	'wetback',
+	'raghead',
+	'towelhead',
+	'cameljockey',
+	'porchmonkey',
+	'junglebunny',
+	'jigaboo',
+	'pickaninny',
+	'golliwog',
+	'zipperhead',
+	'chingchong',
+	'chinaman',
+	'tranny',
+	'shemale'
+];
+
+/**
+ * Matched only as a whole word plus a plural, because each is also part of an
+ * ordinary word: spicy, raccoon, Negroni, flame retardant.
+ */
+const WHOLE_WORD = [
+	'nig',
+	'nigger',
+	'negro',
+	'fag',
+	'spic',
+	'spik',
+	'kike',
+	'kyke',
+	'chink',
+	'gook',
+	'coon',
+	'jap',
+	'paki',
+	'beaner',
+	'darkie',
+	'darky',
+	'sambo',
+	'wigger',
+	'heeb',
+	'hymie',
+	'wop',
+	'dago',
+	'squaw',
+	'injun',
+	'redskin',
+	'dyke',
+	'retard',
+	'retarded',
+	'tard',
+	'mongoloid'
+];
+
+/** Real words and names a match would otherwise swallow. */
+const ALLOWED = [/\bsnigger(s|ed|ing)?\b/g, /\bvan dyke\b/g];
+
+/** Characters people swap in for each letter. */
+const VARIANTS: Record<string, string> = {
+	a: 'a4@',
+	b: 'b8',
+	c: 'ck(',
+	e: 'e3',
+	g: 'g96',
+	h: 'h#',
+	i: 'i1!|l',
+	k: 'kc',
+	l: 'l1|i',
+	o: 'o0',
+	s: 's5$z',
+	t: 't7+',
+	u: 'uv',
+	z: 'z2s'
+};
+
+/** Cyrillic and Greek letters that render like Latin ones. */
+const LOOKALIKES: Record<string, string> = {
+	а: 'a',
+	в: 'b',
+	е: 'e',
+	ё: 'e',
+	к: 'k',
+	м: 'm',
+	н: 'h',
+	о: 'o',
+	р: 'p',
+	с: 'c',
+	т: 't',
+	у: 'y',
+	х: 'x',
+	і: 'i',
+	ї: 'i',
+	ј: 'j',
+	ѕ: 's',
+	ԁ: 'd',
+	ɡ: 'g',
+	ı: 'i',
+	α: 'a',
+	β: 'b',
+	ε: 'e',
+	ι: 'i',
+	κ: 'k',
+	ν: 'v',
+	ο: 'o',
+	ρ: 'p',
+	τ: 't',
+	υ: 'u',
+	χ: 'x'
+};
+
+const KEEP = 'a-z0-9@$!|+(#';
+const SEPARATORS = new RegExp(`[^${KEEP}]+`, 'g');
+
+/** Each letter becomes "this letter or a stand-in, one or more times". */
+function pattern(term: string): string {
+	return [...term]
+		.map((letter) => {
+			const chars = (VARIANTS[letter] ?? letter).replace(/[\\\]^-]/g, '\\$&');
+			return `[${chars}]+`;
+		})
+		.join('');
+}
+
+const EMBEDDED_RE = new RegExp(EMBEDDED.map(pattern).join('|'));
+const SPANNING_RE = new RegExp(
+	EMBEDDED.filter((term) => term.length >= 6)
+		.map(pattern)
+		.join('|')
+);
+const WHOLE_WORD_RE = new RegExp(`^(?:${WHOLE_WORD.map(pattern).join('|')})(?:e?[s5$z])?$`);
+
+function prepare(text: string): string {
+	let out = text
+		.normalize('NFKD')
+		.replace(/[\u0300-\u036f\u200b-\u200d\u2060\ufeff\u00ad]/g, '')
+		.toLowerCase();
+	out = [...out].map((char) => LOOKALIKES[char] ?? char).join('');
+	for (const allowed of ALLOWED) out = out.replace(allowed, ' ');
+	return out;
+}
+
+/** Words, with runs of single characters ("f a g") joined back up. */
+function words(text: string): string[] {
+	const out: string[] = [];
+	let run = '';
+	for (const token of text.split(SEPARATORS)) {
+		if (token.length === 1) {
+			run += token;
+			continue;
+		}
+		if (run) out.push(run);
+		run = '';
+		if (token) out.push(token);
+	}
+	if (run) out.push(run);
+	return out;
+}
+
+export function containsSlur(text: string): boolean {
+	const prepared = prepare(text);
+	if (SPANNING_RE.test(prepared.replace(SEPARATORS, ''))) return true;
+	return words(prepared).some((word) => {
+		// "Fag!" or "(spic)": the symbols are punctuation here, not letters.
+		const bare = word.replace(/^[(!|+#]+|[!|+#(]+$/g, '');
+		return [word, bare].some((form) => EMBEDDED_RE.test(form) || WHOLE_WORD_RE.test(form));
+	});
+}

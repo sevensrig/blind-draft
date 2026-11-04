@@ -2,8 +2,11 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
-	import { maxSlotsFor } from '$lib/game/deck';
+	import { CUSTOM_MIN_ITEMS, blockedEntry, customSeeds } from '$lib/data/custom';
+	import { deckSizeFor, maxSlotsFor } from '$lib/game/deck';
+	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
+	import CustomListForm from '$lib/components/CustomListForm.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, rememberName } from '$lib/remote/identity';
@@ -22,19 +25,29 @@
 	let joinCode = $state('');
 	let busy = $state(false);
 	let error = $state<string | null>(null);
-
-	/* Custom pools live on one device, so the server has no deck to build. */
-	const creatable = CATEGORIES.filter((entry) => !entry.custom);
+	let customName = $state('');
+	let customText = $state('');
 
 	const category = $derived(categoryId ? getCategory(categoryId) : undefined);
 	const activeVariant = $derived(
 		category ? getVariant(category, variantChoice[category.id] ?? '') : undefined
 	);
+	const isCustom = $derived(!!category?.custom);
+	const parsedCustom = $derived(customSeeds(customText.split('\n')));
+	const customNames = $derived(parsedCustom.map((seed) => seed.name));
+	const customCount = $derived(customNames.length);
+	const customBlocked = $derived(!!blockedEntry(customName, parsedCustom));
+	const poolSize = $derived(isCustom ? customCount : (activeVariant?.items.length ?? 0));
 	const template = $derived(category?.roster ?? null);
-	const slotCap = $derived(
-		activeVariant ? Math.min(10, maxSlotsFor(activeVariant.items.length)) : 10
-	);
+	const slotCap = $derived(poolSize ? Math.min(10, maxSlotsFor(poolSize)) : 10);
 	const effectiveSlots = $derived(template ? template.length : Math.min(slots, slotCap));
+	const canCreate = $derived(
+		!!category &&
+			(!isCustom ||
+				(customCount >= CUSTOM_MIN_ITEMS &&
+					!customBlocked &&
+					poolSize >= deckSizeFor(effectiveSlots)))
+	);
 
 	/* Typed once, then reused by the rooms browser and by invite links. */
 	onMount(() => {
@@ -42,13 +55,23 @@
 		// and typable before hydration — overwriting it here wiped the name of
 		// anyone who typed faster than the bundle loaded.
 		if (!name) name = recallName();
+		// The same draft the local setup screen keeps, so a list typed there is here too.
+		const saved = loadCustomDraft();
+		if (saved) {
+			customName = saved.name;
+			customText = saved.text;
+		}
 		// Same signal the home page raises, for the same reason: the form is
 		// clickable before its handlers attach, so taps land on nothing.
 		document.documentElement.dataset.hydrated = 'true';
 	});
 
+	$effect(() => {
+		saveCustomDraft({ name: customName, text: customText });
+	});
+
 	async function create() {
-		if (!category || !activeVariant || busy) return;
+		if (!category || !activeVariant || !canCreate || busy) return;
 		busy = true;
 		error = null;
 		rememberName(name);
@@ -59,7 +82,8 @@
 				budget,
 				slots: effectiveSlots,
 				visibility,
-				name: name.trim()
+				name: name.trim(),
+				...(isCustom ? { customName, customItems: customNames } : {})
 			});
 			// Code rides in the URL so refreshing the lobby still shows it.
 			await goto(`/online/room?id=${roomId}&code=${code}`);
@@ -203,6 +227,14 @@
 	<section class="block">
 		<h2 class="block__title">Category</h2>
 
+		{#if isCustom}
+			<CustomListForm
+				bind:name={customName}
+				bind:text={customText}
+				drafted={deckSizeFor(effectiveSlots)}
+			/>
+		{/if}
+
 		{#if category && hasVariants(category)}
 			<div class="variants">
 				<span class="eyebrow">{category.label} pool</span>
@@ -220,7 +252,7 @@
 		{/if}
 
 		<div class="grid">
-			{#each creatable as entry (entry.id)}
+			{#each CATEGORIES as entry (entry.id)}
 				<button
 					class="tile"
 					class:tile--on={categoryId === entry.id}
@@ -237,11 +269,11 @@
 	</section>
 
 	<div class="dock">
-		<button class="btn btn--hot" type="button" disabled={!category || busy} onclick={create}>
+		<button class="btn btn--hot" type="button" disabled={!canCreate || busy} onclick={create}>
 			{busy ? 'Working…' : category ? 'Create room' : 'Pick a category'}
 			{#if category}
 				<span class="btn__sub">
-					{category.label} · ${budget} · {effectiveSlots} slots · {visibility === 'public'
+					{isCustom ? customName.trim() || 'Custom Draft' : category.label} · ${budget} · {effectiveSlots} slots · {visibility === 'public'
 						? 'anyone'
 						: 'link only'}
 				</span>

@@ -1,9 +1,14 @@
 import { getCategory, getVariant, hasVariants, openRoster } from '../_shared/vendor/data/index.ts';
+import { CUSTOM_MIN_ITEMS, CUSTOM_NAME_MAX, blockedEntry, customSeeds } from '../_shared/vendor/data/custom.ts';
+import { variant as buildVariant } from '../_shared/vendor/data/types.ts';
 import { buildBench, buildDeck } from '../_shared/vendor/game/deck.ts';
 import { applyAction, defaultConfig, initialState } from '../_shared/vendor/game/engine.ts';
 import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
 import { redact } from '../_shared/state.ts';
+
+const CUSTOM_MAX_LINES = 200;
+const CUSTOM_ITEM_MAX = 40;
 
 /**
  * Creates a room and builds its deck server-side — the creator is also a player,
@@ -36,10 +41,25 @@ Deno.serve(async (req) => {
 
 	const category = getCategory(String(body.categoryId ?? ''));
 	if (!category) return fail('bad_request', 'Unknown category');
-	// Custom categories are local-only: the pool lives on one device.
-	if (category.custom) return fail('bad_request', 'Custom categories are local play only');
 
-	const variant = getVariant(category, String(body.variantId ?? ''));
+	let variant = getVariant(category, String(body.variantId ?? ''));
+	let categoryLabel = category.label;
+	if (category.custom) {
+		const lines = Array.isArray(body.customItems) ? body.customItems : [];
+		if (lines.length > CUSTOM_MAX_LINES || !lines.every((line) => typeof line === 'string')) {
+			return fail('bad_request', `A custom list takes up to ${CUSTOM_MAX_LINES} options`);
+		}
+		const seeds = customSeeds(lines.map((line: string) => line.slice(0, CUSTOM_ITEM_MAX)));
+		if (seeds.length < CUSTOM_MIN_ITEMS) {
+			return fail('bad_request', `A custom list needs at least ${CUSTOM_MIN_ITEMS} options`);
+		}
+		categoryLabel = String(body.customName ?? '').slice(0, CUSTOM_NAME_MAX).trim() || 'Custom Draft';
+		// Public rooms list the name to strangers, so this is the check that counts.
+		if (blockedEntry(categoryLabel, seeds)) {
+			return fail('bad_request', 'Slurs are not allowed in a custom category');
+		}
+		variant = buildVariant('custom', 'Custom', seeds);
+	}
 	const budget = Number(body.budget);
 	if (!Number.isInteger(budget) || budget < 5 || budget > 200) {
 		return fail('bad_request', 'Budget must be a whole number between 5 and 200');
@@ -64,7 +84,9 @@ Deno.serve(async (req) => {
 		positional: !!category.roster,
 		categoryId: category.id,
 		variantId: variant.id,
-		categoryLabel: category.label,
+		// No `customItems`: the config is copied into `game_public`, and the pool
+		// stays server-side like every other deck.
+		categoryLabel,
 		variantLabel: hasVariants(category) ? variant.label : null
 	};
 
