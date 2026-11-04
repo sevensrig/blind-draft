@@ -1,5 +1,5 @@
-import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, it } from 'vitest';
+import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import { game } from '$lib/game/store.svelte';
 import { expectNoViolations } from '$lib/testing/axe';
@@ -102,7 +102,7 @@ describe('accessibility', () => {
 	it('results sheet is clean', async () => {
 		game.replace(finishedGame({ slots: 3, names: ['Sri', 'Alex'] }));
 		render(ResultsScreen);
-		await expect.element(page.getByText('Rosters are full')).toBeVisible();
+		await expect.element(page.getByRole('heading', { level: 1 })).toBeVisible();
 		await expectNoViolations();
 	});
 });

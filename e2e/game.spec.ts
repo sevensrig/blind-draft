@@ -19,8 +19,8 @@ test('plays a complete two-player draft through to the results sheet', async ({ 
 	await playRound(page, { winner: 'Sri' });
 	await playToResults(page, { winner: 'Alex' });
 
-	await expect(page.getByRole('heading', { name: 'Sri' })).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Alex' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Sri', exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Alex', exact: true })).toBeVisible();
 
 	// Three picks each, and money that adds up.
 	const prices = page.locator('.pick__price');
@@ -46,7 +46,9 @@ test('copies a text version of the results when the browser has no share sheet',
 	await expect(page.getByText(/Copied/)).toBeVisible();
 
 	const copied = await page.evaluate(() => navigator.clipboard.readText());
-	expect(copied).toMatch(/^\$20 Draft · Foods · \$20 each\nSri: .+\nAlex: .+\nWho won\?/);
+	expect(copied).toMatch(
+		/^\$20 Draft · Foods · \$20 each\nSri \(\d+ pts\): .+\nAlex \(\d+ pts\): .+\n(Sri wins|Alex wins|Dead even)\. Play/
+	);
 });
 
 test('drops into the broke-player fallback when someone spends everything', async ({ page }) => {

@@ -104,9 +104,9 @@ export async function playRound(page: Page, options: RoundOptions = {}): Promise
 export async function playToResults(page: Page, options: RoundOptions = {}): Promise<Mode[]> {
 	const modes: Mode[] = [];
 	for (let guard = 0; guard < 30; guard++) {
-		if (await page.getByText('Rosters are full').isVisible()) break;
+		if (await page.getByRole('button', { name: /Share results/ }).isVisible()) break;
 		modes.push(await playRound(page, options));
 	}
-	await expect(page.getByText('Rosters are full')).toBeVisible();
+	await expect(page.getByRole('button', { name: /Share results/ })).toBeVisible();
 	return modes;
 }
