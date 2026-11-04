@@ -27,6 +27,8 @@ vite.config.ts.timestamp-*
 /playwright-report
 /test-results
 /blob-report
+/reports
+.stryker-tmp
 /src/**/__screenshots__
 
 # Private skills

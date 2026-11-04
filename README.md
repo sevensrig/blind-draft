@@ -268,6 +268,7 @@ before you push. The pieces individually:
 | `npm run test`          | unit → component → e2e (a11y included in the last two)       |
 | `npm run coverage`      | Coverage report, scoped to the engine                        |
 | `npm run test:load`     | k6 against the local Supabase stack (needs `k6`, see below)  |
+| `npm run test:mutation` | Stryker on the rulebook, a few minutes (see below)           |
 
 ### The shape of the suite
 
@@ -329,6 +330,31 @@ function in the rulebook executes. Statements and branches sit slightly lower
 can't actually reach; forcing those to 100 would mean asserting against
 impossible inputs, which tests the guard rather than the game. `store.svelte.ts`
 is excluded from this Node run and covered by the component and E2E suites.
+
+### Mutation testing
+
+Line coverage at 100% only proves each line ran. [Stryker](https://stryker-mutator.io)
+checks the tests would notice it being wrong: it plants small bugs in
+`src/lib/game/**` (`>` to `>=`, `+` to `-`, a condition forced to `true`) and
+reruns the tests that cover each one. A mutant the tests don't catch has
+"survived", and a survivor marks an assertion that's missing.
+
+```bash
+npm run test:mutation
+```
+
+It takes about four minutes, so it's in CI but not in `npm run check`. The HTML
+report lands in `reports/mutation/index.html` (CI uploads it as an artifact) and
+shows each survivor in place.
+
+The first run scored **79%** against that 100% line coverage. CI fails below
+75%, so the score can only climb. 100% isn't the goal: some survivors are
+*equivalent* mutants that change nothing observable (letting the shuffle swap
+index 0 with itself, say), and no test can kill those.
+
+It runs from `vitest.stryker.config.ts` rather than the `unit` project, which
+leaves out `vendor.test.ts`. That test diffs the engine against its vendored
+copy, so it would fail on every mutant and the score would mean nothing.
 
 ### Accessibility
 
