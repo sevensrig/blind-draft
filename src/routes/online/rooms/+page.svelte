@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { onDestroy, onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { track } from '$lib/analytics';
+	import { botSuggestionEvent } from '$lib/analytics/events';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import { LOBBY_HOSTS, RemoteError, supabase } from '$lib/remote/client';
 	import { recallName, rememberName } from '$lib/remote/identity';
@@ -30,6 +32,14 @@
 	// here, at which point the server named the joiner "Player 2".
 	let pending = $state<RoomListing | null>(null);
 	let name = $state('');
+
+	/** Once per visit: the list emptying and refilling shouldn't count as many sightings. */
+	let suggested = false;
+	$effect(() => {
+		if (loading || error || rooms.length > 0 || suggested) return;
+		suggested = true;
+		track(botSuggestionEvent('bot_suggestion_shown', 'empty_lobby', null));
+	});
 
 	let channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 	/** Present ids already looked up, so a key with no listing isn't fetched every sync. */
@@ -178,7 +188,11 @@
 			<p class="empty">Looking…</p>
 		{:else if rooms.length === 0}
 			<p class="empty">Nothing open right now. Play the bot, or start a room and share the link.</p>
-			<a class="btn btn--hot" href="/?opponent=bot">Play vs. the bot</a>
+			<a
+				class="btn btn--hot"
+				href="/?opponent=bot"
+				onclick={() => track(botSuggestionEvent('bot_suggestion_clicked', 'empty_lobby', null))}
+			>Play vs. the bot</a>
 			<a class="btn btn--ghost" href="/online">Start a room</a>
 		{:else}
 			<ul class="list">

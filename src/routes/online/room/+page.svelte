@@ -6,6 +6,8 @@
 	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
+	import { track } from '$lib/analytics';
+	import { botSuggestionEvent } from '$lib/analytics/events';
 	import { toGameState } from '$lib/remote/adapt';
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, recallSeat, rememberName } from '$lib/remote/identity';
@@ -42,19 +44,32 @@
 	/** How long a host sits alone before being offered the bot instead. */
 	const BOT_NUDGE_MS = 60_000;
 	let lonely = $state(false);
+	let waitingSince = 0;
 
 	$effect(() => {
 		// Restarts if the lobby is left and re-entered, so a reconnect isn't
 		// greeted by a nudge it didn't earn.
 		lonely = false;
 		if (!waiting) return;
-		const timer = setTimeout(() => (lonely = true), BOT_NUDGE_MS);
+		waitingSince = Date.now();
+		const timer = setTimeout(() => {
+			lonely = true;
+			track(botSuggestionEvent('bot_suggestion_shown', 'waiting_room', nudgeCategory));
+		}, BOT_NUDGE_MS);
 		return () => clearTimeout(timer);
 	});
 
+	const nudgeCategory = $derived(room.state?.config.categoryId ?? null);
+
+	function playBot() {
+		const waited = Math.round((Date.now() - waitingSince) / 1000);
+		track(botSuggestionEvent('bot_suggestion_clicked', 'waiting_room', nudgeCategory, waited));
+		void leave(botHref);
+	}
+
 	/** Same category, so the switch costs nothing but the opponent. */
 	const botHref = $derived.by(() => {
-		const category = room.state?.config.categoryId;
+		const category = nudgeCategory;
 		return `/?opponent=bot${category ? `&category=${encodeURIComponent(category)}` : ''}`;
 	});
 
@@ -189,7 +204,7 @@
 				<button
 					class="btn btn--yellow"
 					type="button"
-					onclick={() => leave(botHref)}
+					onclick={playBot}
 					disabled={leaving}
 				>
 					Play vs. the bot
