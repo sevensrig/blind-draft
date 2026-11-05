@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { localMode, shareEvent, track } from '$lib/analytics';
 	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -18,11 +19,13 @@
 		view?: GameState;
 		/** Null hides the button — a remote room can't reshuffle from the client. */
 		onRunItBack?: (() => void) | null;
+		/** Online play's rematch controls, shown where "Run it back" would be. */
+		rematch?: Snippet;
 		onLeave?: () => void;
 		leaveLabel?: string;
 	}
 
-	let { view, onRunItBack, onLeave, leaveLabel = 'New setup' }: Props = $props();
+	let { view, onRunItBack, rematch, onLeave, leaveLabel = 'New setup' }: Props = $props();
 
 	/* Named `view`, not `state`: a binding called `state` shadows the `$state` rune. */
 	const s = $derived(view ?? game.state);
@@ -187,7 +190,9 @@
 	</p>
 
 	<div class="actions">
-		{#if onRunItBack !== null}
+		{#if rematch}
+			{@render rematch()}
+		{:else if onRunItBack !== null}
 			<button class="btn btn--hot" type="button" onclick={onRunItBack ?? runItBack}>
 				Run it back
 				<span class="btn__sub">same players, fresh deck</span>

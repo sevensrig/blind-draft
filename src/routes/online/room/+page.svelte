@@ -5,6 +5,7 @@
 	import BidScreen from '$lib/components/BidScreen.svelte';
 	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
+	import RematchPanel from '$lib/components/RematchPanel.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
 	import { track } from '$lib/analytics';
 	import { botSuggestionEvent, botWaitEvent, type BotWaitChoice } from '$lib/analytics/events';
@@ -36,7 +37,8 @@
 
 	const view = $derived(room.state ? toGameState(room.state) : null);
 	const waiting = $derived(room.status === 'waiting');
-	const away = $derived(room.status === 'opponent-away');
+	// Not once they've left the results for good: "may be reconnecting" would be wrong.
+	const away = $derived(room.status === 'opponent-away' && !room.opponentGone);
 	// A server fact, unlike `away`, so it outranks every branch below — including
 	// `waiting`, since a host whose guest quit isn't waiting for anybody.
 	const ended = $derived(room.opponentLeft);
@@ -315,12 +317,22 @@
 	{/if}
 
 	{#if view.phase === 'results'}
-		<ResultsScreen
-			{view}
-			onRunItBack={null}
-			onLeave={() => leave()}
-			leaveLabel="Leave room"
-		/>
+		<ResultsScreen {view} onLeave={() => leave()} leaveLabel="Leave room">
+			{#snippet rematch()}
+				{#if room.seat !== null}
+					<RematchPanel
+						offer={room.rematch}
+						seat={room.seat}
+						{opponentName}
+						opponentGone={room.opponentGone}
+						config={view.config}
+						onPropose={(settings) => room.proposeRematch(settings)}
+						onAccept={() => room.acceptRematch()}
+						onCancel={() => room.cancelRematch()}
+					/>
+				{/if}
+			{/snippet}
+		</ResultsScreen>
 	{:else}
 		<!-- `onQuit` is what stops the Quit button dispatching `reset` at the server. -->
 		<BidScreen

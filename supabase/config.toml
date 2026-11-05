@@ -431,3 +431,6 @@ verify_jwt = true
 
 [functions.room-action]
 verify_jwt = true
+
+[functions.rematch]
+verify_jwt = true

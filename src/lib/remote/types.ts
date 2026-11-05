@@ -20,6 +20,27 @@ export interface PublicGameState {
 	item: GameState['deck'][number] | null;
 }
 
+/** A pending rematch, as `game_public.rematch` shows it. */
+export interface RematchOffer {
+	by: 0 | 1;
+	categoryId: string;
+	variantId: string;
+	categoryLabel: string;
+	variantLabel: string | null;
+	budget: number;
+	slots: number;
+}
+
+/** What a player picks for a new room or a rematch. */
+export interface RoomSettings {
+	categoryId: string;
+	variantId: string;
+	budget: number;
+	slots: number;
+	customName?: string;
+	customItems?: string[];
+}
+
 export interface RoomListing {
 	room_id: string;
 	category_label: string;

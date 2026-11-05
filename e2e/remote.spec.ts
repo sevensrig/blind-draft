@@ -472,3 +472,123 @@ test('a stranger cannot read a room they have not joined', async ({ browser }) =
 	// Either refused outright, or an empty result. Never the row.
 	expect(rows).toBeLessThanOrEqual(0);
 });
+
+/** Opens a 3-slot Foods room as `host` and seats `guest` by code. */
+async function startRoom(host: Page, guest: Page): Promise<void> {
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await guest.waitForURL(/\/online\/room\?id=/);
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+}
+
+/**
+ * Plays the draft out: the host opens every auction at the minimum and the
+ * guest sells, so the host fills up and the guest takes the rest free.
+ */
+async function playRemoteToResults(host: Page, guest: Page): Promise<void> {
+	const done = async () =>
+		(await host.getByRole('button', { name: /Share results/ }).isVisible()) &&
+		(await guest.getByRole('button', { name: /Share results/ }).isVisible());
+	const tap = async (page: Page, name: RegExp): Promise<boolean> => {
+		const button = page.getByRole('button', { name }).first();
+		const ready = await button
+			.isEnabled({ timeout: 300 })
+			.then((enabled) => enabled)
+			.catch(() => false);
+		if (!ready) return false;
+		// Short: the board re-renders under a click whenever the other device moves.
+		return button.click({ timeout: 2_000 }).then(
+			() => true,
+			() => false
+		);
+	};
+
+	// A deadline, not a move count: cold Edge Runtime isolates make early moves slow.
+	const deadline = Date.now() + 60_000;
+	while (Date.now() < deadline && !(await done())) {
+		if (await tap(host, /Tap to reveal/)) continue;
+		if (await tap(guest, /Tap to reveal/)) continue;
+		if (await tap(host, /Next item|See the results/)) continue;
+		if (await tap(guest, /Next item|See the results/)) continue;
+		if (await tap(guest, /^Sell to Sri/)) continue;
+		if (await tap(host, /takes it/)) continue;
+		if (await tap(guest, /takes it/)) continue;
+		const open = host.locator('.duel__btn').first();
+		if (
+			(await open.isVisible()) &&
+			(await open.isEnabled()) &&
+			(await host.locator('.standing__amount').textContent())?.includes('—')
+		) {
+			await open.click({ timeout: 2_000 }).catch(() => {});
+			continue;
+		}
+		await host.waitForTimeout(250);
+	}
+	expect(await done()).toBe(true);
+}
+
+test('both players can rematch and change the category on the way', async ({ browser }) => {
+	test.setTimeout(120_000);
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+	await startRoom(host, guest);
+	await playRemoteToResults(host, guest);
+
+	// The guest offers Desserts.
+	await guest.getByRole('button', { name: /^Play again/ }).click();
+	const guestPicker = guest.getByRole('dialog', { name: 'Pick the next draft' });
+	await guestPicker.getByRole('button', { name: /Desserts/ }).click();
+	await guestPicker.getByRole('button', { name: /^Offer Desserts/ }).click();
+	await expect(guest.getByText('Waiting on Sri to accept')).toBeVisible({ timeout: 15_000 });
+
+	// The host sees it and counters with Drinks instead.
+	await expect(host.getByText('Alex wants to play again')).toBeVisible({ timeout: 15_000 });
+	await expect(host.getByText(/Desserts · \$20 · 3 slots/)).toBeVisible();
+	await scan(host, 'incoming rematch offer');
+	await host.getByRole('button', { name: 'Pick something else' }).click();
+	const hostPicker = host.getByRole('dialog', { name: 'Pick the next draft' });
+	await scan(host, 'rematch picker');
+	await hostPicker.getByRole('button', { name: /^Drinks/ }).click();
+	await hostPicker.getByRole('button', { name: /^Offer Drinks/ }).click();
+
+	// Now it's the guest's call, and accepting deals a fresh Drinks draft for both.
+	await expect(guest.getByText('Sri wants to play again')).toBeVisible({ timeout: 15_000 });
+	await guest.getByRole('button', { name: /^Accept/ }).click();
+	for (const page of [host, guest]) {
+		await expect(page.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByText(/^Drinks/).first()).toBeVisible();
+	}
+	// Fresh rosters, same two names.
+	await expect(guest.getByRole('img', { name: '0 of 3 roster slots filled' })).toHaveCount(2);
+	await expect(guest.getByText('Sri', { exact: true })).toBeVisible();
+	await expect(guest.getByText('Alex', { exact: true })).toBeVisible();
+});
+
+test('leaving the results tells the other player no rematch is coming', async ({ browser }) => {
+	test.setTimeout(120_000);
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+	await startRoom(host, guest);
+	await playRemoteToResults(host, guest);
+
+	await host.getByRole('button', { name: /^Play again/ }).click();
+	await host
+		.getByRole('dialog', { name: 'Pick the next draft' })
+		.getByRole('button', { name: /^Offer Foods/ })
+		.click();
+	await expect(guest.getByText('Sri wants to play again')).toBeVisible({ timeout: 15_000 });
+
+	await guest.getByRole('button', { name: 'Leave room' }).click();
+	await guest.waitForURL(/\/online$/, { timeout: 20_000 });
+
+	// The host keeps the results sheet; only the offer goes away.
+	await expect(host.getByText(/Alex left the room/)).toBeVisible({ timeout: 15_000 });
+	await expect(host.getByRole('button', { name: /Share results/ })).toBeVisible();
+	await expect(host.getByRole('button', { name: /^Play again/ })).toHaveCount(0);
+	await expect(host.getByText(/may be reconnecting/)).toHaveCount(0);
+});

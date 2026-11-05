@@ -4,7 +4,7 @@ import type { Action } from '$lib/game/types';
 import { toGameState } from './adapt';
 import { LOBBY_HOSTS, RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
-import type { ConnectionStatus, PublicGameState } from './types';
+import type { ConnectionStatus, PublicGameState, RematchOffer, RoomSettings } from './types';
 
 /**
  * The remote counterpart to `$lib/game/store.svelte.ts`: same actions, posted to
@@ -24,6 +24,9 @@ class RemoteRoom {
 	#lastRejection = $state<string | null>(null);
 	/** Seat that quit. Null while the game is live. */
 	#abandonedBy = $state<0 | 1 | null>(null);
+	/** Pending rematch offer, and the seat that walked away from the results. */
+	#rematch = $state<RematchOffer | null>(null);
+	#leftBy = $state<0 | 1 | null>(null);
 
 	#channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 	/** Our presence on `LOBBY_HOSTS`, held only while a public lobby waits. */
@@ -57,6 +60,15 @@ class RemoteRoom {
 		return this.#abandonedBy;
 	}
 
+	get rematch() {
+		return this.#rematch;
+	}
+
+	/** The other player left the results sheet, so no rematch is coming. */
+	get opponentGone() {
+		return this.#leftBy !== null && this.#leftBy !== this.#seat;
+	}
+
 	/** The *other* player quit. A server fact, so unlike `opponent-away` it never clears. */
 	get opponentLeft() {
 		return this.#abandonedBy !== null && this.#abandonedBy !== this.#seat;
@@ -70,16 +82,9 @@ class RemoteRoom {
 		return (this.#state?.seatsTaken ?? 0) >= 2;
 	}
 
-	async create(options: {
-		categoryId: string;
-		variantId: string;
-		budget: number;
-		slots: number;
-		visibility: 'public' | 'private';
-		name: string;
-		customName?: string;
-		customItems?: string[];
-	}): Promise<{ roomId: string; code: string }> {
+	async create(
+		options: RoomSettings & { visibility: 'public' | 'private'; name: string }
+	): Promise<{ roomId: string; code: string }> {
 		const result = await callFunction<{ roomId: string; code: string; seat: 0 }>('create-room', {
 			...options,
 			token: deviceToken()
@@ -114,6 +119,8 @@ class RemoteRoom {
 		this.#status = 'connecting';
 		this.#message = null;
 		this.#abandonedBy = null;
+		this.#rematch = null;
+		this.#leftBy = null;
 
 		try {
 			await this.#pull();
@@ -194,6 +201,47 @@ class RemoteRoom {
 		}
 	}
 
+	/** Offers a rematch on these settings, replacing any offer on the table. */
+	async proposeRematch(settings: RoomSettings): Promise<void> {
+		await this.#rematchCall({ op: 'propose', ...settings });
+	}
+
+	/** Takes the opponent's offer. The server deals and both screens follow. */
+	async acceptRematch(): Promise<void> {
+		const result = await this.#rematchCall<{ state: PublicGameState; version: number }>({
+			op: 'accept'
+		});
+		if (result) {
+			this.#rematch = null;
+			this.#apply(result.state, result.version);
+		}
+	}
+
+	/** Withdraws our offer or turns down theirs. */
+	async cancelRematch(): Promise<void> {
+		await this.#rematchCall({ op: 'cancel' });
+	}
+
+	async #rematchCall<T>(body: Record<string, unknown>): Promise<T | null> {
+		if (!this.#roomId) return null;
+		this.#lastRejection = null;
+		try {
+			const result = await callFunction<T>('rematch', {
+				...body,
+				roomId: this.#roomId,
+				token: deviceToken()
+			});
+			await this.#pull();
+			return result;
+		} catch (error) {
+			this.#lastRejection =
+				error instanceof RemoteError ? error.message : 'Something went wrong. Try that again.';
+			// The offer may have changed under us; show what's really there.
+			await this.#pull().catch(() => {});
+			return null;
+		}
+	}
+
 	disconnect(): void {
 		this.#unadvertise();
 		if (this.#channel) {
@@ -230,6 +278,8 @@ class RemoteRoom {
 		this.#state = null;
 		this.#version = 0;
 		this.#abandonedBy = null;
+		this.#rematch = null;
+		this.#leftBy = null;
 		this.#lastRejection = null;
 	}
 
@@ -254,7 +304,7 @@ class RemoteRoom {
 
 		const { data, error } = await supabase()
 			.from('game_public')
-			.select('payload, version, abandoned_by')
+			.select('payload, version, abandoned_by, rematch, left_by')
 			.eq('room_id', roomId)
 			.maybeSingle();
 
@@ -270,6 +320,10 @@ class RemoteRoom {
 		const abandonedBy = data.abandoned_by as number | null;
 		this.#abandonedBy = abandonedBy === 0 || abandonedBy === 1 ? abandonedBy : null;
 		if (this.#abandonedBy !== null) this.#status = 'ended';
+		// Same reason: an offer or a departure changes the row, not the version.
+		this.#rematch = (data.rematch as RematchOffer | null) ?? null;
+		const leftBy = data.left_by as number | null;
+		this.#leftBy = leftBy === 0 || leftBy === 1 ? leftBy : null;
 	}
 
 	#apply(state: PublicGameState, version: number): void {

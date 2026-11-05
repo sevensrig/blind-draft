@@ -11,7 +11,7 @@ import { CORS, actorOf, fail, json } from '../_shared/http.ts';
  * quitting applies no game action, so bumping it would make the survivor's next
  * move come back `stale`.
  *
- * Idempotent, and a no-op on a `finished` room.
+ * Idempotent. A `finished` room stays finished; only `left_by` is set.
  */
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -57,12 +57,22 @@ Deno.serve(async (req) => {
 	// Already gone — cleanup may have reaped it. Safe to walk away either way.
 	if (!room) return json({ ok: true, status: 'abandoned' });
 
-	// A game that ran to the end stays finished. Nobody abandoned it.
-	if (room.status === 'finished' || room.status === 'abandoned') {
+	const now = new Date().toISOString();
+
+	// A game that ran to the end stays finished. Nobody abandoned it, but the
+	// other player may be waiting on a rematch, so say who left.
+	if (room.status === 'finished') {
+		const [a, b] = await Promise.all([
+			db.from('rooms').update({ rematch: null, last_active_at: now }).eq('id', roomId),
+			db
+				.from('game_public')
+				.update({ left_by: seat, rematch: null, updated_at: now })
+				.eq('room_id', roomId)
+		]);
+		if (a.error || b.error) console.error('leave after results failed', a.error ?? b.error);
 		return json({ ok: true, status: room.status });
 	}
-
-	const now = new Date().toISOString();
+	if (room.status === 'abandoned') return json({ ok: true, status: room.status });
 
 	const { error: statusError } = await db
 		.from('rooms')
