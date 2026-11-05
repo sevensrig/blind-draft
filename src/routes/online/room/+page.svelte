@@ -333,7 +333,14 @@
 		<ResultsScreen {view} onRunItBack={null} onLeave={() => leave()} leaveLabel="Leave room">
 			{#snippet chat()}
 				{#if room.seat !== null}
-					<RoomChat seat={room.seat} {names} messages={room.chat} send={(text) => room.say(text)} />
+					<RoomChat
+						seat={room.seat}
+						{names}
+						messages={room.chat}
+						send={(text) => room.say(text)}
+						opponentTyping={room.opponentTyping}
+						onTyping={() => room.typing()}
+					/>
 				{/if}
 			{/snippet}
 		</ResultsScreen>
