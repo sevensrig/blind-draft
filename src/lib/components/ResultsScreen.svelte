@@ -19,13 +19,15 @@
 		view?: GameState;
 		/** Null hides the button — a remote room can't reshuffle from the client. */
 		onRunItBack?: (() => void) | null;
+		/** Online play's rematch controls, shown where "Run it back" would be. */
+		rematch?: Snippet;
 		onLeave?: () => void;
 		leaveLabel?: string;
 		/** Online only: the post-game chat, between the verdict and the buttons. */
 		chat?: Snippet;
 	}
 
-	let { view, onRunItBack, onLeave, leaveLabel = 'New setup', chat }: Props = $props();
+	let { view, onRunItBack, rematch, onLeave, leaveLabel = 'New setup', chat }: Props = $props();
 
 	/* Named `view`, not `state`: a binding called `state` shadows the `$state` rune. */
 	const s = $derived(view ?? game.state);
@@ -192,7 +194,9 @@
 	{@render chat?.()}
 
 	<div class="actions">
-		{#if onRunItBack !== null}
+		{#if rematch}
+			{@render rematch()}
+		{:else if onRunItBack !== null}
 			<button class="btn btn--hot" type="button" onclick={onRunItBack ?? runItBack}>
 				Run it back
 				<span class="btn__sub">same players, fresh deck</span>

@@ -658,3 +658,117 @@ test('emotes cross during the draft and chat opens at the end', async ({ browser
 	await expect(host.getByRole('alert')).toHaveCount(0);
 	await scan(host, 'results with chat');
 });
+
+/** Opens a 3-slot Foods room as `host` and seats `guest` by code. */
+async function startRoom(host: Page, guest: Page): Promise<void> {
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await guest.waitForURL(/\/online\/room\?id=/);
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+}
+
+/**
+ * Plays the draft out: the host opens every auction at the minimum and the
+ * guest sells, so the host fills up and the guest takes the rest free.
+ */
+async function playRemoteToResults(host: Page, guest: Page): Promise<void> {
+	const sri = [/Tap to reveal/, /^Sri bid \$1/, /See the results/, /Next item/, /takes it/];
+	const alex = [/^Sell to Sri/, /takes it/, /Tap to reveal/, /Next item/, /See the results/];
+	const done = async () =>
+		(await host.getByRole('button', { name: /Share results/ }).isVisible()) &&
+		(await guest.getByRole('button', { name: /Share results/ }).isVisible());
+	// A deadline, not a move count: cold Edge Runtime isolates make early moves slow.
+	const deadline = Date.now() + 90_000;
+	while (Date.now() < deadline && !(await done())) {
+		const moved = (await tapFirst(host, sri)) || (await tapFirst(guest, alex));
+		if (!moved) await host.waitForTimeout(300);
+	}
+	expect(await done()).toBe(true);
+}
+
+test('both players can rematch and change the category on the way', async ({ browser }) => {
+	test.setTimeout(120_000);
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+	await startRoom(host, guest);
+	await playRemoteToResults(host, guest);
+
+	// The guest offers Desserts.
+	await guest.getByRole('button', { name: /^Play again/ }).click();
+	const guestPicker = guest.getByRole('dialog', { name: 'Pick the next draft' });
+	await guestPicker.getByRole('button', { name: /Desserts/ }).click();
+	await guestPicker.getByRole('button', { name: /^Offer Desserts/ }).click();
+	await expect(guest.getByText('Waiting on Sri to accept')).toBeVisible({ timeout: 15_000 });
+
+	// The host sees it and counters with Drinks instead.
+	await expect(host.getByText('Alex wants to play again')).toBeVisible({ timeout: 15_000 });
+	await expect(host.getByText(/Desserts · \$20 · 3 slots/)).toBeVisible();
+	await scan(host, 'incoming rematch offer');
+	await host.getByRole('button', { name: 'Pick something else' }).click();
+	const hostPicker = host.getByRole('dialog', { name: 'Pick the next draft' });
+	await scan(host, 'rematch picker');
+	await hostPicker.getByRole('button', { name: /^Drinks/ }).click();
+	await hostPicker.getByRole('button', { name: /^Offer Drinks/ }).click();
+
+	// Now it's the guest's call, and accepting deals a fresh Drinks draft for both.
+	await expect(guest.getByText('Sri wants to play again')).toBeVisible({ timeout: 15_000 });
+	await guest.getByRole('button', { name: /^Accept/ }).click();
+	for (const page of [host, guest]) {
+		await expect(page.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByText(/^Drinks/).first()).toBeVisible();
+	}
+	// Fresh rosters, same two names.
+	await expect(guest.getByRole('img', { name: '0 of 3 roster slots filled' })).toHaveCount(2);
+	await expect(guest.getByText('Sri', { exact: true })).toBeVisible();
+	await expect(guest.getByText('Alex', { exact: true })).toBeVisible();
+});
+
+test('leaving the results tells the other player no rematch is coming', async ({ browser }) => {
+	test.setTimeout(120_000);
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+	await startRoom(host, guest);
+	await playRemoteToResults(host, guest);
+
+	await host.getByRole('button', { name: /^Play again/ }).click();
+	await host
+		.getByRole('dialog', { name: 'Pick the next draft' })
+		.getByRole('button', { name: /^Offer Foods/ })
+		.click();
+	await expect(guest.getByText('Sri wants to play again')).toBeVisible({ timeout: 15_000 });
+
+	await guest.getByRole('button', { name: 'Leave room' }).click();
+	await guest.waitForURL(/\/online$/, { timeout: 20_000 });
+
+	// The host keeps the results sheet; only the offer goes away.
+	await expect(host.getByText(/Alex left the room/)).toBeVisible({ timeout: 15_000 });
+	await expect(host.getByRole('button', { name: /Share results/ })).toBeVisible();
+	await expect(host.getByRole('button', { name: /^Play again/ })).toHaveCount(0);
+	await expect(host.getByText(/may be reconnecting/)).toHaveCount(0);
+	// The chat log stays, but there's nobody left to talk to.
+	await expect(host.getByText('Alex left, so chat is closed.')).toBeVisible();
+	await expect(host.getByLabel('Message')).toHaveCount(0);
+	// And the server refuses it if the client is skipped.
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+	const refusal = await host.evaluate(
+		async ([url, id]) => {
+			const res = await fetch(`${url}/functions/v1/room-chat`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json', apikey: 'anon-placeholder' },
+				body: JSON.stringify({
+					roomId: id,
+					token: localStorage.getItem('blind-draft:device:v1'),
+					text: 'anyone there?'
+				})
+			});
+			return ((await res.json()) as { error?: string }).error;
+		},
+		[SUPABASE, roomId]
+	);
+	expect(refusal).toBe('forbidden');
+});

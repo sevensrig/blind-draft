@@ -39,8 +39,13 @@ Deno.serve(async (req) => {
 		.maybeSingle();
 	if (!player) return fail('forbidden', 'You are not a player in this room');
 
-	const { data: room } = await db.from('rooms').select('status').eq('id', roomId).maybeSingle();
+	const [{ data: room }, { data: shown }] = await Promise.all([
+		db.from('rooms').select('status').eq('id', roomId).maybeSingle(),
+		db.from('game_public').select('left_by').eq('room_id', roomId).maybeSingle()
+	]);
 	if (room?.status !== 'finished') return fail('forbidden', 'Chat opens when the draft ends');
+	// Nobody is left to read it.
+	if (shown?.left_by != null) return fail('forbidden', 'Your opponent has left the room');
 
 	const { error } = await db
 		.from('chat_messages')

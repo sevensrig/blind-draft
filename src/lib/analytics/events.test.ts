@@ -73,6 +73,10 @@ describe('transitionEvent', () => {
 		expect(transitionEvent(at('results', 10), at('setup'), 'local')).toBeNull();
 	});
 
+	it('starts a game on a rematch straight from results', () => {
+		expect(transitionEvent(at('results', 10), at('reveal'), 'online')?.name).toBe('game_started');
+	});
+
 	it('ignores ordinary play', () => {
 		expect(transitionEvent(at('reveal'), at('resolve'), 'local')).toBeNull();
 		expect(transitionEvent(at('resolve'), at('resolve'), 'local')).toBeNull();

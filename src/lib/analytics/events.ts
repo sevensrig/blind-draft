@@ -103,7 +103,10 @@ export function transitionEvent(
 	mode: PlayMode
 ): GameEvent | null {
 	if (prev.phase === next.phase) return null;
-	if (prev.phase === 'setup') return gameEvent('game_started', next, mode);
+	// From results straight into a deal is "run it back" or an online rematch.
+	if (prev.phase === 'setup' || (prev.phase === 'results' && next.phase !== 'setup')) {
+		return gameEvent('game_started', next, mode);
+	}
 	if (next.phase === 'results') return gameEvent('game_finished', next, mode);
 	// Back to setup from a live game is a quit; from results it's "play again".
 	if (next.phase === 'setup' && prev.phase !== 'results') {

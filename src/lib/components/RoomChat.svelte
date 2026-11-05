@@ -8,9 +8,11 @@
 		messages: ChatMessage[];
 		/** Rejects with a readable message when the server refuses. */
 		send: (text: string) => Promise<void>;
+		/** Set once the other player has left: the log stays, the input goes. */
+		closed?: string | null;
 	}
 
-	let { seat, names, messages, send }: Props = $props();
+	let { seat, names, messages, send, closed = null }: Props = $props();
 
 	let draft = $state('');
 	let busy = $state(false);
@@ -55,28 +57,32 @@
 				</li>
 			{/each}
 		</ol>
-	{:else}
+	{:else if !closed}
 		<p class="empty">Who won the draft? Make your case.</p>
 	{/if}
 
-	<form onsubmit={submit}>
-		<label class="sr-only" for="chat-input">Message</label>
-		<input
-			id="chat-input"
-			bind:value={draft}
-			maxlength={CHAT_MAX}
-			autocomplete="off"
-			placeholder="Say something"
-			aria-invalid={blocked}
-			aria-describedby={blocked || error ? 'chat-error' : undefined}
-		/>
-		<button class="btn send" type="submit" disabled={busy || blocked || !draft.trim()}>Send</button>
-	</form>
+	{#if closed}
+		<p class="empty">{closed}</p>
+	{:else}
+		<form onsubmit={submit}>
+			<label class="sr-only" for="chat-input">Message</label>
+			<input
+				id="chat-input"
+				bind:value={draft}
+				maxlength={CHAT_MAX}
+				autocomplete="off"
+				placeholder="Say something"
+				aria-invalid={blocked}
+				aria-describedby={blocked || error ? 'chat-error' : undefined}
+			/>
+			<button class="btn send" type="submit" disabled={busy || blocked || !draft.trim()}>Send</button>
+		</form>
 
-	{#if blocked || error}
-		<p class="error" id="chat-error" role="alert">
-			{blocked ? "Slurs aren't allowed in chat." : error}
-		</p>
+		{#if blocked || error}
+			<p class="error" id="chat-error" role="alert">
+				{blocked ? "Slurs aren't allowed in chat." : error}
+			</p>
+		{/if}
 	{/if}
 </section>
 
