@@ -176,6 +176,36 @@ function words(text: string): string[] {
 	return out;
 }
 
+/** Longest post-game chat message, enforced by `room-chat`. */
+export const CHAT_MAX = 200;
+
+/*
+ * Chat allows swearing but stars out the vowels ("f*ck"). Cosmetic, not a
+ * filter, so no leetspeak handling: someone spelling around it isn't a harm
+ * the way a slur is. Stems match inside a word ("motherfucker"); the short ones
+ * only alone, or "class" and "Dickens" would be starred.
+ */
+const SWEAR_STEMS = ['fuck', 'shit', 'bitch', 'bastard', 'asshole', 'piss', 'damn', 'pussy'];
+const SWEAR_WORDS = [
+	'ass',
+	'asses',
+	'dick',
+	'dicks',
+	'dickhead',
+	'cock',
+	'cocks',
+	'crap',
+	'crappy'
+];
+const SWEAR_RE = new RegExp(
+	`[a-z]*(?:${SWEAR_STEMS.join('|')})[a-z]*|\\b(?:${SWEAR_WORDS.join('|')})\\b`,
+	'gi'
+);
+
+export function censorSwears(text: string): string {
+	return text.replace(SWEAR_RE, (word) => word.replace(/[aeiou]/gi, '*'));
+}
+
 export function containsSlur(text: string): boolean {
 	const prepared = prepare(text);
 	if (SPANNING_RE.test(prepared.replace(SEPARATORS, ''))) return true;
