@@ -1,4 +1,5 @@
 import type { GameState } from '$lib/game/types';
+import type { EmoteId } from './emotes';
 
 /**
  * Mirrors `redact()` in `supabase/functions/_shared/state.ts`. The missing `deck`
@@ -39,3 +40,16 @@ export type ConnectionStatus =
 	/** Someone pressed quit. Terminal — the server has closed the room. */
 	| 'ended'
 	| 'error';
+
+/** A row of `chat_messages`, as a player may read it. */
+export interface ChatMessage {
+	id: number;
+	seat: 0 | 1;
+	body: string;
+}
+
+export interface EmoteEvent {
+	key: number;
+	seat: 0 | 1;
+	emote: EmoteId;
+}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import AmountDial from './AmountDial.svelte';
 	import PlayerStatus from './PlayerStatus.svelte';
 	import {
@@ -19,6 +20,7 @@
 	} from '$lib/game/engine';
 	import { game } from '$lib/game/store.svelte';
 	import type { Action, GameState, PlayerId } from '$lib/game/types';
+	import type { IconName } from '$lib/icons';
 
 	interface Props {
 		/** Omitted for local play, where the store is the truth. Remote play passes
@@ -35,9 +37,13 @@
 		 * handler that closes the room and navigates out.
 		 */
 		onQuit?: () => void;
+		/** Online only: each player's emote while it's showing. */
+		emotes?: Partial<Record<PlayerId, { icon: IconName; label: string }>>;
+		/** Online only: the emote buttons, beside Quit so they never sit over the controls. */
+		toolbar?: Snippet;
 	}
 
-	let { view, dispatch, seat = null, onQuit }: Props = $props();
+	let { view, dispatch, seat = null, onQuit, emotes = {}, toolbar }: Props = $props();
 
 	const s = $derived(view ?? game.state);
 	// Wrapped, not passed by reference: `game.dispatch` loses its receiver when
@@ -127,7 +133,9 @@
 			</span>
 			<span class="count">Item {itemNumber(s)} <i>of {s.deck.length}</i></span>
 		</div>
-		<button
+		<div class="bar__end">
+			{@render toolbar?.()}
+			<button
 			class="quit"
 			type="button"
 			onclick={() => {
@@ -139,6 +147,7 @@
 		>
 			{confirmQuit ? 'End it?' : 'Quit'}
 		</button>
+		</div>
 	</header>
 
 	<div class="track" data-tour="track" role="img" aria-label="Draft progress">
@@ -154,6 +163,7 @@
 				roster={s.config.roster}
 				positional={s.config.positional}
 				leading={s.bid?.holder === id}
+				emote={emotes[id]}
 			/>
 		{/each}
 	</div>
@@ -343,10 +353,19 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.1rem;
+		min-width: 0;
+	}
+
+	/* One line, so the online emote buttons don't stretch the header on a small phone. */
+	.bar__meta .eyebrow {
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
 	}
 
 	.count {
-		font-size: 1.05rem;
+		font-size: clamp(0.9rem, 4.6vw, 1.05rem);
+		white-space: nowrap;
 		font-weight: 900;
 		letter-spacing: -0.02em;
 		text-transform: uppercase;
@@ -355,6 +374,13 @@
 	.count i {
 		font-style: normal;
 		color: var(--ink-muted);
+	}
+
+	.bar__end {
+		display: flex;
+		flex: none;
+		gap: clamp(0.3rem, 1.5vw, 0.5rem);
+		align-items: center;
 	}
 
 	.quit {

@@ -1,5 +1,7 @@
 <script lang="ts">
+	import Icon from './Icon.svelte';
 	import type { SlotSpec } from '$lib/data/types';
+	import type { IconName } from '$lib/icons';
 	import type { Player } from '$lib/game/types';
 
 	interface Props {
@@ -9,9 +11,11 @@
 		positional: boolean;
 		/** Draws attention while this player holds the standing bid. */
 		leading?: boolean;
+		/** An emote this player just sent. Pinned to their panel so it never covers the card. */
+		emote?: { icon: IconName; label: string } | null;
 	}
 
-	let { player, roster, positional, leading = false }: Props = $props();
+	let { player, roster, positional, leading = false, emote = null }: Props = $props();
 
 	const accent = $derived(player.id === 0 ? 'var(--p1)' : 'var(--p2)');
 	/** Opposing tilts, per the style's "slightly rotated cards". */
@@ -24,6 +28,13 @@
 <div class="status" class:leading style:--accent={accent} style:--tilt={tilt}>
 	{#if leading}
 		<span class="badge">Leading</span>
+	{/if}
+
+	{#if emote}
+		<span class="emote">
+			<span class="emote__icon"><Icon name={emote.icon} /></span>
+			{emote.label}
+		</span>
 	{/if}
 
 	<span class="name">{player.name}</span>
@@ -94,6 +105,45 @@
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		transform: rotate(6deg);
+	}
+
+	/* Hangs off the bottom edge, into the gap above the card. */
+	.emote {
+		position: absolute;
+		bottom: -0.85rem;
+		left: 0.4rem;
+		z-index: 2;
+		display: flex;
+		gap: 0.25rem;
+		align-items: center;
+		padding: 0.15rem 0.4rem;
+		background: var(--white);
+		border: var(--bw-thin) solid var(--ink);
+		box-shadow: 2px 2px 0 var(--ink);
+		font-size: 0.7rem;
+		font-weight: 900;
+		text-transform: uppercase;
+		transform: rotate(-4deg);
+		animation: pop 120ms linear;
+	}
+
+	.emote__icon {
+		font-size: 1.15rem;
+	}
+
+	@keyframes pop {
+		from {
+			scale: 0.6;
+		}
+		to {
+			scale: 1;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.emote {
+			animation: none;
+		}
 	}
 
 	.name {

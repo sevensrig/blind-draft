@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import { containsSlur } from '$lib/data/moderation';
 
 	interface Props {
 		/** Small caps line above the heading. */
@@ -30,7 +31,9 @@
 
 	// An empty name defeats the point: the server would name the seat "Player 2"
 	// and nothing edits it afterwards.
-	const ready = $derived(value.trim().length > 0);
+	// Only a warning: `join-room` is what refuses it.
+	const blocked = $derived(containsSlur(value));
+	const ready = $derived(value.trim().length > 0 && !blocked);
 
 	/** Unique per instance, so the label still points at its own input. */
 	const fieldId = $props.id();
@@ -41,8 +44,10 @@
 	<h1>{heading}</h1>
 	<p class="ask__sub">{sub}</p>
 
-	{#if error}
-		<p class="status status--bad" role="alert">{error}</p>
+	{#if blocked || error}
+		<p class="status status--bad" role="alert">
+			{blocked ? "Slurs aren't allowed in names." : error}
+		</p>
 	{/if}
 
 	<form
