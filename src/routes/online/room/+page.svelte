@@ -349,7 +349,13 @@
 			{/snippet}
 			{#snippet chat()}
 				{#if room.seat !== null}
-					<RoomChat seat={room.seat} {names} messages={room.chat} send={(text) => room.say(text)} />
+					<RoomChat
+						seat={room.seat}
+						{names}
+						messages={room.chat}
+						send={(text) => room.say(text)}
+						closed={room.opponentGone ? `${opponentName} left, so chat is closed.` : null}
+					/>
 				{/if}
 			{/snippet}
 		</ResultsScreen>

@@ -649,4 +649,25 @@ test('leaving the results tells the other player no rematch is coming', async ({
 	await expect(host.getByRole('button', { name: /Share results/ })).toBeVisible();
 	await expect(host.getByRole('button', { name: /^Play again/ })).toHaveCount(0);
 	await expect(host.getByText(/may be reconnecting/)).toHaveCount(0);
+	// The chat log stays, but there's nobody left to talk to.
+	await expect(host.getByText('Alex left, so chat is closed.')).toBeVisible();
+	await expect(host.getByLabel('Message')).toHaveCount(0);
+	// And the server refuses it if the client is skipped.
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+	const refusal = await host.evaluate(
+		async ([url, id]) => {
+			const res = await fetch(`${url}/functions/v1/room-chat`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json', apikey: 'anon-placeholder' },
+				body: JSON.stringify({
+					roomId: id,
+					token: localStorage.getItem('blind-draft:device:v1'),
+					text: 'anyone there?'
+				})
+			});
+			return ((await res.json()) as { error?: string }).error;
+		},
+		[SUPABASE, roomId]
+	);
+	expect(refusal).toBe('forbidden');
 });
