@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import { localMode, shareEvent, track } from '$lib/analytics';
 	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -20,9 +21,11 @@
 		onRunItBack?: (() => void) | null;
 		onLeave?: () => void;
 		leaveLabel?: string;
+		/** Online only: the post-game chat, between the verdict and the buttons. */
+		chat?: Snippet;
 	}
 
-	let { view, onRunItBack, onLeave, leaveLabel = 'New setup' }: Props = $props();
+	let { view, onRunItBack, onLeave, leaveLabel = 'New setup', chat }: Props = $props();
 
 	/* Named `view`, not `state`: a binding called `state` shadows the `$state` rune. */
 	const s = $derived(view ?? game.state);
@@ -185,6 +188,8 @@
 			Points from our rankings, plus a bonus for steals.
 		{/if}
 	</p>
+
+	{@render chat?.()}
 
 	<div class="actions">
 		{#if onRunItBack !== null}

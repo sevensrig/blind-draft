@@ -38,6 +38,16 @@ describe('NamePrompt', () => {
 		expect(submit).not.toHaveBeenCalled();
 	});
 
+	it('warns about a slur and refuses to submit it', async () => {
+		const submit = vi.fn();
+		render(NamePrompt, { ...props, value: '', submit });
+
+		await page.getByLabelText('Your name').fill('f a g');
+		await expect.element(page.getByRole('alert')).toHaveTextContent(/Slurs aren't allowed/);
+		await expect.element(page.getByRole('button', { name: /Join the draft/ })).toBeDisabled();
+		expect(submit).not.toHaveBeenCalled();
+	});
+
 	it('submits once a name is typed', async () => {
 		const submit = vi.fn();
 		render(NamePrompt, { ...props, value: '', submit });
