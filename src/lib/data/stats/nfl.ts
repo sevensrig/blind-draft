@@ -325,7 +325,76 @@ export const NFL_CURRENT_STATS: StatTable = {
 		recYds: 283,
 		recTd: 0
 	}, // 2024
-	'Kyle Pitts': { kind: 'nfl-skill', g: 17, rushYds: 0, rushTd: 0, rec: 88, recYds: 928, recTd: 5 }
+	'Kyle Pitts': { kind: 'nfl-skill', g: 17, rushYds: 0, rushTd: 0, rec: 88, recYds: 928, recTd: 5 },
+	'Jaxon Smith-Njigba': {
+		kind: 'nfl-skill',
+		g: 17,
+		rushYds: 36,
+		rushTd: 0,
+		rec: 119,
+		recYds: 1793,
+		recTd: 10
+	},
+	'Matthew Stafford': { kind: 'nfl-qb', g: 17, passYds: 4707, passTd: 46, int: 8, rushYds: 1 },
+	'Drake Maye': { kind: 'nfl-qb', g: 17, passYds: 4394, passTd: 31, int: 8, rushYds: 450 },
+	'Jonathan Taylor': {
+		kind: 'nfl-skill',
+		g: 17,
+		rushYds: 1585,
+		rushTd: 18,
+		rec: 46,
+		recYds: 378,
+		recTd: 2
+	},
+	'George Pickens': {
+		kind: 'nfl-skill',
+		g: 17,
+		rushYds: 0,
+		rushTd: 0,
+		rec: 93,
+		recYds: 1429,
+		recTd: 9
+	},
+	'Justin Herbert': { kind: 'nfl-qb', g: 16, passYds: 3727, passTd: 26, int: 13, rushYds: 498 },
+	'Bo Nix': { kind: 'nfl-qb', g: 17, passYds: 3931, passTd: 25, int: 11, rushYds: 356 },
+	'Caleb Williams': { kind: 'nfl-qb', g: 17, passYds: 3942, passTd: 27, int: 7, rushYds: 388 },
+	'Zay Flowers': {
+		kind: 'nfl-skill',
+		g: 17,
+		rushYds: 62,
+		rushTd: 1,
+		rec: 86,
+		recYds: 1211,
+		recTd: 5
+	},
+	'Tetairoa McMillan': {
+		kind: 'nfl-skill',
+		g: 17,
+		rushYds: 0,
+		rushTd: 0,
+		rec: 70,
+		recYds: 1014,
+		recTd: 7
+	},
+	'Kyren Williams': {
+		kind: 'nfl-skill',
+		g: 17,
+		rushYds: 1252,
+		rushTd: 10,
+		rec: 36,
+		recYds: 281,
+		recTd: 3
+	},
+	'Luther Burden': {
+		kind: 'nfl-skill',
+		g: 15,
+		rushYds: 37,
+		rushTd: 0,
+		rec: 47,
+		recYds: 652,
+		recTd: 2
+	},
+	'Bryce Young': { kind: 'nfl-qb', g: 16, passYds: 3011, passTd: 23, int: 11, rushYds: 216 }
 };
 
 /** Career regular season totals. */
@@ -718,7 +787,19 @@ export const NFL_CURRENT_TOP100: Record<string, number> = {
 	'Baker Mayfield': 77,
 	'Travis Kelce': 79,
 	'A.J. Brown': 80,
-	'Brock Purdy': 85
+	'Brock Purdy': 85,
+	'Jaxon Smith-Njigba': 5,
+	'Matthew Stafford': 4,
+	'Drake Maye': 11,
+	'Jonathan Taylor': 17,
+	'George Pickens': 36,
+	'Justin Herbert': 39,
+	'Bo Nix': 59,
+	'Caleb Williams': 51,
+	'Zay Flowers': 71,
+	'Tetairoa McMillan': 87,
+	'Kyren Williams': 89,
+	'Bryce Young': 98
 };
 
 /** CBS Sports' 100 greatest NFL players ever. Lower is better; absent = unranked. */
@@ -753,6 +834,28 @@ export const NFL_ALL_TIME_CBS: Record<string, number> = {
  * player takes that place's score and everyone in between shifts one.
  */
 export const NFL_CURRENT_PLACES: Record<string, number> = {
-	'Justin Jefferson': 12,
-	'Josh Jacobs': 28
+	'Bijan Robinson': 3,
+	'Puka Nacua': 4,
+	'Christian McCaffrey': 5,
+	'Josh Allen': 6,
+	'Matthew Stafford': 8,
+	'Patrick Mahomes': 12,
+	'Joe Burrow': 13,
+	'Justin Jefferson': 15,
+	'Trey McBride': 17,
+	'Caleb Williams': 18,
+	'Jared Goff': 19,
+	'Lamar Jackson': 20,
+	'CeeDee Lamb': 22,
+	"De'Von Achane": 25,
+	'Brock Bowers': 27,
+	'Brock Purdy': 29,
+	'Davante Adams': 32,
+	'Nico Collins': 35,
+	'Zay Flowers': 39,
+	'Mike Evans': 42,
+	'Tetairoa McMillan': 44,
+	'Baker Mayfield': 45,
+	'Luther Burden': 50,
+	'Cooper Kupp': 53
 };

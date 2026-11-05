@@ -1,5 +1,11 @@
 import { MLB_ALL_TIME_STATS, MLB_CURRENT_STATS } from './mlb';
-import { NBA_ALL_TIME_BR, NBA_ALL_TIME_STATS, NBA_CURRENT_2K, NBA_CURRENT_STATS } from './nba';
+import {
+	NBA_ALL_TIME_BR,
+	NBA_ALL_TIME_STATS,
+	NBA_CURRENT_2K,
+	NBA_CURRENT_PLACES,
+	NBA_CURRENT_STATS
+} from './nba';
 import {
 	NFL_ALL_TIME_CBS,
 	NFL_ALL_TIME_STATS,
@@ -43,7 +49,10 @@ export function ratingTable(variantId: string): Record<string, number> | null {
 	return RATINGS[variantId] ?? null;
 }
 
-const PLACES: Record<string, Record<string, number>> = { 'nfl-current': NFL_CURRENT_PLACES };
+const PLACES: Record<string, Record<string, number>> = {
+	'nba-current': NBA_CURRENT_PLACES,
+	'nfl-current': NFL_CURRENT_PLACES
+};
 
 export function placeTable(variantId: string): Record<string, number> | null {
 	return PLACES[variantId] ?? null;
