@@ -34,10 +34,13 @@ describe('stat tables', () => {
 		expect(nfl['Josh Allen']).toBeGreaterThan(nfl['Brock Purdy']);
 	});
 
-	it('only hand-places players in the pool, one per spot', () => {
-		const pool = new Set(sports.find((v) => v.id === 'nfl-current')!.items.map((i) => i.name));
-		const places = placeTable('nfl-current')!;
-		expect(Object.keys(places).filter((name) => !pool.has(name))).toEqual([]);
-		expect(new Set(Object.values(places)).size).toBe(Object.keys(places).length);
-	});
+	it.each(['nba-current', 'nfl-current'])(
+		'%s only hand-places pool players, one per spot',
+		(id) => {
+			const pool = new Set(sports.find((v) => v.id === id)!.items.map((i) => i.name));
+			const places = placeTable(id)!;
+			expect(Object.keys(places).filter((name) => !pool.has(name))).toEqual([]);
+			expect(new Set(Object.values(places)).size).toBe(Object.keys(places).length);
+		}
+	);
 });

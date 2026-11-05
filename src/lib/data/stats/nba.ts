@@ -9,6 +9,12 @@ export const NBA_CURRENT_STATS: StatTable = {
 	'Victor Wembanyama': { kind: 'nba', pts: 25.0, reb: 11.5, ast: 3.1 },
 	'Jayson Tatum': { kind: 'nba', pts: 21.8, reb: 10.0, ast: 5.3 },
 	'Jaylen Brown': { kind: 'nba', pts: 28.7, reb: 6.9, ast: 5.1 },
+	'Tyrese Maxey': { kind: 'nba', pts: 28.3, reb: 4.1, ast: 6.6 },
+	'Cooper Flagg': { kind: 'nba', pts: 21.0, reb: 6.7, ast: 4.5 },
+	'Chet Holmgren': { kind: 'nba', pts: 17.1, reb: 8.9, ast: 1.7 },
+	'Stephon Castle': { kind: 'nba', pts: 16.7, reb: 5.3, ast: 7.4 },
+	'LaMelo Ball': { kind: 'nba', pts: 20.1, reb: 4.8, ast: 7.1 },
+	'Ja Morant': { kind: 'nba', pts: 19.5, reb: 3.3, ast: 8.1 },
 	'Anthony Edwards': { kind: 'nba', pts: 28.8, reb: 5.0, ast: 3.7 },
 	'Stephen Curry': { kind: 'nba', pts: 26.6, reb: 3.6, ast: 4.7 },
 	'LeBron James': { kind: 'nba', pts: 20.9, reb: 6.1, ast: 7.2 },
@@ -122,6 +128,12 @@ export const NBA_CURRENT_2K: Record<string, number> = {
 	'Victor Wembanyama': 97,
 	'Jayson Tatum': 93,
 	'Jaylen Brown': 91,
+	'Tyrese Maxey': 92,
+	'Cooper Flagg': 87,
+	'Stephon Castle': 87,
+	'Chet Holmgren': 86,
+	'LaMelo Ball': 86,
+	'Ja Morant': 84,
 	'Anthony Edwards': 95,
 	'Stephen Curry': 93,
 	'LeBron James': 91,
@@ -193,4 +205,15 @@ export const NBA_ALL_TIME_BR: Record<string, number> = {
 	'Dennis Rodman': 67,
 	'Kyrie Irving': 69,
 	'Chris Bosh': 71
+};
+
+/** Hand-placed spots (1 = best) in NBA Current, applied after the blend; see NFL_CURRENT_PLACES. */
+export const NBA_CURRENT_PLACES: Record<string, number> = {
+	'Kevin Durant': 9,
+	'Stephen Curry': 11,
+	'LeBron James': 12,
+	'Donovan Mitchell': 14,
+	'Jaylen Brown': 15,
+	'Kawhi Leonard': 16,
+	'Karl-Anthony Towns': 18
 };

@@ -12,6 +12,9 @@ export const NFL_CURRENT: ItemSeed[] = [
 	{ name: 'Saquon Barkley', tier: 'great', position: 'RB' },
 	{ name: 'Joe Burrow', tier: 'great', position: 'QB' },
 	{ name: 'Jalen Hurts', tier: 'great', position: 'QB' },
+	{ name: 'Jaxon Smith-Njigba', tier: 'great', position: 'WR' },
+	{ name: 'Matthew Stafford', tier: 'great', position: 'QB' },
+	{ name: 'Drake Maye', tier: 'great', position: 'QB' },
 
 	// good
 	{ name: 'CeeDee Lamb', tier: 'good', position: 'WR' },
@@ -26,6 +29,9 @@ export const NFL_CURRENT: ItemSeed[] = [
 	{ name: 'Jahmyr Gibbs', tier: 'good', position: 'RB' },
 	{ name: 'Jayden Daniels', tier: 'good', position: 'QB' },
 	{ name: 'Bijan Robinson', tier: 'good', position: 'RB' },
+	{ name: 'Jonathan Taylor', tier: 'good', position: 'RB' },
+	{ name: 'George Pickens', tier: 'good', position: 'WR' },
+	{ name: 'Justin Herbert', tier: 'good', position: 'QB' },
 
 	// mid
 	{ name: 'Brock Purdy', tier: 'mid', position: 'QB' },
@@ -49,6 +55,12 @@ export const NFL_CURRENT: ItemSeed[] = [
 	{ name: 'Sam LaPorta', tier: 'mid', position: 'TE' },
 	{ name: 'Trey McBride', tier: 'mid', position: 'TE' },
 	{ name: 'Mark Andrews', tier: 'mid', position: 'TE' },
+	{ name: 'Bo Nix', tier: 'mid', position: 'QB' },
+	{ name: 'Caleb Williams', tier: 'mid', position: 'QB' },
+	{ name: 'Zay Flowers', tier: 'mid', position: 'WR' },
+	{ name: 'Tetairoa McMillan', tier: 'mid', position: 'WR' },
+	{ name: 'Kyren Williams', tier: 'mid', position: 'RB' },
+	{ name: 'Luther Burden', tier: 'mid', position: 'WR' },
 
 	// bad
 	{ name: 'Zach Wilson', tier: 'bad', position: 'QB' },
@@ -60,7 +72,8 @@ export const NFL_CURRENT: ItemSeed[] = [
 	{ name: 'Jerry Jeudy', tier: 'bad', position: 'WR' },
 	{ name: 'Ezekiel Elliott', tier: 'bad', position: 'RB' },
 	{ name: 'Najee Harris', tier: 'bad', position: 'RB' },
-	{ name: 'Kyle Pitts', tier: 'bad', position: 'TE' }
+	{ name: 'Kyle Pitts', tier: 'bad', position: 'TE' },
+	{ name: 'Bryce Young', tier: 'bad', position: 'QB' }
 ];
 
 export const NFL_ALL_TIME: ItemSeed[] = [
