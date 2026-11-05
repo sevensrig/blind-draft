@@ -1,54 +1,21 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
-	import { CUSTOM_MIN_ITEMS, blockedEntry, customSeeds } from '$lib/data/custom';
 	import { containsSlur } from '$lib/data/moderation';
-	import { deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
-	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
-	import CustomListForm from '$lib/components/CustomListForm.svelte';
-	import Icon from '$lib/components/Icon.svelte';
+	import RoomSettingsFields from '$lib/components/RoomSettingsFields.svelte';
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
+	import { SettingsForm } from '$lib/remote/settings.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 
-	const BUDGET_PRESETS = [10, 20, 50];
-	const SLOT_PRESETS = [3, 4, 5, 6, 7, 8];
-
+	const form = new SettingsForm();
 	let name = $state('');
-	let budget = $state(DEFAULT_BUDGET);
-	let slots = $state(DEFAULT_SLOTS);
-	let categoryId = $state<string | null>(null);
-	let variantChoice = $state<Record<string, string>>({});
 	let visibility = $state<'public' | 'private'>('public');
 	let joinCode = $state('');
 	let busy = $state(false);
 	let error = $state<string | null>(null);
-	let customName = $state('');
-	let customText = $state('');
-
-	const category = $derived(categoryId ? getCategory(categoryId) : undefined);
-	const activeVariant = $derived(
-		category ? getVariant(category, variantChoice[category.id] ?? '') : undefined
-	);
-	const isCustom = $derived(!!category?.custom);
-	const parsedCustom = $derived(customSeeds(customText.split('\n')));
-	const customNames = $derived(parsedCustom.map((seed) => seed.name));
-	const customCount = $derived(customNames.length);
-	const customBlocked = $derived(!!blockedEntry(customName, parsedCustom));
-	const poolSize = $derived(isCustom ? customCount : (activeVariant?.items.length ?? 0));
-	const template = $derived(category?.roster ?? null);
-	const slotCap = $derived(poolSize ? Math.min(10, maxSlotsFor(poolSize)) : 10);
-	const effectiveSlots = $derived(template ? template.length : Math.min(slots, slotCap));
-	const canCreate = $derived(
-		!!category &&
-			(!isCustom ||
-				(customCount >= CUSTOM_MIN_ITEMS &&
-					!customBlocked &&
-					poolSize >= deckSizeFor(effectiveSlots)))
-	);
 
 	/* Typed once, then reused by the rooms browser and by invite links. */
 	onMount(() => {
@@ -59,8 +26,8 @@
 		// The same draft the local setup screen keeps, so a list typed there is here too.
 		const saved = loadCustomDraft();
 		if (saved) {
-			customName = saved.name;
-			customText = saved.text;
+			form.customName = saved.name;
+			form.customText = saved.text;
 		}
 		// Same signal the home page raises, for the same reason: the form is
 		// clickable before its handlers attach, so taps land on nothing.
@@ -68,27 +35,20 @@
 	});
 
 	$effect(() => {
-		saveCustomDraft({ name: customName, text: customText });
+		saveCustomDraft({ name: form.customName, text: form.customText });
 	});
 
 	/* Only a warning: `create-room` and `join-room` are what refuse it. */
 	const badName = $derived(containsSlur(name));
 
 	async function create() {
-		if (!category || !activeVariant || !canCreate || busy || badName) return;
+		const settings = form.toSettings();
+		if (!settings || busy || badName) return;
 		busy = true;
 		error = null;
 		rememberName(name);
 		try {
-			const { roomId, code } = await room.create({
-				categoryId: category.id,
-				variantId: activeVariant.id,
-				budget,
-				slots: effectiveSlots,
-				visibility,
-				name: name.trim(),
-				...(isCustom ? { customName, customItems: customNames } : {})
-			});
+			const { roomId, code } = await room.create({ ...settings, visibility, name: name.trim() });
 			// Code rides in the URL so refreshing the lobby still shows it.
 			await goto(`/online/room?id=${roomId}&code=${code}`);
 		} catch (failure) {
@@ -179,117 +139,19 @@
 
 	<hr class="rule" />
 
-	<section class="block">
-		<h2 class="block__title">Or start one</h2>
-		<div class="chips">
-			{#each BUDGET_PRESETS as preset (preset)}
-				<button
-					class="chip"
-					class:chip--on={budget === preset}
-					type="button"
-					onclick={() => (budget = preset)}>${preset}</button
-				>
-			{/each}
-		</div>
-	</section>
-
-	{#if !template}
-		<section class="block">
-			<h2 class="block__title">Roster slots each</h2>
-			<div class="chips chips--wrap">
-				{#each SLOT_PRESETS as preset (preset)}
-					<button
-						class="chip"
-						class:chip--on={effectiveSlots === preset}
-						type="button"
-						disabled={preset > slotCap}
-						onclick={() => (slots = preset)}>{preset}</button
-					>
-				{/each}
-			</div>
-		</section>
-	{:else}
-		<section class="block">
-			<h2 class="block__title">{category?.label} roster (locked)</h2>
-			<div class="chips">
-				{#each template as slot (slot.id)}
-					<span class="chip chip--static">{slot.label}</span>
-				{/each}
-			</div>
-		</section>
-	{/if}
-
-	<section class="block">
-		<h2 class="block__title">Who can join</h2>
-		<div class="chips">
-			<button
-				class="chip"
-				class:chip--on={visibility === 'public'}
-				type="button"
-				onclick={() => (visibility = 'public')}>Anyone</button
-			>
-			<button
-				class="chip"
-				class:chip--on={visibility === 'private'}
-				type="button"
-				onclick={() => (visibility = 'private')}>Link only</button
-			>
-		</div>
-		<p class="hint">Set once. A private room never shows up in the browser.</p>
-	</section>
-
-	<section class="block">
-		<h2 class="block__title">Category</h2>
-
-		{#if isCustom}
-			<CustomListForm
-				bind:name={customName}
-				bind:text={customText}
-				drafted={deckSizeFor(effectiveSlots)}
-			/>
-		{/if}
-
-		{#if category && hasVariants(category)}
-			<div class="variants">
-				<span class="eyebrow">{category.label} pool</span>
-				<div class="chips">
-					{#each category.variants as option (option.id)}
-						<button
-							class="chip"
-							class:chip--on={activeVariant?.id === option.id}
-							type="button"
-							onclick={() => (variantChoice[category.id] = option.id)}>{option.label}</button
-						>
-					{/each}
-				</div>
-			</div>
-		{/if}
-
-		<div class="grid">
-			{#each CATEGORIES as entry (entry.id)}
-				<button
-					class="tile"
-					class:tile--on={categoryId === entry.id}
-					style:--accent={`var(--${entry.accent})`}
-					type="button"
-					aria-pressed={categoryId === entry.id}
-					onclick={() => (categoryId = entry.id)}
-				>
-					<span class="tile__icon"><Icon name={entry.icon} /></span>
-					<span class="tile__label">{entry.label}</span>
-				</button>
-			{/each}
-		</div>
-	</section>
+	<RoomSettingsFields {form} bind:visibility budgetTitle="Or start one" />
 
 	<div class="dock">
-		<button class="btn btn--hot" type="button" disabled={!canCreate || busy || badName}
+		<button
+			class="btn btn--hot"
+			type="button"
+			disabled={!form.ready || busy || badName}
 			onclick={create}
 		>
-			{busy ? 'Working…' : category ? 'Create room' : 'Pick a category'}
-			{#if category}
+			{busy ? 'Working…' : form.category ? 'Create room' : 'Pick a category'}
+			{#if form.category}
 				<span class="btn__sub">
-					{isCustom ? customName.trim() || 'Custom Draft' : category.label} · ${budget} · {effectiveSlots} slots · {visibility === 'public'
+					{form.label} · ${form.budget} · {form.effectiveSlots} slots · {visibility === 'public'
 						? 'anyone'
 						: 'link only'}
 				</span>
@@ -407,108 +269,6 @@
 		margin: 0;
 		background: var(--ink);
 		border: 0;
-	}
-
-	.chips {
-		display: flex;
-		gap: 0.4rem;
-	}
-
-	.chips--wrap {
-		flex-wrap: wrap;
-	}
-
-	.chip {
-		flex: 1;
-		min-width: 2.5rem;
-		padding: 0.55rem 0.45rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-		font-size: 0.88rem;
-		text-transform: uppercase;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.chip--on {
-		background: var(--ink);
-		color: var(--cream);
-	}
-
-	.chip--static {
-		box-shadow: none;
-		font-size: 0.72rem;
-		font-weight: 900;
-		text-align: center;
-		line-height: 1.6;
-	}
-
-	.chip:disabled {
-		opacity: 0.35;
-		box-shadow: none;
-		transform: translate(4px, 4px);
-	}
-
-	.hint {
-		margin: 0;
-		font-size: 0.72rem;
-		font-weight: 700;
-		color: var(--ink-muted);
-	}
-
-	.variants {
-		display: flex;
-		flex-direction: column;
-		gap: 0.4rem;
-		padding: 0.6rem;
-		margin-bottom: 0.2rem;
-		background: var(--violet);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.grid {
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: 0.5rem;
-	}
-
-	.tile {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		padding: 0.5rem;
-		background: var(--white);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-		text-align: left;
-	}
-
-	.tile--on {
-		background: var(--accent);
-		box-shadow: var(--shadow-lg);
-	}
-
-	.tile__icon {
-		display: grid;
-		place-items: center;
-		flex: none;
-		width: 1.6rem;
-		height: 1.6rem;
-		background: var(--accent);
-		border: var(--bw-thin) solid var(--ink);
-		font-size: 0.85rem;
-	}
-
-	.tile--on .tile__icon {
-		background: var(--white);
-	}
-
-	.tile__label {
-		font-size: 0.76rem;
-		font-weight: 900;
-		line-height: 1.1;
-		text-transform: uppercase;
 	}
 
 	.dock {

@@ -8,13 +8,23 @@
 		messages: ChatMessage[];
 		/** Rejects with a readable message when the server refuses. */
 		send: (text: string) => Promise<void>;
+		/** Set once the other player has left: the log stays, the input goes. */
+		closed?: string | null;
 		/** The other player has typed in the last few seconds. */
 		opponentTyping?: boolean;
 		/** Called on every keystroke; the caller decides how often to pass it on. */
 		onTyping?: () => void;
 	}
 
-	let { seat, names, messages, send, opponentTyping = false, onTyping }: Props = $props();
+	let {
+		seat,
+		names,
+		messages,
+		send,
+		closed = null,
+		opponentTyping = false,
+		onTyping
+	}: Props = $props();
 
 	let draft = $state('');
 	let busy = $state(false);
@@ -22,12 +32,14 @@
 	let log = $state<HTMLOListElement | null>(null);
 
 	const opponent = $derived(seat === 0 ? 1 : 0);
+	/* Nobody is typing in a room the other player has left. */
+	const typing = $derived(opponentTyping && !closed);
 	// Only a warning: `room-chat` is what actually refuses it.
 	const blocked = $derived(containsSlur(draft));
 
 	$effect(() => {
 		void messages.length;
-		void opponentTyping;
+		void typing;
 		if (log) log.scrollTop = log.scrollHeight;
 	});
 
@@ -52,7 +64,7 @@
 <section class="chat" aria-labelledby="chat-title">
 	<h2 id="chat-title">Talk it out</h2>
 
-	{#if messages.length || opponentTyping}
+	{#if messages.length || typing}
 		<ol class="log" bind:this={log} aria-live="polite">
 			{#each messages as message (message.id)}
 				<li
@@ -68,7 +80,7 @@
 					<span>{message.body}</span>
 				</li>
 			{/each}
-			{#if opponentTyping}
+			{#if typing}
 				<li class="typing" style:--accent={opponent === 0 ? 'var(--p1)' : 'var(--p2)'}>
 					<b>{names[opponent]}</b>
 					<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
@@ -76,29 +88,33 @@
 				</li>
 			{/if}
 		</ol>
-	{:else}
+	{:else if !closed}
 		<p class="empty">Who won the draft? Make your case.</p>
 	{/if}
 
-	<form onsubmit={submit}>
-		<label class="sr-only" for="chat-input">Message</label>
-		<input
-			id="chat-input"
-			bind:value={draft}
-			oninput={() => onTyping?.()}
-			maxlength={CHAT_MAX}
-			autocomplete="off"
-			placeholder="Say something"
-			aria-invalid={blocked}
-			aria-describedby={blocked || error ? 'chat-error' : undefined}
-		/>
-		<button class="btn send" type="submit" disabled={busy || blocked || !draft.trim()}>Send</button>
-	</form>
+	{#if closed}
+		<p class="empty">{closed}</p>
+	{:else}
+		<form onsubmit={submit}>
+			<label class="sr-only" for="chat-input">Message</label>
+			<input
+				id="chat-input"
+				bind:value={draft}
+				oninput={() => onTyping?.()}
+				maxlength={CHAT_MAX}
+				autocomplete="off"
+				placeholder="Say something"
+				aria-invalid={blocked}
+				aria-describedby={blocked || error ? 'chat-error' : undefined}
+			/>
+			<button class="btn send" type="submit" disabled={busy || blocked || !draft.trim()}>Send</button>
+		</form>
 
-	{#if blocked || error}
-		<p class="error" id="chat-error" role="alert">
-			{blocked ? "Slurs aren't allowed in chat." : error}
-		</p>
+		{#if blocked || error}
+			<p class="error" id="chat-error" role="alert">
+				{blocked ? "Slurs aren't allowed in chat." : error}
+			</p>
+		{/if}
 	{/if}
 </section>
 
