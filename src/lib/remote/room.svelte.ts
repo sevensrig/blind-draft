@@ -5,6 +5,7 @@ import { toGameState } from './adapt';
 import { emoteById, type EmoteId } from './emotes';
 import { LOBBY_HOSTS, RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
+import { type PendingBid, believable, landed, readAnnouncement, withBid } from './pending';
 import type {
 	ChatMessage,
 	ConnectionStatus,
@@ -18,6 +19,12 @@ import type {
 const EMOTE_MS = 2500;
 
 /**
+ * How long an announced bid may stand without the server backing it. Long enough
+ * for a cold function start; a dropped or forged one is gone after this.
+ */
+const ANNOUNCED_BID_TTL_MS = 4000;
+
+/**
  * The remote counterpart to `$lib/game/store.svelte.ts`: same actions, posted to
  * an Edge Function instead of a local reducer. Two rules run through it —
  * connect *fetches* before subscribing, and the server always wins.
@@ -25,8 +32,26 @@ const EMOTE_MS = 2500;
 class RemoteRoom {
 	#roomId = $state<string | null>(null);
 	#seat = $state<0 | 1 | null>(null);
+	/** The server's word. Only `#apply` writes it, so analytics never sees a guess. */
 	#state = $state<PublicGameState | null>(null);
 	#version = $state(0);
+	/*
+	 * Bids on screen before the server has them. Raw so the identity checks that
+	 * clear them compare against what was stored, not a proxy of it.
+	 */
+	#mine = $state.raw<PendingBid | null>(null);
+	#theirs = $state.raw<PendingBid | null>(null);
+	/** What the screen shows: the server's state with any pending bids drawn on. */
+	#view = $derived.by(() => {
+		let view = this.#state;
+		if (!view) return null;
+		if (this.#theirs?.base === this.#version) view = withBid(view, this.#theirs);
+		if (this.#mine) view = withBid(view, this.#mine);
+		return view;
+	});
+	#theirsTimer: ReturnType<typeof setTimeout> | null = null;
+	/** Moves waiting for the opponent's announced bid to land or lapse. */
+	#waiting: (() => void)[] = [];
 	#status = $state<ConnectionStatus>('idle');
 	/* Room metadata, not game state — the server never puts it in game_public. */
 	#code = $state<string | null>(null);
@@ -53,7 +78,7 @@ class RemoteRoom {
 		return this.#seat;
 	}
 	get state() {
-		return this.#state;
+		return this.#view;
 	}
 	get version() {
 		return this.#version;
@@ -167,6 +192,12 @@ class RemoteRoom {
 			 * action, and gating on the version left the host stuck in the lobby.
 			 */
 			.on('broadcast', { event: 'state' }, () => void this.#pull())
+			/*
+			 * The opponent's bid, sent straight from their browser while their
+			 * request is still on its way. Drawn as a guess; the nudge above brings
+			 * the truth a few hundred milliseconds later.
+			 */
+			.on('broadcast', { event: 'bid' }, ({ payload }) => this.#hear(payload))
 			// `self` is off, so anything arriving here came from the other seat.
 			.on('broadcast', { event: 'emote' }, ({ payload }) => {
 				const emote = emoteById(payload?.emote);
@@ -213,19 +244,35 @@ class RemoteRoom {
 
 	/** Sends an action and takes whatever the server says the truth is. */
 	async dispatch(action: Action): Promise<void> {
-		if (!this.#roomId) return;
+		const roomId = this.#roomId;
+		if (!roomId) return;
 		this.#lastRejection = null;
-		const optimistic = this.#optimistic(action);
+		const mine = this.#guess(action);
 
 		try {
+			/*
+			 * A move made while the opponent's bid is still a guess answers that
+			 * guess. Sent now it would carry the version from before their bid, and
+			 * lose to it as `stale` — so it waits, and goes out only if what it
+			 * answered really landed. Your own screen already shows it.
+			 */
+			const answering = this.#theirs;
+			if (answering) {
+				await this.#settled();
+				if (this.#roomId !== roomId) return;
+				if (!landed(this.#state, answering)) {
+					this.#lastRejection = "Your opponent's bid didn't go through.";
+					return;
+				}
+			}
+			if (mine) this.#announce({ ...mine, base: this.#version });
+
 			const result = await callFunction<{ state: PublicGameState; version: number }>(
 				'room-action',
-				{ roomId: this.#roomId, token: deviceToken(), action, version: this.#version }
+				{ roomId, token: deviceToken(), action, version: this.#version }
 			);
 			this.#apply(result.state, result.version);
 		} catch (error) {
-			// Nothing below replaced the guess (no state came back), so take it back.
-			if (optimistic && this.#state === optimistic.guess) this.#state = optimistic.prior;
 			if (error instanceof RemoteError) {
 				// `stale` and `illegal_action` carry the corrected state, so the loser
 				// of a race sees reality rather than a bid that never landed.
@@ -242,6 +289,9 @@ class RemoteRoom {
 				return;
 			}
 			this.#lastRejection = 'Something went wrong. Try that again.';
+		} finally {
+			// Whatever came back (or didn't) is now the truth on screen.
+			if (mine && this.#mine === mine) this.#mine = null;
 		}
 	}
 
@@ -288,6 +338,7 @@ class RemoteRoom {
 
 	disconnect(): void {
 		this.#unadvertise();
+		this.#dropTheirs();
 		if (this.#channel) {
 			void supabase().removeChannel(this.#channel);
 			this.#channel = null;
@@ -321,6 +372,7 @@ class RemoteRoom {
 		this.#seat = null;
 		this.#state = null;
 		this.#version = 0;
+		this.#mine = null;
 		this.#abandonedBy = null;
 		this.#rematch = null;
 		this.#leftBy = null;
@@ -352,15 +404,62 @@ class RemoteRoom {
 
 	/**
 	 * Shows the caller's own bid before the server confirms it, since a bid only
-	 * touches `bid`. The version stays put, so the server's reply always replaces it.
+	 * touches `bid`. Checked against what's on screen, which may include the
+	 * opponent's announced bid — that's the bid being answered.
 	 */
-	#optimistic(action: Action): { prior: PublicGameState; guess: PublicGameState } | null {
-		const prior = this.#state;
-		if (action.type !== 'bid' || !prior || action.player !== this.#seat) return null;
-		if (!canBid(toGameState(prior), action.player, action.amount)) return null;
-		this.#state = { ...prior, bid: { amount: action.amount, holder: action.player } };
-		// Read back: `$state` stores a proxy, and the revert compares by identity.
-		return { prior, guess: this.#state };
+	#guess(action: Action): PendingBid | null {
+		const view = this.#view;
+		if (action.type !== 'bid' || !view || action.player !== this.#seat) return null;
+		if (!canBid(toGameState(view), action.player, action.amount)) return null;
+		const mine = { player: action.player, amount: action.amount, base: this.#version };
+		this.#mine = mine;
+		return mine;
+	}
+
+	/** Tells the opponent about our bid now, rather than after the server round trip. */
+	#announce(bid: PendingBid): void {
+		void this.#channel?.send({
+			type: 'broadcast',
+			event: 'bid',
+			payload: { player: bid.player, amount: bid.amount, version: bid.base }
+		});
+	}
+
+	#hear(payload: unknown): void {
+		const bid = readAnnouncement(payload);
+		const state = this.#state;
+		if (!bid || !state || this.#seat === null) return;
+		if (!believable(state, this.#version, this.#seat, bid)) return;
+
+		this.#dropTheirs();
+		this.#theirs = bid;
+		// Unbacked after this long, it's probably not coming: a failed request, or a
+		// forged message. Ask the server before giving up on it — a slow bid that
+		// did land clears itself in `#apply`, and a raise waiting on it still goes.
+		this.#theirsTimer = setTimeout(() => {
+			if (this.#theirs !== bid) return;
+			void this.#pull()
+				.catch(() => {})
+				.finally(() => {
+					if (this.#theirs === bid) this.#dropTheirs();
+				});
+		}, ANNOUNCED_BID_TTL_MS);
+	}
+
+	/** Clears the opponent's announced bid and lets any move waiting on it go. */
+	#dropTheirs(): void {
+		if (this.#theirsTimer) clearTimeout(this.#theirsTimer);
+		this.#theirsTimer = null;
+		this.#theirs = null;
+		const waiting = this.#waiting;
+		this.#waiting = [];
+		for (const resolve of waiting) resolve();
+	}
+
+	/** Resolves once the opponent's announced bid has landed or lapsed. */
+	#settled(): Promise<void> {
+		if (!this.#theirs) return Promise.resolve();
+		return new Promise((resolve) => this.#waiting.push(resolve));
 	}
 
 	async #pull(): Promise<void> {
@@ -398,6 +497,9 @@ class RemoteRoom {
 		this.#trackApply(this.#state, state);
 		this.#state = state;
 		this.#version = version;
+		// The server has moved past the state their bid was placed on: it either
+		// landed (and is in `state`) or lost a race. Either way it's no guess now.
+		if (this.#theirs && version > this.#theirs.base) this.#dropTheirs();
 		if (this.#status === 'connecting' || this.#status === 'waiting') {
 			this.#status = this.bothSeated ? 'live' : 'waiting';
 		}
