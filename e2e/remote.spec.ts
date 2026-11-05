@@ -473,6 +473,91 @@ test('a stranger cannot read a room they have not joined', async ({ browser }) =
 	expect(rows).toBeLessThanOrEqual(0);
 });
 
+/** Clicks the first enabled control matching one of `names`, or reports none. */
+async function tapFirst(page: Page, names: RegExp[]): Promise<boolean> {
+	for (const name of names) {
+		const button = page.getByRole('button', { name }).first();
+		// The board re-renders under us, so a button can vanish between checks.
+		if (!(await button.isEnabled({ timeout: 300 }).catch(() => false))) continue;
+		if (
+			await button.click({ timeout: 1000 }).then(
+				() => true,
+				() => false
+			)
+		)
+			return true;
+	}
+	return false;
+}
+
+test('emotes cross during the draft and chat opens at the end', async ({ browser }) => {
+	const host = await device(browser, 'Sri');
+	const guest = await device(browser, 'Alex');
+
+	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: '3', exact: true }).click();
+	await host.getByRole('button', { name: /Create room/ }).click();
+	await host.waitForURL(/\/online\/room\?id=/);
+	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
+	await guest.locator('.code').fill(code);
+	await guest.getByRole('button', { name: 'Join', exact: true }).click();
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+
+	// One square button folds out the four emotes, and sending folds them away.
+	await expect(guest.getByRole('button', { name: /Bid!/ })).toHaveCount(0);
+	await guest.getByRole('button', { name: 'Emotes' }).click();
+	await guest.getByRole('button', { name: /Bid!/ }).click();
+	await expect(guest.getByRole('button', { name: /Bid!/ })).toHaveCount(0);
+	// On Alex's own panel on both screens, never over the card.
+	const alexPanel = (page: Page) => page.locator('.status').filter({ hasText: 'Alex' });
+	await expect(alexPanel(host).locator('.emote')).toContainText('Bid!', { timeout: 15_000 });
+	await expect(alexPanel(guest).locator('.emote')).toContainText('Bid!');
+
+	// Sri buys three for $1 each, then the rest go to Alex free.
+	const sri = [/Tap to reveal/, /^Sri bid \$1/, /See the results/, /Next item/];
+	const alex = [/^Sell to Sri/, /^Alex takes it/, /Tap to reveal/, /Next item/, /See the results/];
+	const chatTitle = (page: Page) => page.getByRole('heading', { name: 'Talk it out' });
+	for (let turn = 0; turn < 60 && !(await chatTitle(host).isVisible()); turn++) {
+		const moved = (await tapFirst(host, sri)) || (await tapFirst(guest, alex));
+		if (!moved) await host.waitForTimeout(300);
+	}
+	await expect(chatTitle(host)).toBeVisible({ timeout: 15_000 });
+	await expect(chatTitle(guest)).toBeVisible({ timeout: 15_000 });
+	await expect(guest.getByRole('button', { name: 'Emotes' })).toHaveCount(0);
+
+	await guest.getByLabel('Message').fill('free picks and I still lost');
+	await guest.getByRole('button', { name: 'Send' }).click();
+	await expect(host.locator('.log')).toContainText('free picks and I still lost', {
+		timeout: 15_000
+	});
+
+	// Blocked on the client, and the server refuses it too if the client is skipped.
+	await host.getByLabel('Message').fill('f a g');
+	await expect(host.getByRole('alert')).toContainText("Slurs aren't allowed");
+	await expect(host.getByRole('button', { name: 'Send' })).toBeDisabled();
+	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
+	const refusal = await host.evaluate(
+		async ([url, id]) => {
+			const res = await fetch(`${url}/functions/v1/room-chat`, {
+				method: 'POST',
+				headers: { 'content-type': 'application/json', apikey: 'anon-placeholder' },
+				body: JSON.stringify({
+					roomId: id,
+					token: localStorage.getItem('blind-draft:device:v1'),
+					text: 'f a g'
+				})
+			});
+			return res.status;
+		},
+		[SUPABASE, roomId]
+	);
+	expect(refusal).toBe(400);
+
+	await host.getByLabel('Message').fill('skill issue');
+	await expect(host.getByRole('alert')).toHaveCount(0);
+	await scan(host, 'results with chat');
+});
+
 /** Opens a 3-slot Foods room as `host` and seats `guest` by code. */
 async function startRoom(host: Page, guest: Page): Promise<void> {
 	await host.getByRole('button', { name: /^Foods/ }).click();
@@ -491,43 +576,16 @@ async function startRoom(host: Page, guest: Page): Promise<void> {
  * guest sells, so the host fills up and the guest takes the rest free.
  */
 async function playRemoteToResults(host: Page, guest: Page): Promise<void> {
+	const sri = [/Tap to reveal/, /^Sri bid \$1/, /See the results/, /Next item/, /takes it/];
+	const alex = [/^Sell to Sri/, /takes it/, /Tap to reveal/, /Next item/, /See the results/];
 	const done = async () =>
 		(await host.getByRole('button', { name: /Share results/ }).isVisible()) &&
 		(await guest.getByRole('button', { name: /Share results/ }).isVisible());
-	const tap = async (page: Page, name: RegExp): Promise<boolean> => {
-		const button = page.getByRole('button', { name }).first();
-		const ready = await button
-			.isEnabled({ timeout: 300 })
-			.then((enabled) => enabled)
-			.catch(() => false);
-		if (!ready) return false;
-		// Short: the board re-renders under a click whenever the other device moves.
-		return button.click({ timeout: 2_000 }).then(
-			() => true,
-			() => false
-		);
-	};
-
 	// A deadline, not a move count: cold Edge Runtime isolates make early moves slow.
-	const deadline = Date.now() + 60_000;
+	const deadline = Date.now() + 90_000;
 	while (Date.now() < deadline && !(await done())) {
-		if (await tap(host, /Tap to reveal/)) continue;
-		if (await tap(guest, /Tap to reveal/)) continue;
-		if (await tap(host, /Next item|See the results/)) continue;
-		if (await tap(guest, /Next item|See the results/)) continue;
-		if (await tap(guest, /^Sell to Sri/)) continue;
-		if (await tap(host, /takes it/)) continue;
-		if (await tap(guest, /takes it/)) continue;
-		const open = host.locator('.duel__btn').first();
-		if (
-			(await open.isVisible()) &&
-			(await open.isEnabled()) &&
-			(await host.locator('.standing__amount').textContent())?.includes('—')
-		) {
-			await open.click({ timeout: 2_000 }).catch(() => {});
-			continue;
-		}
-		await host.waitForTimeout(250);
+		const moved = (await tapFirst(host, sri)) || (await tapFirst(guest, alex));
+		if (!moved) await host.waitForTimeout(300);
 	}
 	expect(await done()).toBe(true);
 }

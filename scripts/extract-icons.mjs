@@ -33,7 +33,12 @@ const WANTED = [
 	'basket-shopping',
 	'arrow-up-from-bracket',
 	'robot',
-	'crown'
+	'crown',
+	'hand-point-right',
+	'face-angry',
+	'face-grin-beam',
+	'face-grin-squint-tears',
+	'face-smile'
 ];
 
 function extract(slug) {

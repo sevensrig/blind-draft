@@ -1,10 +1,21 @@
 import { gameEvent, track, trackTransition } from '$lib/analytics';
-import { canBid } from '$lib/game/engine';
+import { canBid, other } from '$lib/game/engine';
 import type { Action } from '$lib/game/types';
 import { toGameState } from './adapt';
+import { emoteById, type EmoteId } from './emotes';
 import { LOBBY_HOSTS, RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
-import type { ConnectionStatus, PublicGameState, RematchOffer, RoomSettings } from './types';
+import type {
+	ChatMessage,
+	ConnectionStatus,
+	EmoteEvent,
+	PublicGameState,
+	RematchOffer,
+	RoomSettings
+} from './types';
+
+/** How long an emote bubble stays up. */
+const EMOTE_MS = 2500;
 
 /**
  * The remote counterpart to `$lib/game/store.svelte.ts`: same actions, posted to
@@ -27,6 +38,9 @@ class RemoteRoom {
 	/** Pending rematch offer, and the seat that walked away from the results. */
 	#rematch = $state<RematchOffer | null>(null);
 	#leftBy = $state<0 | 1 | null>(null);
+	#emotes = $state<EmoteEvent[]>([]);
+	#chat = $state<ChatMessage[]>([]);
+	#emoteKey = 0;
 
 	#channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 	/** Our presence on `LOBBY_HOSTS`, held only while a public lobby waits. */
@@ -58,6 +72,13 @@ class RemoteRoom {
 	}
 	get abandonedBy() {
 		return this.#abandonedBy;
+	}
+	/** Emotes still on screen, oldest first. */
+	get emotes() {
+		return this.#emotes;
+	}
+	get chat() {
+		return this.#chat;
 	}
 
 	get rematch() {
@@ -121,6 +142,8 @@ class RemoteRoom {
 		this.#abandonedBy = null;
 		this.#rematch = null;
 		this.#leftBy = null;
+		this.#emotes = [];
+		this.#chat = [];
 
 		try {
 			await this.#pull();
@@ -144,6 +167,12 @@ class RemoteRoom {
 			 * action, and gating on the version left the host stuck in the lobby.
 			 */
 			.on('broadcast', { event: 'state' }, () => void this.#pull())
+			// `self` is off, so anything arriving here came from the other seat.
+			.on('broadcast', { event: 'emote' }, ({ payload }) => {
+				const emote = emoteById(payload?.emote);
+				if (emote) this.#showEmote(other(seat), emote.id);
+			})
+			.on('broadcast', { event: 'chat' }, () => void this.#pullChat())
 			.on('presence', { event: 'sync' }, () => {
 				const seats = Object.keys(this.#channel?.presenceState() ?? {});
 				const opponentHere = seats.some((key) => key !== String(seat));
@@ -165,6 +194,21 @@ class RemoteRoom {
 				if (this.#status === 'waiting') void this.#advertise(roomId);
 			}
 		});
+		void this.#pullChat();
+	}
+
+	/** Fire and forget: an emote that doesn't arrive isn't worth an error. */
+	emote(id: EmoteId): void {
+		if (!this.#channel || this.#seat === null) return;
+		this.#showEmote(this.#seat, id);
+		void this.#channel.send({ type: 'broadcast', event: 'emote', payload: { emote: id } });
+	}
+
+	/** Throws `RemoteError` when refused, so the form can keep the text and say why. */
+	async say(text: string): Promise<void> {
+		if (!this.#roomId) return;
+		await callFunction('room-chat', { roomId: this.#roomId, token: deviceToken(), text });
+		await this.#pullChat();
 	}
 
 	/** Sends an action and takes whatever the server says the truth is. */
@@ -281,6 +325,29 @@ class RemoteRoom {
 		this.#rematch = null;
 		this.#leftBy = null;
 		this.#lastRejection = null;
+		this.#emotes = [];
+		this.#chat = [];
+	}
+
+	#showEmote(seat: 0 | 1, emote: EmoteId): void {
+		const key = ++this.#emoteKey;
+		// Capped so a spammer can't pile bubbles up the screen.
+		this.#emotes = [...this.#emotes.slice(-3), { key, seat, emote }];
+		setTimeout(() => {
+			this.#emotes = this.#emotes.filter((entry) => entry.key !== key);
+		}, EMOTE_MS);
+	}
+
+	async #pullChat(): Promise<void> {
+		const roomId = this.#roomId;
+		if (!roomId) return;
+		const { data, error } = await supabase()
+			.from('chat_messages')
+			.select('id, seat, body')
+			.eq('room_id', roomId)
+			.order('id');
+		if (this.#roomId !== roomId || error || !data) return;
+		this.#chat = data as ChatMessage[];
 	}
 
 	/**

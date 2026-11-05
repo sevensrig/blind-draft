@@ -3,10 +3,12 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import BidScreen from '$lib/components/BidScreen.svelte';
+	import EmoteBar from '$lib/components/EmoteBar.svelte';
 	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import RematchPanel from '$lib/components/RematchPanel.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
+	import RoomChat from '$lib/components/RoomChat.svelte';
 	import { track } from '$lib/analytics';
 	import { botSuggestionEvent, botWaitEvent, type BotWaitChoice } from '$lib/analytics/events';
 	import { getCategory, getVariant } from '$lib/data';
@@ -15,6 +17,7 @@
 	import { toGameState } from '$lib/remote/adapt';
 	import { RemoteError } from '$lib/remote/client';
 	import { recallName, recallSeat, rememberName } from '$lib/remote/identity';
+	import { emoteById } from '$lib/remote/emotes';
 	import { room } from '$lib/remote/room.svelte';
 	import { SITE_NAME } from '$lib/site';
 
@@ -42,6 +45,18 @@
 	// A server fact, unlike `away`, so it outranks every branch below — including
 	// `waiting`, since a host whose guest quit isn't waiting for anybody.
 	const ended = $derived(room.opponentLeft);
+	const names = $derived(
+		(room.state?.players.map((player) => player.name) ?? ['', '']) as [string, string]
+	);
+	/** The newest emote from each seat, for its player panel. */
+	const emotes = $derived(
+		Object.fromEntries(
+			room.emotes.flatMap((event) => {
+				const emote = emoteById(event.emote);
+				return emote ? [[event.seat, emote]] : [];
+			})
+		)
+	);
 	const opponentName = $derived(
 		room.state && room.seat !== null ? room.state.players[room.seat === 0 ? 1 : 0].name : 'They'
 	);
@@ -332,6 +347,11 @@
 					/>
 				{/if}
 			{/snippet}
+			{#snippet chat()}
+				{#if room.seat !== null}
+					<RoomChat seat={room.seat} {names} messages={room.chat} send={(text) => room.say(text)} />
+				{/if}
+			{/snippet}
 		</ResultsScreen>
 	{:else}
 		<!-- `onQuit` is what stops the Quit button dispatching `reset` at the server. -->
@@ -340,12 +360,20 @@
 			seat={room.seat}
 			dispatch={(action) => void room.dispatch(action)}
 			onQuit={() => leave()}
-		/>
+			{emotes}
+		>
+			{#snippet toolbar()}
+				{#if room.seat !== null}
+					<EmoteBar seat={room.seat} {names} bubbles={room.emotes} send={(id) => room.emote(id)} />
+				{/if}
+			{/snippet}
+		</BidScreen>
 	{/if}
 
 	{#if room.lastRejection}
 		<p class="rejected" role="status">{room.lastRejection}</p>
 	{/if}
+
 {/if}
 
 <style>
@@ -431,7 +459,7 @@
 	.waitbar {
 		position: sticky;
 		top: 0;
-		z-index: 3;
+		z-index: 6;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
@@ -483,11 +511,11 @@
 		font-weight: 700;
 	}
 
-	/* Sits above the board without shifting it. */
+	/* Sits above the board without shifting it, and above the open emote tray. */
 	.away {
 		position: sticky;
 		top: 0;
-		z-index: 3;
+		z-index: 6;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;

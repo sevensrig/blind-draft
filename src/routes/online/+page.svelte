@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { containsSlur } from '$lib/data/moderation';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import RoomSettingsFields from '$lib/components/RoomSettingsFields.svelte';
 	import { RemoteError } from '$lib/remote/client';
@@ -37,9 +38,12 @@
 		saveCustomDraft({ name: form.customName, text: form.customText });
 	});
 
+	/* Only a warning: `create-room` and `join-room` are what refuse it. */
+	const badName = $derived(containsSlur(name));
+
 	async function create() {
 		const settings = form.toSettings();
-		if (!settings || busy) return;
+		if (!settings || busy || badName) return;
 		busy = true;
 		error = null;
 		rememberName(name);
@@ -55,7 +59,7 @@
 
 	async function join() {
 		const code = joinCode.replace(/\D/g, '');
-		if (code.length < 4 || busy) return;
+		if (code.length < 4 || busy || badName) return;
 		busy = true;
 		error = null;
 		rememberName(name);
@@ -93,7 +97,17 @@
 
 	<section class="block">
 		<h2 class="block__title">Your name</h2>
-		<input class="field" type="text" bind:value={name} placeholder="Player" maxlength="14" />
+		<input
+			class="field"
+			type="text"
+			bind:value={name}
+			placeholder="Player"
+			maxlength="14"
+			aria-invalid={badName}
+		/>
+		{#if badName}
+			<p class="error" role="alert">Slurs aren't allowed in names.</p>
+		{/if}
 	</section>
 
 	<section class="block">
@@ -111,7 +125,7 @@
 			<button
 				class="btn"
 				type="button"
-				disabled={joinCode.replace(/\D/g, '').length < 4 || busy}
+				disabled={joinCode.replace(/\D/g, '').length < 4 || busy || badName}
 				onclick={join}>Join</button
 			>
 		</div>
@@ -128,7 +142,12 @@
 	<RoomSettingsFields {form} bind:visibility budgetTitle="Or start one" />
 
 	<div class="dock">
-		<button class="btn btn--hot" type="button" disabled={!form.ready || busy} onclick={create}>
+		<button
+			class="btn btn--hot"
+			type="button"
+			disabled={!form.ready || busy || badName}
+			onclick={create}
+		>
 			{busy ? 'Working…' : form.category ? 'Create room' : 'Pick a category'}
 			{#if form.category}
 				<span class="btn__sub">

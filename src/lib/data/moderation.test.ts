@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { containsSlur } from './moderation';
+import { censorSwears, containsSlur } from './moderation';
 
 describe('containsSlur', () => {
 	it.each([
@@ -67,4 +67,26 @@ describe('containsSlur', () => {
 	])('allows %s', (text) => {
 		expect(containsSlur(text)).toBe(false);
 	});
+});
+
+describe('censorSwears', () => {
+	it.each([
+		['what the fuck', 'what the f*ck'],
+		['FUCKING steal', 'F*CK*NG steal'],
+		['motherfucker', 'm*th*rf*ck*r'],
+		['bullshit pick', 'b*llsh*t pick'],
+		['damn, Shaq at point', 'd*mn, Shaq at point'],
+		['you ass', 'you *ss'],
+		['what a dick move', 'what a d*ck move'],
+		['crappy roster', 'cr*ppy roster']
+	])('%s -> %s', (input, expected) => {
+		expect(censorSwears(input)).toBe(expected);
+	});
+
+	it.each(['class act', 'Dickens', 'cocktail', 'bass', 'scrapbook', 'Mississippi', 'grass'])(
+		'leaves %s alone',
+		(word) => {
+			expect(censorSwears(word)).toBe(word);
+		}
+	);
 });
