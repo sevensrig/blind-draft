@@ -1,3 +1,4 @@
+import { containsSlur } from '../_shared/vendor/data/moderation.ts';
 import type { GameState } from '../_shared/vendor/game/types.ts';
 import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
@@ -64,6 +65,7 @@ Deno.serve(async (req) => {
 	}
 
 	const name = String(body.name ?? '').slice(0, 14).trim() || 'Player 2';
+	if (containsSlur(name)) return fail('bad_request', "Slurs aren't allowed in names");
 
 	// The unique (room_id, seat) constraint settles a race between two devices
 	// joining at once: one insert wins, the other gets 23505.

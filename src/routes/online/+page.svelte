@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { CATEGORIES, getCategory, getVariant, hasVariants, openRoster } from '$lib/data';
 	import { CUSTOM_MIN_ITEMS, blockedEntry, customSeeds } from '$lib/data/custom';
+	import { containsSlur } from '$lib/data/moderation';
 	import { deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
@@ -70,8 +71,11 @@
 		saveCustomDraft({ name: customName, text: customText });
 	});
 
+	/* Only a warning: `create-room` and `join-room` are what refuse it. */
+	const badName = $derived(containsSlur(name));
+
 	async function create() {
-		if (!category || !activeVariant || !canCreate || busy) return;
+		if (!category || !activeVariant || !canCreate || busy || badName) return;
 		busy = true;
 		error = null;
 		rememberName(name);
@@ -95,7 +99,7 @@
 
 	async function join() {
 		const code = joinCode.replace(/\D/g, '');
-		if (code.length < 4 || busy) return;
+		if (code.length < 4 || busy || badName) return;
 		busy = true;
 		error = null;
 		rememberName(name);
@@ -133,7 +137,17 @@
 
 	<section class="block">
 		<h2 class="block__title">Your name</h2>
-		<input class="field" type="text" bind:value={name} placeholder="Player" maxlength="14" />
+		<input
+			class="field"
+			type="text"
+			bind:value={name}
+			placeholder="Player"
+			maxlength="14"
+			aria-invalid={badName}
+		/>
+		{#if badName}
+			<p class="error" role="alert">Slurs aren't allowed in names.</p>
+		{/if}
 	</section>
 
 	<section class="block">
@@ -151,7 +165,7 @@
 			<button
 				class="btn"
 				type="button"
-				disabled={joinCode.replace(/\D/g, '').length < 4 || busy}
+				disabled={joinCode.replace(/\D/g, '').length < 4 || busy || badName}
 				onclick={join}>Join</button
 			>
 		</div>
@@ -269,7 +283,9 @@
 	</section>
 
 	<div class="dock">
-		<button class="btn btn--hot" type="button" disabled={!canCreate || busy} onclick={create}>
+		<button class="btn btn--hot" type="button" disabled={!canCreate || busy || badName}
+			onclick={create}
+		>
 			{busy ? 'Working…' : category ? 'Create room' : 'Pick a category'}
 			{#if category}
 				<span class="btn__sub">

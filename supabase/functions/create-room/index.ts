@@ -1,3 +1,4 @@
+import { containsSlur } from '../_shared/vendor/data/moderation.ts';
 import { getCategory, getVariant, hasVariants, openRoster } from '../_shared/vendor/data/index.ts';
 import { CUSTOM_MIN_ITEMS, CUSTOM_NAME_MAX, blockedEntry, customSeeds } from '../_shared/vendor/data/custom.ts';
 import { variant as buildVariant } from '../_shared/vendor/data/types.ts';
@@ -74,6 +75,8 @@ Deno.serve(async (req) => {
 	}
 
 	const hostName = String(body.name ?? '').slice(0, 14).trim() || 'Player 1';
+	// Your opponent sees it on every screen, and it goes out on the share card.
+	if (containsSlur(hostName)) return fail('bad_request', "Slurs aren't allowed in names");
 	const visibility = body.visibility === 'private' ? 'private' : 'public';
 
 	const config = {
