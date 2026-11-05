@@ -17,6 +17,12 @@ import type {
 
 /** How long an emote bubble stays up. */
 const EMOTE_MS = 2500;
+/** Typing pings go out at most this often while someone types. */
+const TYPING_PING_MS = 2000;
+/** Idle this long and the typer's device says it stopped. */
+const TYPING_IDLE_MS = 3000;
+/** Dots drop on their own after this, in case the "stopped" ping never arrives. */
+const TYPING_FALLBACK_MS = 6000;
 
 /**
  * How long an announced bid may stand without the server backing it. Long enough
@@ -66,6 +72,10 @@ class RemoteRoom {
 	#emotes = $state<EmoteEvent[]>([]);
 	#chat = $state<ChatMessage[]>([]);
 	#emoteKey = 0;
+	#opponentTyping = $state(false);
+	#typingTimer: ReturnType<typeof setTimeout> | undefined;
+	#idleTimer: ReturnType<typeof setTimeout> | undefined;
+	#lastTypingPing = 0;
 
 	#channel: ReturnType<ReturnType<typeof supabase>['channel']> | null = null;
 	/** Our presence on `LOBBY_HOSTS`, held only while a public lobby waits. */
@@ -104,6 +114,9 @@ class RemoteRoom {
 	}
 	get chat() {
 		return this.#chat;
+	}
+	get opponentTyping() {
+		return this.#opponentTyping;
 	}
 
 	get rematch() {
@@ -169,6 +182,7 @@ class RemoteRoom {
 		this.#leftBy = null;
 		this.#emotes = [];
 		this.#chat = [];
+		this.#setOpponentTyping(false);
 
 		try {
 			await this.#pull();
@@ -203,7 +217,15 @@ class RemoteRoom {
 				const emote = emoteById(payload?.emote);
 				if (emote) this.#showEmote(other(seat), emote.id);
 			})
-			.on('broadcast', { event: 'chat' }, () => void this.#pullChat())
+			.on('broadcast', { event: 'chat' }, () => {
+				// Their message landing is what ends their typing.
+				this.#setOpponentTyping(false);
+				void this.#pullChat();
+			})
+			// Contentless, like the state nudge: it only says "they're typing".
+			.on('broadcast', { event: 'typing' }, ({ payload }) =>
+				this.#setOpponentTyping(payload?.stopped !== true)
+			)
 			.on('presence', { event: 'sync' }, () => {
 				const seats = Object.keys(this.#channel?.presenceState() ?? {});
 				const opponentHere = seats.some((key) => key !== String(seat));
@@ -235,10 +257,30 @@ class RemoteRoom {
 		void this.#channel.send({ type: 'broadcast', event: 'emote', payload: { emote: id } });
 	}
 
+	/** Called per keystroke; throttled here so a fast typist sends a ping every couple of seconds. */
+	typing(): void {
+		if (!this.#channel) return;
+		// Only this device knows when the typing really stopped, so it says so.
+		clearTimeout(this.#idleTimer);
+		this.#idleTimer = setTimeout(() => this.#stoppedTyping(), TYPING_IDLE_MS);
+		if (Date.now() - this.#lastTypingPing < TYPING_PING_MS) return;
+		this.#lastTypingPing = Date.now();
+		void this.#channel.send({ type: 'broadcast', event: 'typing', payload: {} });
+	}
+
+	#stoppedTyping(): void {
+		clearTimeout(this.#idleTimer);
+		this.#lastTypingPing = 0;
+		void this.#channel?.send({ type: 'broadcast', event: 'typing', payload: { stopped: true } });
+	}
+
 	/** Throws `RemoteError` when refused, so the form can keep the text and say why. */
 	async say(text: string): Promise<void> {
 		if (!this.#roomId) return;
 		await callFunction('room-chat', { roomId: this.#roomId, token: deviceToken(), text });
+		// The message landing ends the dots over there; no "stopped" ping needed.
+		clearTimeout(this.#idleTimer);
+		this.#lastTypingPing = 0;
 		await this.#pullChat();
 	}
 
@@ -337,6 +379,7 @@ class RemoteRoom {
 	}
 
 	disconnect(): void {
+		clearTimeout(this.#idleTimer);
 		this.#unadvertise();
 		this.#dropTheirs();
 		if (this.#channel) {
@@ -379,6 +422,14 @@ class RemoteRoom {
 		this.#lastRejection = null;
 		this.#emotes = [];
 		this.#chat = [];
+		this.#setOpponentTyping(false);
+	}
+
+	#setOpponentTyping(on: boolean): void {
+		clearTimeout(this.#typingTimer);
+		this.#opponentTyping = on;
+		if (on)
+			this.#typingTimer = setTimeout(() => (this.#opponentTyping = false), TYPING_FALLBACK_MS);
 	}
 
 	#showEmote(seat: 0 | 1, emote: EmoteId): void {

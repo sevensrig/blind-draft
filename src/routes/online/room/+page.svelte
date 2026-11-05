@@ -354,6 +354,8 @@
 						{names}
 						messages={room.chat}
 						send={(text) => room.say(text)}
+						opponentTyping={room.opponentTyping}
+						onTyping={() => room.typing()}
 						closed={room.opponentGone ? `${opponentName} left, so chat is closed.` : null}
 					/>
 				{/if}
