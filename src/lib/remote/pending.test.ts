@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { currentItem } from '$lib/game/engine';
 import type { GameState } from '$lib/game/types';
 import { contested, finishedGame, withStandingBid } from '$lib/testing/fixtures';
-import { believable, landed, readAnnouncement, withBid } from './pending';
+import {
+	alreadyDone,
+	believable,
+	landed,
+	readAnnouncement,
+	readRevealAnnouncement,
+	withBid
+} from './pending';
 import type { PublicGameState } from './types';
 
 /** What a client is sent: `redact()` in the Edge Functions, minus the deck. */
@@ -98,5 +105,43 @@ describe('landed', () => {
 		expect(landed(publicView(withStandingBid(contested(), 0, 3)), bid)).toBe(false);
 		expect(landed(publicView(contested()), bid)).toBe(false);
 		expect(landed(null, bid)).toBe(false);
+	});
+});
+
+describe('readRevealAnnouncement', () => {
+	it('reads the version and refuses anything else', () => {
+		expect(readRevealAnnouncement({ version: 7 })).toBe(7);
+		for (const junk of [null, 7, {}, { version: '7' }, { version: 7.5 }]) {
+			expect(readRevealAnnouncement(junk)).toBeNull();
+		}
+	});
+});
+
+describe('alreadyDone', () => {
+	const live = contested();
+	const facedown = publicView({ ...live, phase: 'reveal', bid: null });
+	const faceUp = publicView(live);
+	const nextCard = publicView({ ...live, phase: 'reveal', index: live.index + 1, bid: null });
+
+	it('counts a reveal beaten by the other tap as done', () => {
+		expect(alreadyDone({ type: 'reveal' }, facedown, faceUp)).toBe(true);
+	});
+
+	it('still reports a reveal that lost to something else', () => {
+		// The card is still face down: whatever won, it wasn't a reveal.
+		expect(alreadyDone({ type: 'reveal' }, facedown, facedown)).toBe(false);
+		// A different card: this tap was for one that's gone.
+		expect(alreadyDone({ type: 'reveal' }, faceUp, nextCard)).toBe(false);
+	});
+
+	it('counts a "next" beaten by the other tap as done', () => {
+		expect(alreadyDone({ type: 'next' }, faceUp, nextCard)).toBe(true);
+		expect(alreadyDone({ type: 'next' }, faceUp, publicView(finishedGame()))).toBe(true);
+		expect(alreadyDone({ type: 'next' }, faceUp, faceUp)).toBe(false);
+	});
+
+	it('never hides a lost bid', () => {
+		expect(alreadyDone({ type: 'bid', player: 0, amount: 2 }, faceUp, faceUp)).toBe(false);
+		expect(alreadyDone({ type: 'reveal' }, null, faceUp)).toBe(false);
 	});
 });

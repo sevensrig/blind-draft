@@ -369,6 +369,7 @@
 			dispatch={(action) => void room.dispatch(action)}
 			onQuit={() => leave()}
 			{emotes}
+			revealing={room.revealingBy}
 		>
 			{#snippet toolbar()}
 				{#if room.seat !== null}

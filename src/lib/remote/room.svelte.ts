@@ -1,11 +1,19 @@
 import { gameEvent, track, trackTransition } from '$lib/analytics';
 import { canBid, other } from '$lib/game/engine';
-import type { Action } from '$lib/game/types';
+import type { Action, PlayerId } from '$lib/game/types';
 import { toGameState } from './adapt';
 import { emoteById, type EmoteId } from './emotes';
 import { LOBBY_HOSTS, RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
-import { type PendingBid, believable, landed, readAnnouncement, withBid } from './pending';
+import {
+	type PendingBid,
+	alreadyDone,
+	believable,
+	landed,
+	readAnnouncement,
+	readRevealAnnouncement,
+	withBid
+} from './pending';
 import type {
 	ChatMessage,
 	ConnectionStatus,
@@ -25,10 +33,10 @@ const TYPING_IDLE_MS = 3000;
 const TYPING_FALLBACK_MS = 6000;
 
 /**
- * How long an announced bid may stand without the server backing it. Long enough
- * for a cold function start; a dropped or forged one is gone after this.
+ * How long an announced bid or reveal may stand without the server backing it.
+ * Long enough for a cold function start; a dropped or forged one is gone after this.
  */
-const ANNOUNCED_BID_TTL_MS = 4000;
+const ANNOUNCED_TTL_MS = 4000;
 
 /**
  * The remote counterpart to `$lib/game/store.svelte.ts`: same actions, posted to
@@ -56,6 +64,13 @@ class RemoteRoom {
 		return view;
 	});
 	#theirsTimer: ReturnType<typeof setTimeout> | null = null;
+	/**
+	 * Who is turning the card over, before the server says it's face up: us, or
+	 * the opponent, announced the moment they tapped. `base` is the version the
+	 * card was face down on.
+	 */
+	#revealing = $state.raw<{ by: PlayerId; base: number } | null>(null);
+	#revealTimer: ReturnType<typeof setTimeout> | null = null;
 	/** Moves waiting for the opponent's announced bid to land or lapse. */
 	#waiting: (() => void)[] = [];
 	#status = $state<ConnectionStatus>('idle');
@@ -89,6 +104,12 @@ class RemoteRoom {
 	}
 	get state() {
 		return this.#view;
+	}
+	/** The seat turning the card over right now, so the screen can start the flip. */
+	get revealingBy(): PlayerId | null {
+		const revealing = this.#revealing;
+		if (!revealing || revealing.base !== this.#version) return null;
+		return this.#state?.phase === 'reveal' ? revealing.by : null;
 	}
 	get version() {
 		return this.#version;
@@ -212,6 +233,9 @@ class RemoteRoom {
 			 * the truth a few hundred milliseconds later.
 			 */
 			.on('broadcast', { event: 'bid' }, ({ payload }) => this.#hear(payload))
+			// Same idea for the card. Nobody but the server knows what's on it, so
+			// this only says "it's being turned over" — enough to stop a second tap.
+			.on('broadcast', { event: 'reveal' }, ({ payload }) => this.#hearReveal(payload))
 			// `self` is off, so anything arriving here came from the other seat.
 			.on('broadcast', { event: 'emote' }, ({ payload }) => {
 				const emote = emoteById(payload?.emote);
@@ -289,7 +313,12 @@ class RemoteRoom {
 		const roomId = this.#roomId;
 		if (!roomId) return;
 		this.#lastRejection = null;
+		if (action.type === 'reveal' && this.revealingBy !== null) {
+			// Already on its way over, theirs or ours: that reveal brings the card.
+			return;
+		}
 		const mine = this.#guess(action);
+		const revealing = action.type === 'reveal' ? this.#startReveal() : null;
 
 		try {
 			/*
@@ -320,7 +349,10 @@ class RemoteRoom {
 				// of a race sees reality rather than a bid that never landed.
 				const state = error.payload.state as PublicGameState | null | undefined;
 				const version = error.payload.version as number | null | undefined;
+				const before = this.#state;
 				if (state && typeof version === 'number') this.#apply(state, version);
+				// Beaten to a reveal or a "next" by the other tap: same result, no news.
+				if (error.code === 'stale' && alreadyDone(action, before, this.#state)) return;
 
 				this.#lastRejection =
 					error.code === 'stale'
@@ -334,6 +366,7 @@ class RemoteRoom {
 		} finally {
 			// Whatever came back (or didn't) is now the truth on screen.
 			if (mine && this.#mine === mine) this.#mine = null;
+			if (revealing && this.#revealing === revealing) this.#dropRevealing();
 		}
 	}
 
@@ -382,6 +415,7 @@ class RemoteRoom {
 		clearTimeout(this.#idleTimer);
 		this.#unadvertise();
 		this.#dropTheirs();
+		this.#dropRevealing();
 		if (this.#channel) {
 			void supabase().removeChannel(this.#channel);
 			this.#channel = null;
@@ -476,6 +510,48 @@ class RemoteRoom {
 		});
 	}
 
+	/** Marks our own reveal in flight and tells the opponent it's coming. */
+	#startReveal(): { by: PlayerId; base: number } | null {
+		const seat = this.#seat;
+		if (seat === null || this.#state?.phase !== 'reveal') return null;
+		const revealing = { by: seat, base: this.#version };
+		this.#setRevealing(revealing);
+		void this.#channel?.send({
+			type: 'broadcast',
+			event: 'reveal',
+			payload: { version: revealing.base }
+		});
+		return revealing;
+	}
+
+	#hearReveal(payload: unknown): void {
+		const base = readRevealAnnouncement(payload);
+		const seat = this.#seat;
+		if (base === null || seat === null) return;
+		if (base !== this.#version || this.#state?.phase !== 'reveal') return;
+		this.#setRevealing({ by: other(seat), base });
+	}
+
+	/** Same lapse as an announced bid: ask the server, then let the card go back down. */
+	#setRevealing(revealing: { by: PlayerId; base: number }): void {
+		this.#dropRevealing();
+		this.#revealing = revealing;
+		this.#revealTimer = setTimeout(() => {
+			if (this.#revealing !== revealing) return;
+			void this.#pull()
+				.catch(() => {})
+				.finally(() => {
+					if (this.#revealing === revealing) this.#dropRevealing();
+				});
+		}, ANNOUNCED_TTL_MS);
+	}
+
+	#dropRevealing(): void {
+		if (this.#revealTimer) clearTimeout(this.#revealTimer);
+		this.#revealTimer = null;
+		this.#revealing = null;
+	}
+
 	#hear(payload: unknown): void {
 		const bid = readAnnouncement(payload);
 		const state = this.#state;
@@ -494,7 +570,7 @@ class RemoteRoom {
 				.finally(() => {
 					if (this.#theirs === bid) this.#dropTheirs();
 				});
-		}, ANNOUNCED_BID_TTL_MS);
+		}, ANNOUNCED_TTL_MS);
 	}
 
 	/** Clears the opponent's announced bid and lets any move waiting on it go. */
@@ -551,6 +627,7 @@ class RemoteRoom {
 		// The server has moved past the state their bid was placed on: it either
 		// landed (and is in `state`) or lost a race. Either way it's no guess now.
 		if (this.#theirs && version > this.#theirs.base) this.#dropTheirs();
+		if (this.#revealing && version > this.#revealing.base) this.#dropRevealing();
 		if (this.#status === 'connecting' || this.#status === 'waiting') {
 			this.#status = this.bothSeated ? 'live' : 'waiting';
 		}

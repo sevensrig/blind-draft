@@ -32,6 +32,36 @@ describe('BidScreen', () => {
 		expect(game.state.phase).toBe('resolve');
 	});
 
+	/*
+	 * Online, the server deals the face, so a reveal takes a round trip. The card
+	 * starts turning the moment either player taps, and says who's doing it.
+	 */
+	it('shows the card turning while someone else reveals it', async () => {
+		const view = startedGame({ names: ['Sri', 'Alex'] });
+		render(BidScreen, { view, seat: 0, dispatch: () => {}, revealing: 1 });
+
+		const card = page.getByRole('button', { name: /Alex is revealing/ });
+		await expect.element(card).toBeVisible();
+		await expect.element(card).toHaveAttribute('aria-busy', 'true');
+		await expect.element(card).toHaveClass(/item--turning/);
+	});
+
+	it('says so when it is your own reveal on its way', async () => {
+		const view = startedGame({ names: ['Sri', 'Alex'] });
+		render(BidScreen, { view, seat: 0, dispatch: () => {}, revealing: 0 });
+
+		await expect.element(page.getByRole('button', { name: /^\?\s*Revealing…/ })).toBeVisible();
+	});
+
+	it('sits still until someone taps', async () => {
+		const view = startedGame({ names: ['Sri', 'Alex'] });
+		render(BidScreen, { view, seat: 0, dispatch: () => {} });
+
+		const card = page.getByRole('button', { name: /Tap to reveal/ });
+		await expect.element(card).toHaveAttribute('aria-busy', 'false');
+		await expect.element(card).not.toHaveClass(/item--turning/);
+	});
+
 	it('records an opening bid and shows who leads', async () => {
 		game.replace(contested({ names: ['Sri', 'Alex'] }));
 		render(BidScreen);
