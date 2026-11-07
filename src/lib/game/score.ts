@@ -96,6 +96,12 @@ function basePoints(item: Item, variantId: string): { base: number; stat: StatLi
 	return { base: Math.round(10 + 90 * rank), stat };
 }
 
+/** A card's base points, 10–100, before any steal: what the scoreboard will pay out for it. */
+export function itemPoints(item: Item, config: GameState['config']): number {
+	if (config.customItems) return TIER_POINTS[item.tier];
+	return basePoints(item, config.variantId).base;
+}
+
 /** Custom games have no ratings to score against, so they get no scoreboard. */
 export function scoreGame(state: GameState): Scoreboard | null {
 	if (state.config.customItems) return null;
