@@ -37,6 +37,8 @@ const TYPING_FALLBACK_MS = 6000;
  * Long enough for a cold function start; a dropped or forged one is gone after this.
  */
 const ANNOUNCED_TTL_MS = 4000;
+/** How long one tap holds off the next. Past the TTL, so a raise still waiting on a bid counts. */
+const BUSY_MS = ANNOUNCED_TTL_MS + 1000;
 
 /**
  * The remote counterpart to `$lib/game/store.svelte.ts`: same actions, posted to
@@ -73,6 +75,16 @@ class RemoteRoom {
 	#revealTimer: ReturnType<typeof setTimeout> | null = null;
 	/** Moves waiting for the opponent's announced bid to land or lapse. */
 	#waiting: (() => void)[] = [];
+	/**
+	 * Our own move on its way to the server. A second tap sent meanwhile carries
+	 * the same version, loses to the first, and comes back `stale` — which reads
+	 * as the opponent getting there first when nobody else did anything.
+	 *
+	 * A deadline, not a flag: a request that never answers mustn't freeze the
+	 * board, so past it the next tap goes out as before.
+	 */
+	#busyUntil = 0;
+	#busyKey = 0;
 	#status = $state<ConnectionStatus>('idle');
 	/* Room metadata, not game state — the server never puts it in game_public. */
 	#code = $state<string | null>(null);
@@ -317,6 +329,11 @@ class RemoteRoom {
 			// Already on its way over, theirs or ours: that reveal brings the card.
 			return;
 		}
+		// A double tap, or a tap while a "sold" is still being answered: the first
+		// one is already doing it.
+		if (Date.now() < this.#busyUntil) return;
+		const busy = ++this.#busyKey;
+		this.#busyUntil = Date.now() + BUSY_MS;
 		const mine = this.#guess(action);
 		const revealing = action.type === 'reveal' ? this.#startReveal() : null;
 
@@ -364,6 +381,7 @@ class RemoteRoom {
 			}
 			this.#lastRejection = 'Something went wrong. Try that again.';
 		} finally {
+			if (this.#busyKey === busy) this.#busyUntil = 0;
 			// Whatever came back (or didn't) is now the truth on screen.
 			if (mine && this.#mine === mine) this.#mine = null;
 			if (revealing && this.#revealing === revealing) this.#dropRevealing();
@@ -450,6 +468,7 @@ class RemoteRoom {
 		this.#state = null;
 		this.#version = 0;
 		this.#mine = null;
+		this.#busyUntil = 0;
 		this.#abandonedBy = null;
 		this.#rematch = null;
 		this.#leftBy = null;

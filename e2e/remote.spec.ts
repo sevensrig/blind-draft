@@ -156,11 +156,31 @@ test('two devices play a remote round through the server', async ({ browser }) =
 
 	const sell = host.getByRole('button', { name: /^Sell to Alex/ });
 	await expect(sell).toBeEnabled();
+
+	/*
+	 * Tapped twice, slowly answered. "Sold" has nothing to draw ahead of the
+	 * server, so the button stays live meanwhile; a second tap used to go out on
+	 * the same version, lose to the first, and blame the opponent, who did nothing.
+	 */
+	await host.route('**/functions/v1/room-action', async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 800));
+		await route.continue();
+	});
+	const sold: string[] = [];
+	host.on('request', (req) => {
+		if (req.url().includes('/room-action')) sold.push(req.postData() ?? '');
+	});
+	await sell.click();
 	await sell.click();
 
 	// The item lands with the bidder, not with whoever tapped the button.
 	await expect(host.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
 	await expect(guest.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
+	// Once, and quietly: long enough for a second answer to have come back.
+	await host.waitForTimeout(1_000);
+	expect(sold).toHaveLength(1);
+	await expect(host.getByText(/got there first/)).toHaveCount(0);
+	await host.unrouteAll({ behavior: 'wait' });
 });
 
 /**
@@ -172,7 +192,11 @@ function roomChannelJoined(page: Page): Promise<void> {
 		page.on('websocket', (socket) => {
 			socket.on('framereceived', ({ payload }) => {
 				const frame = String(payload);
-				if (frame.includes('realtime:room:') && frame.includes('phx_reply') && frame.includes('"ok"')) {
+				if (
+					frame.includes('realtime:room:') &&
+					frame.includes('phx_reply') &&
+					frame.includes('"ok"')
+				) {
 					resolve();
 				}
 			});
@@ -259,10 +283,13 @@ test('a reveal on its way stops the other player tapping into a refusal', async 
 test('two reveals at once both just show the card', async ({ browser }) => {
 	const { host, guest } = await seatedRoom(browser);
 
-	await Promise.all([
-		host.getByRole('button', { name: /Tap to reveal/ }).click(),
-		guest.getByRole('button', { name: /Tap to reveal/ }).click()
-	]);
+	// The card itself, not its label: whichever tap goes first can relabel and
+	// start turning the other card before its click lands. Forced for the same
+	// reason — a turning card never holds still for Playwright.
+	const back = (page: Page) => page.locator('.item--back');
+	await expect(back(host)).toBeVisible();
+	await expect(back(guest)).toBeVisible();
+	await Promise.all([back(host).click({ force: true }), back(guest).click({ force: true })]);
 
 	await expect(host.locator('.item__name')).toBeVisible({ timeout: 15_000 });
 	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
