@@ -19,6 +19,15 @@ const POSTHOG_HOST = env.PUBLIC_POSTHOG_HOST || 'https://us.i.posthog.com';
 
 export const analyticsEnabled = !!POSTHOG_KEY;
 
+/**
+ * The commit this bundle was built from. On every event, so any insight can be
+ * broken down by release — which is what makes a change attributable to the
+ * deploy that shipped it, rather than to whatever else happened that week.
+ * Set here instead of through `register`, which stores super properties in the
+ * persistence this build turns off.
+ */
+const APP_VERSION = __APP_VERSION__;
+
 // Lazy so a deploy without a key ships none of the SDK.
 let client: Promise<PostHog | null> | null = null;
 
@@ -55,6 +64,9 @@ export function initAnalytics(): void {
 				before_send: (event) => {
 					if (!event) return event;
 					event.properties = scrubDeep(event.properties, origin) as typeof event.properties;
+					// After the scrub: a short SHA has nothing to redact, and this way it
+					// can't be dropped by it.
+					event.properties = { ...event.properties, app_version: APP_VERSION };
 					if (event.$set) event.$set = scrubDeep(event.$set, origin) as typeof event.$set;
 					if (event.$set_once) {
 						event.$set_once = scrubDeep(event.$set_once, origin) as typeof event.$set_once;
