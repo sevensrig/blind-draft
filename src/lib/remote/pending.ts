@@ -1,5 +1,5 @@
 import { canBid } from '$lib/game/engine';
-import type { PlayerId } from '$lib/game/types';
+import type { Action, PlayerId } from '$lib/game/types';
 import { toGameState } from './adapt';
 import type { PublicGameState } from './types';
 
@@ -44,4 +44,31 @@ export function believable(
 /** Whether the server's state shows this bid standing, i.e. it really landed. */
 export function landed(state: PublicGameState | null, bid: PendingBid): boolean {
 	return state?.bid?.holder === bid.player && state.bid.amount === bid.amount;
+}
+
+/** Reads a reveal announcement: just the version the card was turned over on. */
+export function readRevealAnnouncement(payload: unknown): number | null {
+	if (!payload || typeof payload !== 'object') return null;
+	const { version } = payload as Record<string, unknown>;
+	return typeof version === 'number' && Number.isInteger(version) ? version : null;
+}
+
+/**
+ * Whether a move that lost a race wanted what already happened. Either player
+ * may turn the card over or move on, so a second tap that arrives late isn't a
+ * refusal worth showing — the first one did the job.
+ */
+export function alreadyDone(
+	action: Action,
+	before: PublicGameState | null,
+	after: PublicGameState | null
+): boolean {
+	if (!before || !after) return false;
+	if (action.type === 'reveal') {
+		return after.itemNumber === before.itemNumber && after.phase !== 'reveal';
+	}
+	if (action.type === 'next') {
+		return after.itemNumber > before.itemNumber || after.phase === 'results';
+	}
+	return false;
 }

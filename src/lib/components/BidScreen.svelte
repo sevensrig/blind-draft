@@ -41,9 +41,22 @@
 		emotes?: Partial<Record<PlayerId, { icon: IconName; label: string }>>;
 		/** Online only: the emote buttons, beside Quit so they never sit over the controls. */
 		toolbar?: Snippet;
+		/**
+		 * Online only: the seat turning the card over, while the server deals the
+		 * face. The card starts its flip now, so the wait reads as the animation.
+		 */
+		revealing?: PlayerId | null;
 	}
 
-	let { view, dispatch, seat = null, onQuit, emotes = {}, toolbar }: Props = $props();
+	let {
+		view,
+		dispatch,
+		seat = null,
+		onQuit,
+		emotes = {},
+		toolbar,
+		revealing = null
+	}: Props = $props();
 
 	const s = $derived(view ?? game.state);
 	// Wrapped, not passed by reference: `game.dispatch` loses its receiver when
@@ -55,6 +68,13 @@
 	const item = $derived(currentItem(s));
 	const mode = $derived(itemMode(s));
 	const facedown = $derived(s.phase === 'reveal');
+	const revealCue = $derived(
+		revealing === null
+			? 'Tap to reveal'
+			: revealing === seat
+				? 'Revealing…'
+				: `${s.players[revealing].name} is revealing…`
+	);
 	const award = $derived(s.phase === 'award' ? s.lastAward : null);
 	const lastItem = $derived(s.index + 1 >= s.deck.length);
 
@@ -169,9 +189,16 @@
 	</div>
 
 	{#if facedown}
-		<button class="item item--back" data-tour="card" type="button" onclick={() => send({ type: 'reveal' })}>
+		<button
+			class="item item--back"
+			class:item--turning={revealing !== null}
+			data-tour="card"
+			type="button"
+			aria-busy={revealing !== null}
+			onclick={() => send({ type: 'reveal' })}
+		>
 			<span class="back__mark">?</span>
-			<span class="back__cue">Tap to reveal</span>
+			<span class="back__cue">{revealCue}</span>
 		</button>
 	{:else if item}
 		<div class="item item--face" data-tour="card" class:item--won={!!award}>
@@ -473,10 +500,19 @@
 		text-transform: uppercase;
 	}
 
+	/*
+	 * Picked up and starting to turn while the server deals the face. It never
+	 * gets past the edge on its own: the face arriving is what finishes the flip.
+	 */
+	.item--turning {
+		animation: card-turning 420ms ease-in-out infinite alternate;
+	}
+
+	/* Swings in from edge-on, so it reads as the back's turn carrying through. */
 	.item--face {
 		background: var(--white);
 		transform: rotate(1deg);
-		animation: slam-card 90ms linear;
+		animation: card-flip 240ms cubic-bezier(0.2, 0.8, 0.3, 1.15);
 	}
 
 	/* Steps back so the sold stamp owns the screen, without leaving a hole. */
@@ -682,9 +718,20 @@
 	}
 
 	/* Each keeps its own tilt, so the animation can't drop the rotation. */
-	@keyframes slam-card {
+	@keyframes card-turning {
+		/* A tall card's near edge grows as it turns: a long perspective and a small
+		   angle keep it clear of the player cards above. */
 		from {
-			transform: rotate(1deg) scale(1.07);
+			transform: rotate(-1deg) translate(-2px, -2px) perspective(140rem) rotateY(5deg);
+		}
+		to {
+			transform: rotate(-1.5deg) translate(-3px, -4px) perspective(140rem) rotateY(16deg);
+		}
+	}
+
+	@keyframes card-flip {
+		from {
+			transform: rotate(1deg) perspective(60rem) rotateY(-90deg) scale(1.07);
 		}
 	}
 

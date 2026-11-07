@@ -156,15 +156,56 @@ test('two devices play a remote round through the server', async ({ browser }) =
 
 	const sell = host.getByRole('button', { name: /^Sell to Alex/ });
 	await expect(sell).toBeEnabled();
+
+	/*
+	 * Tapped twice, slowly answered. "Sold" has nothing to draw ahead of the
+	 * server, so the button stays live meanwhile; a second tap used to go out on
+	 * the same version, lose to the first, and blame the opponent, who did nothing.
+	 */
+	await host.route('**/functions/v1/room-action', async (route) => {
+		await new Promise((resolve) => setTimeout(resolve, 800));
+		await route.continue();
+	});
+	const sold: string[] = [];
+	host.on('request', (req) => {
+		if (req.url().includes('/room-action')) sold.push(req.postData() ?? '');
+	});
+	await sell.click();
 	await sell.click();
 
 	// The item lands with the bidder, not with whoever tapped the button.
 	await expect(host.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
 	await expect(guest.locator('.stamp__to')).toContainText(/alex/i, { timeout: 15_000 });
+	// Once, and quietly: long enough for a second answer to have come back.
+	await host.waitForTimeout(1_000);
+	expect(sold).toHaveLength(1);
+	await expect(host.getByText(/got there first/)).toHaveCount(0);
+	await host.unrouteAll({ behavior: 'wait' });
 });
 
-/** Opens a room, seats a guest by code and turns the first card over. */
-async function liveAuction(browser: Browser): Promise<{ host: Page; guest: Page }> {
+/**
+ * Resolves once the page's room channel has joined. A device shows the board as
+ * soon as its first fetch lands, a beat before it can hear announcements.
+ */
+function roomChannelJoined(page: Page): Promise<void> {
+	return new Promise((resolve) => {
+		page.on('websocket', (socket) => {
+			socket.on('framereceived', ({ payload }) => {
+				const frame = String(payload);
+				if (
+					frame.includes('realtime:room:') &&
+					frame.includes('phx_reply') &&
+					frame.includes('"ok"')
+				) {
+					resolve();
+				}
+			});
+		});
+	});
+}
+
+/** Opens a room and seats a guest by code, leaving the first card face down. */
+async function seatedRoom(browser: Browser): Promise<{ host: Page; guest: Page }> {
 	const host = await device(browser, 'Sri');
 	const guest = await device(browser, 'Alex');
 
@@ -173,15 +214,90 @@ async function liveAuction(browser: Browser): Promise<{ host: Page; guest: Page 
 	await host.waitForURL(/\/online\/room\?id=/);
 	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
 
+	const listening = roomChannelJoined(guest);
 	await guest.locator('.code').fill(code);
 	await guest.getByRole('button', { name: 'Join', exact: true }).click();
 	await guest.waitForURL(/\/online\/room\?id=/);
 
-	await host.getByRole('button', { name: /Tap to reveal/ }).click({ timeout: 15_000 });
+	await expect(host.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+	await expect(guest.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
+	await listening;
+	return { host, guest };
+}
+
+/** A seated room with the first card turned over, ready for bids. */
+async function liveAuction(browser: Browser): Promise<{ host: Page; guest: Page }> {
+	const { host, guest } = await seatedRoom(browser);
+	await host.getByRole('button', { name: /Tap to reveal/ }).click();
 	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
 	await expect(host.locator('.duel__btn').first()).toBeEnabled();
 	return { host, guest };
 }
+
+/*
+ * A reveal is announced like a bid, but it can't carry the card — only the server
+ * knows it. What it carries is "it's being turned over", which starts the flip on
+ * the other screen and turns a second tap into a no-op instead of a `stale`.
+ */
+test('a reveal on its way stops the other player tapping into a refusal', async ({ browser }) => {
+	const { host, guest } = await seatedRoom(browser);
+
+	let release: () => void = () => {};
+	const held = new Promise<void>((resolve) => (release = resolve));
+	await host.route('**/functions/v1/room-action', async (route) => {
+		await held;
+		await route.continue();
+	});
+	const guestActions: string[] = [];
+	guest.on('request', (req) => {
+		if (req.url().includes('/room-action')) guestActions.push(req.postData() ?? '');
+	});
+
+	await host.getByRole('button', { name: /Tap to reveal/ }).click();
+	await expect(host.getByRole('button', { name: /Revealing…/ })).toBeVisible();
+	// Still held: only the announcement can have told the guest.
+	const turning = guest.getByRole('button', { name: /Sri is revealing…/ });
+	await expect(turning).toBeVisible({ timeout: 3_000 });
+
+	// The guest's tap goes nowhere: Sri's reveal is already bringing the card.
+	// Forced: the card is mid-turn, and Playwright would wait for it to hold still.
+	await turning.click({ force: true });
+	await guest.waitForTimeout(500);
+	expect(guestActions).toEqual([]);
+
+	const confirmed = host.waitForResponse((res) => res.url().includes('/room-action'));
+	release();
+	await host.unrouteAll({ behavior: 'wait' });
+	await confirmed;
+
+	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
+	await expect(host.locator('.item__name')).toBeVisible();
+	await expect(guest.getByText(/got there first/)).toHaveCount(0);
+});
+
+/*
+ * Taps close enough together that neither hears the other's announcement still
+ * race on the server, and one loses as `stale`. It lost to the same reveal it
+ * wanted, so nobody should be told off for it.
+ */
+test('two reveals at once both just show the card', async ({ browser }) => {
+	const { host, guest } = await seatedRoom(browser);
+
+	// The card itself, not its label: whichever tap goes first can relabel and
+	// start turning the other card before its click lands. Forced for the same
+	// reason — a turning card never holds still for Playwright.
+	const back = (page: Page) => page.locator('.item--back');
+	await expect(back(host)).toBeVisible();
+	await expect(back(guest)).toBeVisible();
+	await Promise.all([back(host).click({ force: true }), back(guest).click({ force: true })]);
+
+	await expect(host.locator('.item__name')).toBeVisible({ timeout: 15_000 });
+	await expect(guest.locator('.item__name')).toBeVisible({ timeout: 15_000 });
+	// Long enough for a losing request to have come back and said something.
+	await host.waitForTimeout(1_500);
+	await expect(host.getByText(/got there first/)).toHaveCount(0);
+	await expect(guest.getByText(/got there first/)).toHaveCount(0);
+});
 
 /*
  * The bidder's browser announces the bid on the room channel as it sends it, so
@@ -246,7 +362,9 @@ test('a raise straight over an announced bid still lands', async ({ browser }) =
 	await host.locator('.duel__btn').first().click();
 	await expect(guest.locator('.standing__who')).toContainText(/sri/i, { timeout: 3_000 });
 
-	// Alex raises over the bid the server hasn't seen yet.
+	// Alex raises over the bid the server hasn't seen yet. The raise is held back
+	// until Sri's bid lands, so its answer only comes after the release.
+	const raised = guest.waitForResponse((res) => res.url().includes('/room-action'));
 	await guest.locator('.duel__btn').nth(1).click();
 	await expect(guest.locator('.standing__who')).toContainText(/alex/i);
 
@@ -255,6 +373,9 @@ test('a raise straight over an announced bid still lands', async ({ browser }) =
 	await host.unrouteAll({ behavior: 'wait' });
 
 	await expect(host.locator('.standing__who')).toContainText(/alex/i, { timeout: 15_000 });
+	// The host hears the raise before the server has it; the reload below would
+	// cancel a raise still in flight.
+	expect((await raised).ok()).toBe(true);
 	await expect(guest.getByText(/got there first|didn't go through/)).toHaveCount(0);
 	// And it's the server's word, not a leftover guess.
 	await guest.reload();
