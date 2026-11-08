@@ -125,7 +125,7 @@ export const NFL_ALL_TIME: ItemSeed[] = [
 	{ name: 'Dez Bryant', tier: 'mid', position: 'WR' },
 	{ name: 'Reggie Wayne', tier: 'mid', position: 'WR' },
 	{ name: 'Torry Holt', tier: 'mid', position: 'WR' },
-	{ name: 'Ezekiel Elliott', tier: 'mid', position: 'RB' },
+	{ name: 'Eric Dickerson', tier: 'good', position: 'RB' },
 	{ name: 'Frank Gore', tier: 'mid', position: 'RB' },
 	{ name: "Le'Veon Bell", tier: 'mid', position: 'RB' },
 	{ name: 'Antonio Gates', tier: 'mid', position: 'TE' },

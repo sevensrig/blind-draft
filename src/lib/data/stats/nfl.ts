@@ -666,14 +666,14 @@ export const NFL_ALL_TIME_STATS: StatTable = {
 		recYds: 13382,
 		recTd: 74
 	},
-	'Ezekiel Elliott': {
+	'Eric Dickerson': {
 		kind: 'nfl-skill',
-		g: 135,
-		rushYds: 9130,
-		rushTd: 74,
-		rec: 368,
-		recYds: 2718,
-		recTd: 14
+		g: 146,
+		rushYds: 13259,
+		rushTd: 90,
+		rec: 281,
+		recYds: 2137,
+		recTd: 6
 	},
 	'Frank Gore': {
 		kind: 'nfl-skill',
@@ -826,7 +826,8 @@ export const NFL_ALL_TIME_CBS: Record<string, number> = {
 	'Travis Kelce': 48,
 	'Adrian Peterson': 49,
 	'Calvin Johnson': 63,
-	'Marvin Harrison': 65
+	'Marvin Harrison': 65,
+	'Eric Dickerson': 38
 };
 
 /**
@@ -858,4 +859,11 @@ export const NFL_CURRENT_PLACES: Record<string, number> = {
 	'Baker Mayfield': 45,
 	'Luther Burden': 50,
 	'Cooper Kupp': 53
+};
+
+/** Spots set by eye, applied after the blend, like `NFL_CURRENT_PLACES`. */
+export const NFL_ALL_TIME_PLACES: Record<string, number> = {
+	'Jim Brown': 2,
+	'Patrick Mahomes': 10,
+	'Cam Newton': 46
 };

@@ -131,17 +131,20 @@ describe('scoreGame', () => {
 		for (const pick of board.players.flatMap((p) => p.picks)) expect(pick.base).toBeLessThan(62);
 	});
 
-	it.each(['nba', 'nfl'])('puts hand-placed %s players at their spot in the pool', (sport) => {
-		const variantId = `${sport}-current`;
-		const pool = getCategory(sport)!.variants.find((v) => v.id === variantId)!.items;
-		const config = { categoryId: sport, variantId };
-		const bases = pool
-			.map((item) => scoreGame(finished([[item, 1]], [['mid', 1]], config))!.players[0].picks[0])
-			.map((pick) => [pick.entry.item.name, pick.base] as const)
-			.sort((a, b) => b[1] - a[1]);
-		for (const [name, at] of Object.entries(placeTable(variantId)!))
-			expect(bases.find(([n]) => n === name)![1]).toBe(bases[at - 1][1]);
-	});
+	it.each(['nba-current', 'nfl-current', 'nfl-all-time'])(
+		'puts hand-placed %s players at their spot',
+		(variantId) => {
+			const sport = variantId.split('-')[0];
+			const pool = getCategory(sport)!.variants.find((v) => v.id === variantId)!.items;
+			const config = { categoryId: sport, variantId };
+			const bases = pool
+				.map((item) => scoreGame(finished([[item, 1]], [['mid', 1]], config))!.players[0].picks[0])
+				.map((pick) => [pick.entry.item.name, pick.base] as const)
+				.sort((a, b) => b[1] - a[1]);
+			for (const [name, at] of Object.entries(placeTable(variantId)!))
+				expect(bases.find(([n]) => n === name)![1]).toBe(bases[at - 1][1]);
+		}
+	);
 
 	it('falls back to the tier when a sports item has no stat line', () => {
 		const ghost: Item = { id: 'x', name: 'Not A Player', tier: 'good' };

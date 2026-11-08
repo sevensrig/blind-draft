@@ -45,7 +45,6 @@ export const NBA_CURRENT_STATS: StatTable = {
 	'Deandre Ayton': { kind: 'nba', pts: 12.5, reb: 8.0, ast: 0.8 },
 	'Jordan Poole': { kind: 'nba', pts: 13.4, reb: 2.0, ast: 3.1 },
 	'RJ Barrett': { kind: 'nba', pts: 19.3, reb: 5.3, ast: 3.3 },
-	'Jonathan Kuminga': { kind: 'nba', pts: 12.2, reb: 5.6, ast: 2.3 },
 	'Paolo Banchero': { kind: 'nba', pts: 22.2, reb: 8.4, ast: 5.2 },
 	'Tyler Herro': { kind: 'nba', pts: 20.5, reb: 4.8, ast: 4.1 },
 	'Klay Thompson': { kind: 'nba', pts: 11.7, reb: 2.1, ast: 1.4 },
@@ -54,14 +53,17 @@ export const NBA_CURRENT_STATS: StatTable = {
 	'Julius Randle': { kind: 'nba', pts: 21.1, reb: 6.7, ast: 5.0 },
 	'Draymond Green': { kind: 'nba', pts: 8.4, reb: 5.5, ast: 5.5 },
 	'Ben Simmons': { kind: 'nba', pts: 5.0, reb: 4.7, ast: 5.6 }, // 2024-25
-	'James Wiseman': { kind: 'nba', pts: 7.1, reb: 5.3, ast: 0.9 }, // 2023-24
 	'Luke Kennard': { kind: 'nba', pts: 8.4, reb: 2.3, ast: 2.2 },
 	'Max Strus': { kind: 'nba', pts: 11.2, reb: 5.4, ast: 2.0 },
-	'Wendell Carter Jr.': { kind: 'nba', pts: 11.8, reb: 7.4, ast: 2.0 },
 	'Russell Westbrook': { kind: 'nba', pts: 15.2, reb: 5.4, ast: 6.7 },
 	'Kyle Kuzma': { kind: 'nba', pts: 13.0, reb: 4.5, ast: 2.7 },
 	'Duncan Robinson': { kind: 'nba', pts: 12.2, reb: 2.7, ast: 2.1 },
-	'Andrew Wiggins': { kind: 'nba', pts: 15.4, reb: 4.8, ast: 2.7 }
+	'Andrew Wiggins': { kind: 'nba', pts: 15.4, reb: 4.8, ast: 2.7 },
+	'Rudy Gobert': { kind: 'nba', pts: 10.9, reb: 11.5, ast: 1.7 },
+	'Naz Reid': { kind: 'nba', pts: 13.6, reb: 6.2, ast: 2.2 },
+	'Dyson Daniels': { kind: 'nba', pts: 11.9, reb: 6.8, ast: 5.9 },
+	'Donovan Clingan': { kind: 'nba', pts: 12.1, reb: 11.6, ast: 2.1 },
+	'Isaiah Hartenstein': { kind: 'nba', pts: 9.2, reb: 9.4, ast: 3.5 }
 };
 
 /** Career regular season, per game. */
@@ -166,7 +168,12 @@ export const NBA_CURRENT_2K: Record<string, number> = {
 	'Tyler Herro': 85,
 	'Austin Reaves': 88,
 	'Amen Thompson': 86,
-	'Julius Randle': 83
+	'Julius Randle': 83,
+	'Rudy Gobert': 84,
+	'Naz Reid': 82,
+	'Dyson Daniels': 81,
+	'Donovan Clingan': 82,
+	'Isaiah Hartenstein': 82
 };
 
 /** Bleacher Report's top 100 NBA players of all time (Jul 2025). Lower is better; absent = unranked. */
@@ -209,11 +216,14 @@ export const NBA_ALL_TIME_BR: Record<string, number> = {
 
 /** Hand-placed spots (1 = best) in NBA Current, applied after the blend; see NFL_CURRENT_PLACES. */
 export const NBA_CURRENT_PLACES: Record<string, number> = {
-	'Kevin Durant': 9,
-	'Stephen Curry': 11,
-	'LeBron James': 12,
+	'Jayson Tatum': 10,
+	'Tyrese Maxey': 13,
 	'Donovan Mitchell': 14,
 	'Jaylen Brown': 15,
 	'Kawhi Leonard': 16,
-	'Karl-Anthony Towns': 18
+	'Devin Booker': 17,
+	'Karl-Anthony Towns': 18,
+	'Tyrese Haliburton': 22,
+	'Rudy Gobert': 45,
+	'Derrick White': 46
 };
