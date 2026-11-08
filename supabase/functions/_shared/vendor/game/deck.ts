@@ -45,6 +45,21 @@ export function maxSlotsFor(poolSize: number): number {
 	return Math.floor(poolSize / 2);
 }
 
+/** One of `options`, chosen with probability proportional to `weight`. */
+function weightedPick<T>(
+	options: readonly T[],
+	weight: (option: T) => number,
+	rng: Rng
+): T | undefined {
+	const total = options.reduce((sum, option) => sum + weight(option), 0);
+	let roll = rng() * total;
+	for (const option of options) {
+		roll -= weight(option);
+		if (roll < 0) return option;
+	}
+	return options.at(-1);
+}
+
 const isPositional = (roster: SlotSpec[]) => roster.some((slot) => slot.drafts !== null);
 
 function groupByTier(pool: readonly Item[]): Record<Tier, Item[]> {
@@ -158,7 +173,7 @@ function countByPosition(pool: readonly Item[]): Map<Position, number> {
 /**
  * Which positions the deck will contain: one item per slot, per player. Shapes
  * the deck only — players can still slot anyone anywhere. A flex slot picks
- * whichever position the pool can best afford, so a thin one isn't over-committed.
+ * a position weighted by how many the pool can spare, so a thin one isn't over-committed.
  */
 function positionDemand(roster: SlotSpec[], pool: readonly Item[], rng: Rng): Position[] {
 	const supply = countByPosition(pool);
@@ -175,10 +190,10 @@ function positionDemand(roster: SlotSpec[], pool: readonly Item[], rng: Rng): Po
 	}
 	for (let player = 0; player < 2; player++) {
 		for (const slot of flexible) {
-			const options = slot.drafts!;
-			const best = Math.max(...options.map(headroom));
-			const roomiest = options.filter((position) => headroom(position) === best);
-			claim(roomiest[Math.floor(rng() * roomiest.length)]);
+			// Weighted by headroom, so a thin position still turns up sometimes.
+			const options = slot.drafts!.filter((position) => headroom(position) > 0);
+			const position = weightedPick(options, headroom, rng) ?? slot.drafts![0];
+			claim(position);
 		}
 	}
 
@@ -214,18 +229,17 @@ function buildPositionalDeck(
 		const candidates = pool.filter((item) => item.position === position && !used.has(item.id));
 		if (candidates.length === 0) throw new Error(`Ran out of ${position} building the deck`);
 
-		// Spend the biggest outstanding tier quota first; that keeps mid dominant.
-		const byDemand = BACKFILL_ORDER.filter((tier) => quota[tier] > 0).sort(
-			(a, b) => quota[b] - quota[a]
-		);
+		// A tier drawn by its outstanding quota times its players here, so the curve
+		// holds but no position is stuck with the same tier, or player, every game.
+		// Picking the biggest quota first instead dealt a near-fixed deck.
+		const inPosition = (tier: Tier) => candidates.filter((item) => item.tier === tier).length;
+		const offered = BACKFILL_ORDER.filter((tier) => quota[tier] > 0 && inPosition(tier) > 0);
+		const tier = weightedPick(offered, (t) => quota[t] * inPosition(t), rng);
 
 		let chosen: Item | undefined;
-		for (const tier of byDemand) {
+		if (tier) {
 			const inTier = candidates.filter((item) => item.tier === tier);
-			if (inTier.length > 0) {
-				chosen = inTier[Math.floor(rng() * inTier.length)];
-				break;
-			}
+			chosen = inTier[Math.floor(rng() * inTier.length)];
 		}
 		if (!chosen) {
 			// No candidate in any wanted tier, so the curve bends to the position — but
