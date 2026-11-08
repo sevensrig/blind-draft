@@ -34,7 +34,7 @@ describe('stat tables', () => {
 		expect(nfl['Josh Allen']).toBeGreaterThan(nfl['Brock Purdy']);
 	});
 
-	it.each(['nba-current', 'nfl-current'])(
+	it.each(['nba-current', 'nfl-current', 'nfl-all-time'])(
 		'%s only hand-places pool players, one per spot',
 		(id) => {
 			const pool = new Set(sports.find((v) => v.id === id)!.items.map((i) => i.name));

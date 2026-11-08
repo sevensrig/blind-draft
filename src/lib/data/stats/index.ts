@@ -8,6 +8,7 @@ import {
 } from './nba';
 import {
 	NFL_ALL_TIME_CBS,
+	NFL_ALL_TIME_PLACES,
 	NFL_ALL_TIME_STATS,
 	NFL_CURRENT_PLACES,
 	NFL_CURRENT_STATS,
@@ -51,7 +52,8 @@ export function ratingTable(variantId: string): Record<string, number> | null {
 
 const PLACES: Record<string, Record<string, number>> = {
 	'nba-current': NBA_CURRENT_PLACES,
-	'nfl-current': NFL_CURRENT_PLACES
+	'nfl-current': NFL_CURRENT_PLACES,
+	'nfl-all-time': NFL_ALL_TIME_PLACES
 };
 
 export function placeTable(variantId: string): Record<string, number> | null {

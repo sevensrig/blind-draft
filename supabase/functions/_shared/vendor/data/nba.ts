@@ -49,7 +49,6 @@ export const NBA_CURRENT: ItemSeed[] = [
 	{ name: 'Deandre Ayton', tier: 'mid', position: 'C' },
 	{ name: 'Jordan Poole', tier: 'mid', position: 'SG' },
 	{ name: 'RJ Barrett', tier: 'mid', position: 'SG' },
-	{ name: 'Jonathan Kuminga', tier: 'mid', position: 'SF' },
 	{ name: 'Paolo Banchero', tier: 'mid', position: 'PF' },
 	{ name: 'Tyler Herro', tier: 'mid', position: 'SG' },
 	{ name: 'Klay Thompson', tier: 'mid', position: 'SG' },
@@ -63,14 +62,17 @@ export const NBA_CURRENT: ItemSeed[] = [
 
 	// bad
 	{ name: 'Ben Simmons', tier: 'bad', position: 'PG' },
-	{ name: 'James Wiseman', tier: 'bad', position: 'C' },
 	{ name: 'Luke Kennard', tier: 'bad', position: 'SG' },
 	{ name: 'Max Strus', tier: 'bad', position: 'SF' },
-	{ name: 'Wendell Carter Jr.', tier: 'bad', position: 'C' },
 	{ name: 'Russell Westbrook', tier: 'bad', position: 'PG' },
 	{ name: 'Kyle Kuzma', tier: 'bad', position: 'PF' },
 	{ name: 'Duncan Robinson', tier: 'bad', position: 'SF' },
-	{ name: 'Andrew Wiggins', tier: 'bad', position: 'SF' }
+	{ name: 'Andrew Wiggins', tier: 'bad', position: 'SF' },
+	{ name: 'Rudy Gobert', tier: 'good', position: 'C' },
+	{ name: 'Naz Reid', tier: 'mid', position: 'PF' },
+	{ name: 'Dyson Daniels', tier: 'mid', position: 'SG' },
+	{ name: 'Donovan Clingan', tier: 'mid', position: 'C' },
+	{ name: 'Isaiah Hartenstein', tier: 'mid', position: 'C' }
 ];
 
 export const NBA_ALL_TIME: ItemSeed[] = [
