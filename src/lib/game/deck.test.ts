@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getCategory, getVariant } from '$lib/data';
 import { openRoster } from '$lib/data/types';
 import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
 import { buildBench, buildDeck, deckSizeFor, maxSlotsFor, poolSupportsRoster } from './deck';
@@ -176,6 +177,23 @@ describe('positional decks', () => {
 			const flex = counts.get('RB')! - 2 + (counts.get('WR')! - 4) + (counts.get('TE') ?? 0);
 			expect(flex).toBe(2);
 		}
+	});
+
+	// Real pools have uneven position sizes, which once made the deal near-fixed:
+	// some players were in every deck and others in none.
+	it.each(
+		['nba', 'nfl'].flatMap((id) => getCategory(id)!.variants.map((v) => [v.id, id] as const))
+	)('deals every ordinary %s player sometimes', (variantId, categoryId) => {
+		const category = getCategory(categoryId)!;
+		const players = getVariant(category, variantId).items;
+		const rng = seeded(17);
+		const dealt = new Set<string>();
+		for (let i = 0; i < 2000; i++)
+			for (const item of buildDeck(players, category.roster!, rng)) dealt.add(item.id);
+
+		// `bad` is a rare closer by design, so only the ordinary tiers must all turn up.
+		const missed = players.filter((item) => item.tier !== 'bad' && !dealt.has(item.id));
+		expect(missed.map((item) => item.name)).toEqual([]);
 	});
 
 	it('still leans on the tier curve while satisfying positions', () => {
