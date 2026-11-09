@@ -1,30 +1,20 @@
-# Non-Sports Categories — Options & Tiers
+# Non-Sports Categories
 
-Tiers are hidden from players; they only shape the deck curve (`great` > `good` > `mid` > `bad`, with `bad` dealt as a rare closer).
-Mark up this file however you like — add, cut, or move items between tiers — and I'll apply it to the data files.
+How to edit (just change the text, no formatting needed):
 
-## Contents
+- **Delete** a line to remove an option.
+- **Add** a line (`- Name`) under any tier to add an option.
+- **Move** a line under a different tier heading to change its tier.
+- Text after ` | ` is the small note shown on the card (optional, e.g. `- Spider-Man | Marvel`).
+- Anything in a `>` line is a comment for me — leave notes, questions, whatever.
 
-- [Celebrities](#celebrities) — 39 items
-- [Childhood Cartoons](#childhood-cartoons) — 36 items
-- [Childhood TV Shows](#childhood-tv-shows) — 37 items
-- [Childhood Nostalgia](#childhood-nostalgia) — 48 items
-- [Fictional Duos](#fictional-duos) — 47 items
-- [Iconic Movies](#iconic-movies) — 47 items
-- [Foods](#foods) — 50 items
-- [Drinks](#drinks) — 47 items
-- [Desserts](#desserts) — 50 items
-- [Pizza Toppings](#pizza-toppings) — 47 items
-- [Trader Joe's](#trader-joes) — 40 items
-- [Perfect Life](#perfect-life) — 50 items
-- [Summer Day](#summer-day) — 51 items
-- [DC & Marvel Heroes and Villains](#dc--marvel-heroes-and-villains-new--proposed) — **new, proposed**
+Tell me when you're done and I'll compare it against the game data and apply the changes.
+
+---
 
 ## Celebrities
 
-`celebrities` · _Assemble an entourage._ · 39 items (great 10, good 15, mid 10, bad 4)
-
-### Great (10)
+### Great
 
 - MrBeast
 - Kai Cenat
@@ -37,7 +27,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Sabrina Carpenter
 - Kendrick Lamar
 
-### Good (15)
+### Good
 
 - Timothee Chalamet
 - Tom Holland
@@ -55,7 +45,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Metro Boomin
 - David Attenborough
 
-### Mid (10)
+### Mid
 
 - Jack Black
 - Danny DeVito
@@ -68,18 +58,18 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Seth Rogen
 - Bill Nye
 
-### Bad (4)
+### Bad
 
 - Jimmy Fallon
 - Steve Harvey
 - Mark Zuckerberg
 - Jake Paul
 
+---
+
 ## Childhood Cartoons
 
-`cartoons` · _The cartoon block._ · 36 items (great 10, good 8, mid 13, bad 5)
-
-### Great (10)
+### Great
 
 - Avatar: The Last Airbender
 - SpongeBob SquarePants
@@ -92,7 +82,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Family Guy
 - South Park
 
-### Good (8)
+### Good
 
 - Steven Universe
 - The Amazing World of Gumball
@@ -103,7 +93,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - The Fairly OddParents
 - Scooby-Doo
 
-### Mid (13)
+### Mid
 
 - Teen Titans Go!
 - We Bare Bears
@@ -119,7 +109,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Star Wars Rebels
 - Johnny Test
 
-### Bad (5)
+### Bad
 
 - Caillou
 - Dora the Explorer
@@ -127,11 +117,11 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Bubble Guppies
 - Peppa Pig
 
+---
+
 ## Childhood TV Shows
 
-`tv-shows` · _Childhood prime time._ · 37 items (great 9, good 15, mid 7, bad 6)
-
-### Great (9)
+### Great
 
 - iCarly
 - Drake & Josh
@@ -143,7 +133,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - The Suite Life on Deck
 - The Fresh Prince of Bel-Air
 
-### Good (15)
+### Good
 
 - Good Luck Charlie
 - Jessie
@@ -161,7 +151,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - MythBusters
 - Man vs. Wild
 
-### Mid (7)
+### Mid
 
 - A.N.T. Farm
 - Bunk'd
@@ -171,7 +161,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Power Rangers
 - Full House
 
-### Bad (6)
+### Bad
 
 - Dog with a Blog
 - Pair of Kings
@@ -180,11 +170,11 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Barney & Friends
 - Teletubbies
 
+---
+
 ## Childhood Nostalgia
 
-`nostalgia` · _Throwbacks._ · 48 items (great 10, good 10, mid 18, bad 10)
-
-### Great (10)
+### Great
 
 - Nintendo Wii
 - Nintendo DS
@@ -197,7 +187,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Hoverboards
 - Mario Kart Wii
 
-### Good (10)
+### Good
 
 - Pokemon cards
 - Roblox
@@ -210,7 +200,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Lunchables
 - Gushers
 
-### Mid (18)
+### Mid
 
 - Silly Bandz
 - Rainbow Loom
@@ -231,7 +221,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Kahoot
 - Fidget spinners
 
-### Bad (10)
+### Bad
 
 - Caillou
 - Zhu Zhu Pets
@@ -244,74 +234,74 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Silly Putty
 - Slap bracelets
 
+---
+
 ## Fictional Duos
 
-`duos` · _Two for one._ · 47 items (great 10, good 15, mid 17, bad 5)
+### Great
 
-### Great (10)
+- Shrek & Donkey | Shrek
+- SpongeBob & Patrick | SpongeBob SquarePants
+- Woody & Buzz Lightyear | Toy Story
+- Mario & Luigi | Super Mario Bros.
+- Rick & Morty | Rick and Morty
+- Finn & Jake | Adventure Time
+- Phineas & Ferb | Phineas and Ferb
+- Ash & Pikachu | Pokemon
+- Eleven & Mike | Stranger Things
+- Zuko & Iroh | Avatar: The Last Airbender
 
-- Shrek & Donkey — _Shrek_
-- SpongeBob & Patrick — _SpongeBob SquarePants_
-- Woody & Buzz Lightyear — _Toy Story_
-- Mario & Luigi — _Super Mario Bros._
-- Rick & Morty — _Rick and Morty_
-- Finn & Jake — _Adventure Time_
-- Phineas & Ferb — _Phineas and Ferb_
-- Ash & Pikachu — _Pokemon_
-- Eleven & Mike — _Stranger Things_
-- Zuko & Iroh — _Avatar: The Last Airbender_
+### Good
 
-### Good (15)
+- Timon & Pumbaa | The Lion King
+- Mordecai & Rigby | Regular Show
+- Dipper & Mabel | Gravity Falls
+- Walter & Jesse | Breaking Bad
+- Michael & Dwight | The Office
+- Harry & Ron | Harry Potter
+- Mike & Sulley | Monsters Inc.
+- WALL-E & EVE | WALL-E
+- Thor & Loki | Marvel
+- Han Solo & Chewbacca | Star Wars
+- Sonic & Tails | Sonic the Hedgehog
+- Homer & Bart | The Simpsons
+- Peter & Stewie | Family Guy
+- Marty & Doc | Back to the Future
+- Master Chief & Cortana | Halo
 
-- Timon & Pumbaa — _The Lion King_
-- Mordecai & Rigby — _Regular Show_
-- Dipper & Mabel — _Gravity Falls_
-- Walter & Jesse — _Breaking Bad_
-- Michael & Dwight — _The Office_
-- Harry & Ron — _Harry Potter_
-- Mike & Sulley — _Monsters Inc._
-- WALL-E & EVE — _WALL-E_
-- Thor & Loki — _Marvel_
-- Han Solo & Chewbacca — _Star Wars_
-- Sonic & Tails — _Sonic the Hedgehog_
-- Homer & Bart — _The Simpsons_
-- Peter & Stewie — _Family Guy_
-- Marty & Doc — _Back to the Future_
-- Master Chief & Cortana — _Halo_
+### Mid
 
-### Mid (17)
+- Cosmo & Wanda | The Fairly OddParents
+- Tom & Jerry | Tom and Jerry
+- Batman & Robin | DC Comics
+- Frodo & Sam | The Lord of the Rings
+- Nemo & Dory | Finding Nemo
+- Anna & Elsa | Frozen
+- Deadpool & Wolverine | Marvel
+- Sherlock & Watson | Sherlock
+- Calvin & Hobbes | Calvin and Hobbes
+- Luffy & Zoro | One Piece
+- Mr. Incredible & Frozone | The Incredibles
+- Stan & Kyle | South Park
+- Kratos & Atreus | God of War
+- Link & Zelda | The Legend of Zelda
+- Saul & Mike | Better Call Saul
+- Po & Shifu | Kung Fu Panda
+- Shaggy & Scooby | Scooby-Doo
 
-- Cosmo & Wanda — _The Fairly OddParents_
-- Tom & Jerry — _Tom and Jerry_
-- Batman & Robin — _DC Comics_
-- Frodo & Sam — _The Lord of the Rings_
-- Nemo & Dory — _Finding Nemo_
-- Anna & Elsa — _Frozen_
-- Deadpool & Wolverine — _Marvel_
-- Sherlock & Watson — _Sherlock_
-- Calvin & Hobbes — _Calvin and Hobbes_
-- Luffy & Zoro — _One Piece_
-- Mr. Incredible & Frozone — _The Incredibles_
-- Stan & Kyle — _South Park_
-- Kratos & Atreus — _God of War_
-- Link & Zelda — _The Legend of Zelda_
-- Saul & Mike — _Better Call Saul_
-- Po & Shifu — _Kung Fu Panda_
-- Shaggy & Scooby — _Scooby-Doo_
+### Bad
 
-### Bad (5)
+- Dora & Boots | Dora the Explorer
+- Caillou & Rosie | Caillou
+- Peppa & George | Peppa Pig
+- Bob & Stuart | Minions
+- Fanboy & Chum Chum | Fanboy & Chum Chum
 
-- Dora & Boots — _Dora the Explorer_
-- Caillou & Rosie — _Caillou_
-- Peppa & George — _Peppa Pig_
-- Bob & Stuart — _Minions_
-- Fanboy & Chum Chum — _Fanboy & Chum Chum_
+---
 
 ## Iconic Movies
 
-`movies` · _Draft the marquee._ · 47 items (great 11, good 10, mid 17, bad 9)
-
-### Great (11)
+### Great
 
 - Spider-Man: No Way Home
 - The Dark Knight
@@ -325,7 +315,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Parasite
 - Get Out
 
-### Good (10)
+### Good
 
 - La La Land
 - The Matrix
@@ -338,7 +328,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Dune
 - The Wolf of Wall Street
 
-### Mid (17)
+### Mid
 
 - Jurassic Park
 - Fast & Furious
@@ -358,7 +348,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Tron: Legacy
 - Aquaman
 
-### Bad (9)
+### Bad
 
 - Cats
 - Morbius
@@ -370,11 +360,11 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Fantastic Four (2015)
 - Movie 43
 
+---
+
 ## Foods
 
-`foods` · _yum._ · 50 items (great 11, good 12, mid 19, bad 8)
-
-### Great (11)
+### Great
 
 - Chipotle
 - Chick-fil-A
@@ -388,7 +378,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Mac & cheese
 - Philly cheesesteak
 
-### Good (12)
+### Good
 
 - Popeyes
 - Shake Shack
@@ -403,7 +393,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Carne asada tacos
 - Loaded nachos
 
-### Mid (19)
+### Mid
 
 - Panera
 - Subway
@@ -425,7 +415,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Fried rice
 - Meatball sub
 
-### Bad (8)
+### Bad
 
 - Airplane food
 - Cafeteria pizza
@@ -436,11 +426,11 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Unseasoned chicken breast
 - Cafeteria jello
 
+---
+
 ## Drinks
 
-`drinks` · _Something to wash it down._ · 47 items (great 11, good 12, mid 18, bad 6)
-
-### Great (11)
+### Great
 
 - Boba
 - Baja Blast
@@ -454,7 +444,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Sprite Cranberry
 - Icee
 
-### Good (12)
+### Good
 
 - Cold brew
 - Mountain Dew
@@ -469,7 +459,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Vanilla Coke
 - Chick-fil-A lemonade
 
-### Mid (18)
+### Mid
 
 - Gatorade
 - Capri Sun
@@ -490,7 +480,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Protein shake
 - Fruit punch
 
-### Bad (6)
+### Bad
 
 - Flat soda
 - Prune juice
@@ -499,11 +489,11 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Milk left out
 - Buttermilk
 
+---
+
 ## Desserts
 
-`desserts` · _Save room for this._ · 50 items (great 12, good 13, mid 19, bad 6)
-
-### Great (12)
+### Great
 
 - Cheesecake
 - Tiramisu
@@ -518,7 +508,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Ice cream cake
 - Cookie cake
 
-### Good (13)
+### Good
 
 - Chocolate chip cookies
 - Apple pie
@@ -534,7 +524,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Donuts
 - Deep fried Oreos
 
-### Mid (19)
+### Mid
 
 - Vanilla ice cream
 - Frozen yogurt
@@ -556,7 +546,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Dippin' Dots
 - Chocolate covered strawberries
 
-### Bad (6)
+### Bad
 
 - Jell-O
 - Oatmeal raisin cookies
@@ -565,11 +555,11 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Gas station donut
 - Store-brand Oreos
 
+---
+
 ## Pizza Toppings
 
-`pizza-toppings` · _Yes, pineapple is in here._ · 47 items (great 11, good 12, mid 18, bad 6)
-
-### Great (11)
+### Great
 
 - Pepperoni
 - Extra cheese
@@ -583,7 +573,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Chicken bacon ranch
 - Meat lovers
 
-### Good (12)
+### Good
 
 - Mushrooms
 - Red onion
@@ -598,7 +588,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Garlic butter crust
 - Pulled pork
 
-### Mid (18)
+### Mid
 
 - Green pepper
 - Black olives
@@ -619,7 +609,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Roasted red peppers
 - Alfredo sauce
 
-### Bad (6)
+### Bad
 
 - Pineapple
 - Broccoli
@@ -628,14 +618,14 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Sardines
 - Tuna
 
+---
+
 ## Trader Joe's
 
-`trader-joes` · _Fill the cart._ · 40 items (great 9, good 13, mid 15, bad 3)
-
-### Great (9)
+### Great
 
 - Mandarin Orange Chicken
-- Rolled Tortilla Chips — _The Takis dupe_
+- Rolled Tortilla Chips | The Takis dupe
 - Everything Bagel Seasoning
 - Cookie Butter
 - Kimbap
@@ -644,7 +634,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Joe-Joe's
 - Chicken Tikka Masala
 
-### Good (13)
+### Good
 
 - Unexpected Cheddar
 - Pork Gyoza Potstickers
@@ -655,12 +645,12 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Japanese Fried Rice
 - Mochi
 - Hashbrowns
-- Gone Bananas — _Chocolate-dipped bananas_
+- Gone Bananas | Chocolate-dipped bananas
 - Elote Dip
 - Butter Chicken
 - Mini tote bag
 
-### Mid (15)
+### Mid
 
 - Scandinavian Swimmers
 - Bulgogi Beef
@@ -678,17 +668,17 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Turkey Meatballs
 - Cold Brew
 
-### Bad (3)
+### Bad
 
-- Single banana — _19 cents_
+- Single banana | 19 cents
 - Kale Chips
 - Bagged spinach
 
+---
+
 ## Perfect Life
 
-`perfect-life` · _The life you always wanted._ · 50 items (great 12, good 14, mid 18, bad 6)
-
-### Great (12)
+### Great
 
 - Billionaire
 - Teleportation
@@ -703,7 +693,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Never work again
 - Stop time
 
-### Good (14)
+### Good
 
 - 200 IQ
 - Talk to animals
@@ -720,7 +710,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Never lose a fight
 - Perfect jumpshot
 
-### Mid (18)
+### Mid
 
 - 10M followers
 - Perfect metabolism
@@ -741,7 +731,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Best friend group
 - Win every argument
 
-### Bad (6)
+### Bad
 
 - Always find parking
 - Always win rock paper scissors
@@ -750,11 +740,11 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Perfect parallel parking
 - Control the aux
 
+---
+
 ## Summer Day
 
-`summer-day` · _Assemble the perfect day._ · 51 items (great 12, good 14, mid 19, bad 6)
-
-### Great (12)
+### Great
 
 - Beach day
 - Sleeping in till noon
@@ -769,7 +759,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Sunset drive
 - Six Flags
 
-### Good (14)
+### Good
 
 - Fireflies
 - Boat day
@@ -786,7 +776,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Tubing
 - Backyard football
 
-### Mid (19)
+### Mid
 
 - Ice cream truck
 - Cookout
@@ -808,7 +798,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - AC on full blast
 - Hiking
 
-### Bad (6)
+### Bad
 
 - Sunburn
 - Sand in everything
@@ -817,72 +807,106 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Farmer's tan
 - Wasp at the cookout
 
-## DC & Marvel Heroes and Villains (NEW — proposed)
+---
 
-`superheroes` · _Assemble the team._ · 48 items (great 10, good 14, mid 18, bad 6)
+## DC & Marvel Heroes and Villains (NEW)
 
-Proposed shape: one category, one pool, heroes and villains mixed. The card note would show the publisher (`Marvel` / `DC`). (H) = hero, (V) = villain, here only to help you balance it. Alternatively this could have two variants (Heroes / Villains), like sports' Current / All-Time — tell me if you'd prefer that.
+> Proposed new category. Note is the publisher; the (hero)/(villain) tags are just for balancing and won't show in the game. One mixed pool, or split into Heroes / Villains toggle? Tell me here.
 
-### Great (10)
+### Great
 
-- Spider-Man — _Marvel_ (H)
-- Batman — _DC_ (H)
-- Iron Man — _Marvel_ (H)
-- Superman — _DC_ (H)
-- The Joker — _DC_ (V)
-- Wolverine — _Marvel_ (H)
-- Wonder Woman — _DC_ (H)
-- Thanos — _Marvel_ (V)
-- Captain America — _Marvel_ (H)
-- Deadpool — _Marvel_ (H)
+- Spider-Man | Marvel (hero)
+- Batman | DC (hero)
+- Iron Man | Marvel (hero)
+- Superman | DC (hero)
+- The Joker | DC (villain)
+- Wolverine | Marvel (hero)
+- Wonder Woman | DC (hero)
+- Thanos | Marvel (villain)
+- Captain America | Marvel (hero)
+- Deadpool | Marvel (hero)
 
-### Good (14)
+### Good
 
-- Thor — _Marvel_ (H)
-- Hulk — _Marvel_ (H)
-- Black Panther — _Marvel_ (H)
-- Loki — _Marvel_ (V)
-- Doctor Strange — _Marvel_ (H)
-- Scarlet Witch — _Marvel_ (H)
-- Black Widow — _Marvel_ (H)
-- Magneto — _Marvel_ (V)
-- Venom — _Marvel_ (V)
-- Doctor Doom — _Marvel_ (V)
-- The Flash — _DC_ (H)
-- Harley Quinn — _DC_ (V)
-- Green Lantern — _DC_ (H)
-- Aquaman — _DC_ (H)
+- Thor | Marvel (hero)
+- Hulk | Marvel (hero)
+- Black Panther | Marvel (hero)
+- Loki | Marvel (villain)
+- Doctor Strange | Marvel (hero)
+- Scarlet Witch | Marvel (hero)
+- Black Widow | Marvel (hero)
+- Magneto | Marvel (villain)
+- Venom | Marvel (villain)
+- Doctor Doom | Marvel (villain)
+- The Flash | DC (hero)
+- Harley Quinn | DC (villain)
+- Green Lantern | DC (hero)
+- Aquaman | DC (hero)
 
-### Mid (18)
+### Mid
 
-- Hawkeye — _Marvel_ (H)
-- Ant-Man — _Marvel_ (H)
-- Captain Marvel — _Marvel_ (H)
-- Daredevil — _Marvel_ (H)
-- Star-Lord — _Marvel_ (H)
-- Groot — _Marvel_ (H)
-- Storm — _Marvel_ (H)
-- Cyclops — _Marvel_ (H)
-- Green Goblin — _Marvel_ (V)
-- Doctor Octopus — _Marvel_ (V)
-- Ultron — _Marvel_ (V)
-- Robin — _DC_ (H)
-- Nightwing — _DC_ (H)
-- Cyborg — _DC_ (H)
-- Shazam — _DC_ (H)
-- Catwoman — _DC_ (V)
-- Lex Luthor — _DC_ (V)
-- Bane — _DC_ (V)
+- Hawkeye | Marvel (hero)
+- Ant-Man | Marvel (hero)
+- Captain Marvel | Marvel (hero)
+- Daredevil | Marvel (hero)
+- Star-Lord | Marvel (hero)
+- Groot | Marvel (hero)
+- Storm | Marvel (hero)
+- Cyclops | Marvel (hero)
+- Green Goblin | Marvel (villain)
+- Doctor Octopus | Marvel (villain)
+- Ultron | Marvel (villain)
+- Robin | DC (hero)
+- Nightwing | DC (hero)
+- Cyborg | DC (hero)
+- Shazam | DC (hero)
+- Catwoman | DC (villain)
+- Lex Luthor | DC (villain)
+- Bane | DC (villain)
 
-### Bad (6)
+### Bad
 
-- Howard the Duck — _Marvel_ (H)
-- Paste-Pot Pete — _Marvel_ (V)
-- Squirrel Girl — _Marvel_ (H)
-- Kite Man — _DC_ (V)
-- Condiment King — _DC_ (V)
-- Arm-Fall-Off-Boy — _DC_ (H)
+- Howard the Duck | Marvel (hero)
+- Paste-Pot Pete | Marvel (villain)
+- Squirrel Girl | Marvel (hero)
+- Kite Man | DC (villain)
+- Condiment King | DC (villain)
+- Arm-Fall-Off-Boy | DC (hero)
 
-### Bench (not included yet — say the word to add any)
+### Bench
 
-Poison Ivy, The Riddler, The Penguin, Two-Face, Darkseid, Black Adam, Supergirl, Batgirl, Green Arrow, Martian Manhunter, Beast Boy, Raven, Starfire, Sinestro, Reverse-Flash, Deathstroke · Silver Surfer, Moon Knight, Gambit, Rogue, Jean Grey / Phoenix, Mystique, Red Skull, Kingpin, Kang, Galactus, Carnage, Mysterio, Vision, Ghost Rider, Blade, Rocket Raccoon, Gamora
+> Not in the game. Move any of these up into a tier to add them.
+
+- Poison Ivy
+- The Riddler
+- The Penguin
+- Two-Face
+- Darkseid
+- Black Adam
+- Supergirl
+- Batgirl
+- Green Arrow
+- Martian Manhunter
+- Beast Boy
+- Raven
+- Starfire
+- Sinestro
+- Reverse-Flash
+- Deathstroke
+- Silver Surfer
+- Moon Knight
+- Gambit
+- Rogue
+- Jean Grey / Phoenix
+- Mystique
+- Red Skull
+- Kingpin
+- Kang
+- Galactus
+- Carnage
+- Mysterio
+- Vision
+- Ghost Rider
+- Blade
+- Rocket Raccoon
+- Gamora
