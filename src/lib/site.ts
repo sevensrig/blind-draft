@@ -38,7 +38,7 @@ export const SITE_ALT_NAMES = [
  * third; the on-page rules block carries the long explanation.
  */
 export const SITE_DESCRIPTION =
-	'$20 Draft Game is a free two-player party game — the $20 draft from TikTok, playable in any browser. You each get $20 and bid blind on what comes next.';
+	'$20 Draft Game is a free two-player party game — the 20 dollar draft from TikTok, in any browser. You each get $20 and bid blind, auction-style, on what’s next.';
 
 /** Short form for the social card, where long copy gets truncated anyway. */
 export const SITE_TAGLINE = 'The $20 draft game from TikTok. Two players, $20 each, bidding blind.';

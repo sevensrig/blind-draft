@@ -22,8 +22,8 @@
 </script>
 
 <Seo
-	title="$20 Draft Game — how to play, rules and FAQ"
-	description="How to play the $20 TikTok draft game: the rules, how many people can play, what you can draft, and what happens if you spend your whole budget early."
+	title="$20 Draft Game rules — how to play the 20 dollar draft"
+	description="How to play the $20 TikTok bidding game: the rules, how many people can play, what you can draft, and what happens if you spend your whole budget early."
 	path="/faq"
 	{schema}
 />

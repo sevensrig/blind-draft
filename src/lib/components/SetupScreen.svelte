@@ -279,8 +279,9 @@
 		     screen. -->
 		<p class="rules__what">
 			$20 Draft Game is a free two-player party game played in a browser — the $20 TikTok draft
-			game you've seen going around, sometimes called a blind draft. You each get a $20 budget and
-			bid against each other for items revealed one at a time.
+			game you've seen going around, also called the 20 dollar draft or a blind draft. It's a
+			bidding game: you each get a $20 budget and bid against each other, auction-style, for items
+			revealed one at a time.
 		</p>
 		<ol>
 			<li>An item is revealed. Neither of you knew it was coming.</li>
