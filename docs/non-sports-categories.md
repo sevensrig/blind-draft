@@ -5,9 +5,9 @@ Mark up this file however you like — add, cut, or move items between tiers —
 
 ## Contents
 
-- [Celebrities](#celebrities) — 42 items
-- [Childhood Cartoons](#childhood-cartoons) — 41 items
-- [Childhood TV Shows](#childhood-tv-shows) — 43 items
+- [Celebrities](#celebrities) — 39 items
+- [Childhood Cartoons](#childhood-cartoons) — 36 items
+- [Childhood TV Shows](#childhood-tv-shows) — 37 items
 - [Childhood Nostalgia](#childhood-nostalgia) — 48 items
 - [Fictional Duos](#fictional-duos) — 47 items
 - [Iconic Movies](#iconic-movies) — 47 items
@@ -22,7 +22,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 
 ## Celebrities
 
-`celebrities` · _Assemble an entourage._ · 42 items (great 10, good 14, mid 12, bad 6)
+`celebrities` · _Assemble an entourage._ · 39 items (great 10, good 15, mid 10, bad 4)
 
 ### Great (10)
 
@@ -37,7 +37,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Sabrina Carpenter
 - Kendrick Lamar
 
-### Good (14)
+### Good (15)
 
 - Timothee Chalamet
 - Tom Holland
@@ -53,10 +53,10 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Denzel Washington
 - Tom Cruise
 - Metro Boomin
-
-### Mid (12)
-
 - David Attenborough
+
+### Mid (10)
+
 - Jack Black
 - Danny DeVito
 - Adam Sandler
@@ -65,22 +65,19 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Steve Carell
 - Morgan Freeman
 - Jim Carrey
-- Bear Grylls
 - Seth Rogen
 - Bill Nye
 
-### Bad (6)
+### Bad (4)
 
 - Jimmy Fallon
 - Steve Harvey
 - Mark Zuckerberg
 - Jake Paul
-- James Corden
-- Machine Gun Kelly
 
 ## Childhood Cartoons
 
-`cartoons` · _The cartoon block._ · 41 items (great 10, good 9, mid 16, bad 6)
+`cartoons` · _The cartoon block._ · 36 items (great 10, good 8, mid 13, bad 5)
 
 ### Great (10)
 
@@ -95,7 +92,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Family Guy
 - South Park
 
-### Good (9)
+### Good (8)
 
 - Steven Universe
 - The Amazing World of Gumball
@@ -105,19 +102,14 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Danny Phantom
 - The Fairly OddParents
 - Scooby-Doo
-- Foster's Home for Imaginary Friends
 
-### Mid (16)
+### Mid (13)
 
 - Teen Titans Go!
 - We Bare Bears
 - Miraculous Ladybug
 - The Loud House
 - Ninjago
-- Attack on Titan
-- Demon Slayer
-- Ed, Edd n Eddy
-- Courage the Cowardly Dog
 - The Powerpuff Girls
 - Beyblade
 - Jimmy Neutron
@@ -125,10 +117,10 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Transformers: Prime
 - Bakugan
 - Star Wars Rebels
-
-### Bad (6)
-
 - Johnny Test
+
+### Bad (5)
+
 - Caillou
 - Dora the Explorer
 - PAW Patrol
@@ -137,7 +129,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 
 ## Childhood TV Shows
 
-`tv-shows` · _Childhood prime time._ · 43 items (great 9, good 15, mid 13, bad 6)
+`tv-shows` · _Childhood prime time._ · 37 items (great 9, good 15, mid 7, bad 6)
 
 ### Great (9)
 
@@ -169,7 +161,7 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - MythBusters
 - Man vs. Wild
 
-### Mid (13)
+### Mid (7)
 
 - A.N.T. Farm
 - Bunk'd
@@ -178,12 +170,6 @@ Mark up this file however you like — add, cut, or move items between tiers —
 - Nicky, Ricky, Dicky & Dawn
 - Power Rangers
 - Full House
-- Cory in the House
-- All That
-- Pawn Stars
-- Man v. Food
-- Danger Force
-- America's Funniest Home Videos
 
 ### Bad (6)
 

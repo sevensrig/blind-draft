@@ -37,12 +37,6 @@ export const TV_SHOWS: ItemSeed[] = [
 	{ name: 'Nicky, Ricky, Dicky & Dawn', tier: 'mid' },
 	{ name: 'Power Rangers', tier: 'mid' },
 	{ name: 'Full House', tier: 'mid' },
-	{ name: 'Cory in the House', tier: 'mid' },
-	{ name: 'All That', tier: 'mid' },
-	{ name: 'Pawn Stars', tier: 'mid' },
-	{ name: 'Man v. Food', tier: 'mid' },
-	{ name: 'Danger Force', tier: 'mid' },
-	{ name: "America's Funniest Home Videos", tier: 'mid' },
 
 	// bad
 	{ name: 'Dog with a Blog', tier: 'bad' },
