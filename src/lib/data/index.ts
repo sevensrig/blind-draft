@@ -30,7 +30,7 @@ import { TV_SHOWS } from './tv-shows';
 import { NOSTALGIA } from './nostalgia';
 import { DUOS } from './duos';
 import { MOVIES } from './movies';
-import { FOODS } from './foods';
+import { FAST_FOOD } from './fast-food';
 import { DRINKS } from './drinks';
 import { DESSERTS } from './desserts';
 import { PIZZA_TOPPINGS } from './pizza-toppings';
@@ -145,12 +145,12 @@ export const CATEGORIES: Category[] = [
 		variants: [variant('movies', 'Movies', MOVIES)]
 	},
 	{
-		id: 'foods',
-		label: 'Foods',
-		icon: 'pizza-slice',
-		blurb: 'yum.',
+		id: 'fast-food',
+		label: 'Fast Food',
+		icon: 'burger',
+		blurb: 'Hit the drive-thru.',
 		accent: 'green',
-		variants: [variant('foods', 'Foods', FOODS)]
+		variants: [variant('fast-food', 'Fast Food', FAST_FOOD)]
 	},
 	{
 		id: 'drinks',

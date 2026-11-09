@@ -51,9 +51,9 @@ export function startedGame({
 			slots: template.length,
 			roster: template,
 			positional: template.some((slot) => slot.drafts !== null),
-			categoryId: 'foods',
-			variantId: 'foods',
-			categoryLabel: 'Foods',
+			categoryId: 'fast-food',
+			variantId: 'fast-food',
+			categoryLabel: 'Fast Food',
 			variantLabel: null
 		}
 	});

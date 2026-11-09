@@ -147,9 +147,6 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Liv and Maddie
 - The Thundermans
 - Impractical Jokers
-- Wipeout
-- MythBusters
-- Man vs. Wild
 
 ### Mid
 
@@ -157,7 +154,6 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Bunk'd
 - Girl Meets World
 - K.C. Undercover
-- Nicky, Ricky, Dicky & Dawn
 - Power Rangers
 - Full House
 
@@ -166,7 +162,6 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Dog with a Blog
 - Pair of Kings
 - Zeke and Luther
-- Mighty Med
 - Barney & Friends
 - Teletubbies
 
@@ -250,6 +245,7 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Ash & Pikachu | Pokemon
 - Eleven & Mike | Stranger Things
 - Zuko & Iroh | Avatar: The Last Airbender
+- Tom & Jerry | Tom and Jerry
 
 ### Good
 
@@ -268,19 +264,16 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Peter & Stewie | Family Guy
 - Marty & Doc | Back to the Future
 - Master Chief & Cortana | Halo
+- Bob & Stuart | Minions
 
 ### Mid
 
 - Cosmo & Wanda | The Fairly OddParents
-- Tom & Jerry | Tom and Jerry
 - Batman & Robin | DC Comics
 - Frodo & Sam | The Lord of the Rings
 - Nemo & Dory | Finding Nemo
-- Anna & Elsa | Frozen
 - Deadpool & Wolverine | Marvel
-- Sherlock & Watson | Sherlock
 - Calvin & Hobbes | Calvin and Hobbes
-- Luffy & Zoro | One Piece
 - Mr. Incredible & Frozone | The Incredibles
 - Stan & Kyle | South Park
 - Kratos & Atreus | God of War
@@ -294,8 +287,6 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Dora & Boots | Dora the Explorer
 - Caillou & Rosie | Caillou
 - Peppa & George | Peppa Pig
-- Bob & Stuart | Minions
-- Fanboy & Chum Chum | Fanboy & Chum Chum
 
 ---
 
@@ -314,13 +305,13 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Inception
 - Parasite
 - Get Out
+- Spider-Man: Brand New Day
 
 ### Good
 
 - La La Land
 - The Matrix
 - Toy Story
-- Spirited Away
 - Joker
 - Whiplash
 - Coco
@@ -334,97 +325,85 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Fast & Furious
 - Pirates of the Caribbean
 - The Hangover
-- Mean Girls
-- Twilight
-- Legally Blonde
 - Ratatouille
 - Jumanji: Welcome to the Jungle
 - National Treasure
-- Now You See Me
 - Independence Day
 - Men in Black II
-- Bruce Almighty
-- The Da Vinci Code
 - Tron: Legacy
-- Aquaman
 
 ### Bad
 
-- Cats
 - Morbius
 - The Emoji Movie
 - Sharknado
-- Jack and Jill
-- Dragonball Evolution
 - The Last Airbender
 - Fantastic Four (2015)
-- Movie 43
 
 ---
 
-## Foods
+## Fast Food
+
+> NEW — replaces Foods. My first pass at chains; edit freely.
 
 ### Great
 
-- Chipotle
 - Chick-fil-A
-- Pizza
-- Sushi
-- Wings
+- Chipotle
 - In-N-Out
 - Raising Cane's
-- Ramen
-- Steak
-- Mac & cheese
-- Philly cheesesteak
+- Popeyes
+- Taco Bell
+- Wingstop
+- McDonald's
+- Shake Shack
+- Five Guys
+- Cava
 
 ### Good
 
-- Popeyes
-- Shake Shack
-- Smash burger
-- Five Guys
-- Breakfast burrito
-- Chicken parm
-- Pad thai
-- Dumplings
-- Waffles
-- Spaghetti
-- Carne asada tacos
-- Loaded nachos
+- Wendy's
+- Whataburger
+- Culver's
+- Jersey Mike's
+- Panda Express
+- Dave's Hot Chicken
+- Buffalo Wild Wings
+- Domino's
+- Sonic
+- Bojangles
+- Portillo's
+- Jack in the Box
 
 ### Mid
 
-- Panera
+- Burger King
+- KFC
 - Subway
+- Arby's
+- Panera
+- Pizza Hut
+- Papa John's
 - Little Caesars
-- Grilled cheese
-- Quesadilla
-- Hot Pockets
-- Bagel with cream cheese
-- Chinese takeout
-- IHOP pancakes
-- Chicken nuggets
-- Instant ramen
-- Caesar salad
-- Costco hot dog
-- Turkey sandwich
-- Tomato soup
-- Soft pretzel
-- Rotisserie chicken
-- Fried rice
-- Meatball sub
+- Qdoba
+- Jimmy John's
+- Firehouse Subs
+- Dairy Queen
+- White Castle
+- Carl's Jr.
+- Del Taco
+- Zaxby's
+- Sweetgreen
+- Dunkin'
 
 ### Bad
 
-- Airplane food
-- Cafeteria pizza
-- Gas station hot dog
-- Canned green beans
-- Fruitcake
-- Black licorice
-- Unseasoned chicken breast
-- Cafeteria jello
+- Long John Silver's
+- Quiznos
+- Checkers
+- Boston Market
+- Blimpie
+- Krystal
 
 ---
 
@@ -446,7 +425,6 @@ Tell me when you're done and I'll compare it against the game data and apply the
 
 ### Good
 
-- Cold brew
 - Mountain Dew
 - Fanta
 - Slushie
@@ -458,6 +436,7 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Arnold Palmer
 - Vanilla Coke
 - Chick-fil-A lemonade
+- Fresca
 
 ### Mid
 
@@ -681,8 +660,8 @@ Tell me when you're done and I'll compare it against the game data and apply the
 ### Great
 
 - Billionaire
-- Teleportation
 - 6'5" 245 lbs
+- Teleportation
 - Immortality
 - Fly
 - Perfect health
@@ -808,10 +787,9 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Wasp at the cookout
 
 ---
-
 ## DC & Marvel Heroes and Villains (NEW)
 
-> Proposed new category. Note is the publisher; the (hero)/(villain) tags are just for balancing and won't show in the game. One mixed pool, or split into Heroes / Villains toggle? Tell me here.
+> Proposed new category, not in the game yet. Note is the publisher; the (hero)/(villain) tags are just for balancing and won't show in the game. One mixed pool, or split into Heroes / Villains toggle? Tell me here.
 
 ### Great
 
@@ -859,19 +837,8 @@ Tell me when you're done and I'll compare it against the game data and apply the
 - Robin | DC (hero)
 - Nightwing | DC (hero)
 - Cyborg | DC (hero)
-- Shazam | DC (hero)
-- Catwoman | DC (villain)
 - Lex Luthor | DC (villain)
 - Bane | DC (villain)
-
-### Bad
-
-- Howard the Duck | Marvel (hero)
-- Paste-Pot Pete | Marvel (villain)
-- Squirrel Girl | Marvel (hero)
-- Kite Man | DC (villain)
-- Condiment King | DC (villain)
-- Arm-Fall-Off-Boy | DC (hero)
 
 ### Bench
 

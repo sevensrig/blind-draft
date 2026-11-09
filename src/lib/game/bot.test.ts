@@ -179,7 +179,7 @@ describe('the bot with a broke opponent', () => {
 
 describe('what the bot knows', () => {
 	it('plays the same whatever order the unrevealed cards are in', () => {
-		const pool = CATEGORIES.find((c) => c.id === 'foods')!.variants[0].items;
+		const pool = CATEGORIES.find((c) => c.id === 'fast-food')!.variants[0].items;
 		const rng = seeded(7);
 
 		for (let run = 0; run < 50; run++) {

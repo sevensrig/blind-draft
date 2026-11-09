@@ -47,7 +47,7 @@ test('copies a text version of the results when the browser has no share sheet',
 
 	const copied = await page.evaluate(() => navigator.clipboard.readText());
 	expect(copied).toMatch(
-		/^\$20 Draft · Foods · \$20 each\nSri \(\d+ pts\): .+\nAlex \(\d+ pts\): .+\n(Sri wins|Alex wins|Dead even)\. Play/
+		/^\$20 Draft · Fast Food · \$20 each\nSri \(\d+ pts\): .+\nAlex \(\d+ pts\): .+\n(Sri wins|Alex wins|Dead even)\. Play/
 	);
 });
 

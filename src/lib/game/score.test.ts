@@ -35,8 +35,8 @@ function finished(a: Pick[], b: Pick[], config: Partial<GameConfig> = {}): GameS
 			budget: 20,
 			slots,
 			roster: openRoster(slots),
-			categoryId: 'foods',
-			variantId: 'foods',
+			categoryId: 'fast-food',
+			variantId: 'fast-food',
 			...config
 		}
 	};

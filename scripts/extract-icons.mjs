@@ -23,7 +23,7 @@ const WANTED = [
 	'gamepad',
 	'user-group',
 	'film',
-	'pizza-slice',
+	'burger',
 	'glass-water',
 	'wand-magic-sparkles',
 	'umbrella-beach',

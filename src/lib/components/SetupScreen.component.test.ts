@@ -21,7 +21,7 @@ describe('SetupScreen', () => {
 		await page.getByPlaceholder('Player 2').fill('Alex');
 		await page.getByRole('button', { name: '$10', exact: true }).click();
 		await page.getByRole('button', { name: '4', exact: true }).click();
-		await page.getByRole('button', { name: /Foods/ }).click();
+		await page.getByRole('button', { name: /Fast Food/ }).click();
 		await page.getByRole('button', { name: /Start the draft/ }).click();
 
 		const state = game.state;
@@ -32,7 +32,7 @@ describe('SetupScreen', () => {
 		expect(state.config.slots).toBe(4);
 		// Deck is always two items per slot.
 		expect(state.deck).toHaveLength(8);
-		expect(state.config.categoryId).toBe('foods');
+		expect(state.config.categoryId).toBe('fast-food');
 	});
 
 	it('falls back to default names when the fields are left empty', async () => {
@@ -48,7 +48,7 @@ describe('SetupScreen', () => {
 
 	it('opens on the bot with the online name when sent with ?opponent=bot', async () => {
 		localStorage.setItem('blind-draft:name:v1', 'Sri');
-		history.replaceState(null, '', '?opponent=bot&category=foods');
+		history.replaceState(null, '', '?opponent=bot&category=fast-food');
 		try {
 			render(SetupScreen);
 			await expect
@@ -57,7 +57,7 @@ describe('SetupScreen', () => {
 			await expect.element(page.getByPlaceholder('Player 1')).toHaveValue('Sri');
 			await page.getByRole('button', { name: /Start the draft/ }).click();
 			expect(game.state.config.bot).toBe(1);
-			expect(game.state.config.categoryId).toBe('foods');
+			expect(game.state.config.categoryId).toBe('fast-food');
 		} finally {
 			history.replaceState(null, '', location.pathname);
 		}
@@ -69,7 +69,7 @@ describe('SetupScreen', () => {
 		await page.getByRole('button', { name: 'Vs. the bot' }).click();
 		expect(page.getByPlaceholder('Player 2').elements()).toHaveLength(0);
 		await page.getByPlaceholder('Player 1').fill('Sri');
-		await page.getByRole('button', { name: /Foods/ }).click();
+		await page.getByRole('button', { name: /Fast Food/ }).click();
 		await page.getByRole('button', { name: /Start the draft/ }).click();
 
 		expect(game.state.players.map((player) => player.name)).toEqual(['Sri', 'Bot']);
@@ -79,7 +79,7 @@ describe('SetupScreen', () => {
 	it('leaves pass-and-play games without a bot', async () => {
 		render(SetupScreen);
 
-		await page.getByRole('button', { name: /Foods/ }).click();
+		await page.getByRole('button', { name: /Fast Food/ }).click();
 		await page.getByRole('button', { name: /Start the draft/ }).click();
 
 		expect(game.state.config.bot).toBeUndefined();
@@ -150,7 +150,7 @@ describe('SetupScreen', () => {
 
 		await page.getByRole('button', { name: 'Raise budget by five' }).click();
 		await page.getByRole('button', { name: 'Raise budget by five' }).click();
-		await page.getByRole('button', { name: /Foods/ }).click();
+		await page.getByRole('button', { name: /Fast Food/ }).click();
 		await page.getByRole('button', { name: /Start the draft/ }).click();
 
 		expect(game.state.config.budget).toBe(30);

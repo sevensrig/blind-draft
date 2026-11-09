@@ -28,16 +28,12 @@ export const TV_SHOWS: ItemSeed[] = [
 	{ name: 'Liv and Maddie', tier: 'good' },
 	{ name: 'The Thundermans', tier: 'good' },
 	{ name: 'Impractical Jokers', tier: 'good' },
-	{ name: 'Wipeout', tier: 'good' },
-	{ name: 'MythBusters', tier: 'good' },
-	{ name: 'Man vs. Wild', tier: 'good' },
 
 	// mid
 	{ name: 'A.N.T. Farm', tier: 'mid' },
 	{ name: "Bunk'd", tier: 'mid' },
 	{ name: 'Girl Meets World', tier: 'mid' },
 	{ name: 'K.C. Undercover', tier: 'mid' },
-	{ name: 'Nicky, Ricky, Dicky & Dawn', tier: 'mid' },
 	{ name: 'Power Rangers', tier: 'mid' },
 	{ name: 'Full House', tier: 'mid' },
 
@@ -45,7 +41,6 @@ export const TV_SHOWS: ItemSeed[] = [
 	{ name: 'Dog with a Blog', tier: 'bad' },
 	{ name: 'Pair of Kings', tier: 'bad' },
 	{ name: 'Zeke and Luther', tier: 'bad' },
-	{ name: 'Mighty Med', tier: 'bad' },
 	{ name: 'Barney & Friends', tier: 'bad' },
 	{ name: 'Teletubbies', tier: 'bad' }
 ];

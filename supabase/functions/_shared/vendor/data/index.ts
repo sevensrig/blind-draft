@@ -33,7 +33,7 @@ import { TV_SHOWS } from './tv-shows.ts';
 import { NOSTALGIA } from './nostalgia.ts';
 import { DUOS } from './duos.ts';
 import { MOVIES } from './movies.ts';
-import { FOODS } from './foods.ts';
+import { FAST_FOOD } from './fast-food.ts';
 import { DRINKS } from './drinks.ts';
 import { DESSERTS } from './desserts.ts';
 import { PIZZA_TOPPINGS } from './pizza-toppings.ts';
@@ -148,12 +148,12 @@ export const CATEGORIES: Category[] = [
 		variants: [variant('movies', 'Movies', MOVIES)]
 	},
 	{
-		id: 'foods',
-		label: 'Foods',
-		icon: 'pizza-slice',
-		blurb: 'yum.',
+		id: 'fast-food',
+		label: 'Fast Food',
+		icon: 'burger',
+		blurb: 'Hit the drive-thru.',
 		accent: 'green',
-		variants: [variant('foods', 'Foods', FOODS)]
+		variants: [variant('fast-food', 'Fast Food', FAST_FOOD)]
 	},
 	{
 		id: 'drinks',

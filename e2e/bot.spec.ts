@@ -7,7 +7,7 @@ test('plays a full draft against the bot', async ({ page }) => {
 	await waitForHydration(page);
 	await page.getByRole('button', { name: 'Vs. the bot' }).click();
 	await page.getByPlaceholder('Player 1').fill('Sri');
-	await page.getByRole('button', { name: /Foods/ }).click();
+	await page.getByRole('button', { name: /Fast Food/ }).click();
 	await page.getByRole('button', { name: '3', exact: true }).click();
 	await page.getByRole('button', { name: /Start the draft/ }).click();
 

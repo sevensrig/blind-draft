@@ -28,7 +28,7 @@ export interface SetupOptions {
 
 export async function setUpGame(page: Page, options: SetupOptions = {}): Promise<void> {
 	const { names = ['Sri', 'Alex'], budget, slots, variant, custom } = options;
-	const category = custom ? 'Make Your Own' : (options.category ?? 'Foods');
+	const category = custom ? 'Make Your Own' : (options.category ?? 'Fast Food');
 
 	await page.goto('/');
 	await waitForHydration(page);
