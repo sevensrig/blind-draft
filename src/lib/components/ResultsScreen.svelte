@@ -283,8 +283,10 @@
 		box-shadow: var(--shadow-lg);
 	}
 
+	/* Wraps so a long name keeps its size and the totals drop beneath it. */
 	.roster__head {
 		display: flex;
+		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
 		gap: 0.5rem;
@@ -316,6 +318,7 @@
 
 	.roster__totals {
 		flex: none;
+		margin-left: auto;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
@@ -383,7 +386,10 @@
 		text-transform: uppercase;
 	}
 
+	/* min-width lets a long one-word name wrap instead of pushing the points off the card. */
 	.pick__name {
+		min-width: 0;
+		overflow-wrap: break-word;
 		font-size: 0.92rem;
 		font-weight: 900;
 		line-height: 1.15;

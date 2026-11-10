@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { containsSlur } from '$lib/data/moderation';
+	import { NAME_MAX } from '$lib/game/engine';
 
 	interface Props {
 		/** Small caps line above the heading. */
@@ -64,7 +65,7 @@
 			type="text"
 			bind:value
 			placeholder="Player"
-			maxlength="14"
+			maxlength={NAME_MAX}
 			autocomplete="nickname"
 		/>
 		<button class="btn btn--hot" type="submit" disabled={!ready || busy}>

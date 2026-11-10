@@ -4,7 +4,7 @@
 	import { CUSTOM_MIN_ITEMS, blockedEntry, customSeeds as parseCustom } from '$lib/data/custom';
 	import { variant as buildVariant } from '$lib/data/types';
 	import { buildBench, buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
-	import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
+	import { DEFAULT_BUDGET, DEFAULT_SLOTS, NAME_MAX } from '$lib/game/engine';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
 	import { recallName } from '$lib/remote/identity';
@@ -159,7 +159,7 @@
 						type="text"
 						bind:value={names[slot]}
 						placeholder="Player {slot + 1}"
-						maxlength="14"
+						maxlength={NAME_MAX}
 						autocomplete="off"
 						spellcheck="false"
 					/>

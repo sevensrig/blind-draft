@@ -82,8 +82,8 @@ export async function playRound(page: Page, options: RoundOptions = {}): Promise
 	if (mode === 'contest') {
 		if (allIn) await page.getByRole('button', { name: /All in/ }).click();
 		const bidder = winner ?? 'Sri';
-		await page.getByRole('button', { name: new RegExp(`${bidder}[\\s\\S]*bid \\$`) }).click();
-		await page.getByRole('button', { name: /^Sell to/ }).click();
+		await page.getByRole('button', { name: new RegExp(`${bidder}[\\s\\S]*bid \\$`, 'i') }).click();
+		await page.getByRole('button', { name: /^Let .+ have it/ }).click();
 	} else if (mode === 'solo') {
 		if (pass) {
 			await page.getByRole('button', { name: /^Pass/ }).click();

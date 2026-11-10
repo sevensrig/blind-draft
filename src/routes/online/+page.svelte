@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { containsSlur } from '$lib/data/moderation';
+	import { NAME_MAX } from '$lib/game/engine';
 	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
 	import RoomSettingsFields from '$lib/components/RoomSettingsFields.svelte';
 	import { RemoteError } from '$lib/remote/client';
@@ -102,7 +103,7 @@
 			type="text"
 			bind:value={name}
 			placeholder="Player"
-			maxlength="14"
+			maxlength={NAME_MAX}
 			aria-invalid={badName}
 		/>
 		{#if badName}

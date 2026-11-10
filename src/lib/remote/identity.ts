@@ -3,6 +3,7 @@
  * secret this device minted; presenting it is what gets the seat back after a
  * refresh. localStorage, not sessionStorage — that dies with the tab.
  */
+import { cleanName } from '$lib/game/engine';
 
 const TOKEN_KEY = 'blind-draft:device:v1';
 /** Which seat this device holds, per room, so a rejoin can skip the round trip. */
@@ -76,7 +77,7 @@ const NAME_KEY = 'blind-draft:name:v1';
 
 export function rememberName(name: string): void {
 	try {
-		const trimmed = name.trim().slice(0, 14);
+		const trimmed = cleanName(name);
 		if (trimmed) localStorage.setItem(NAME_KEY, trimmed);
 		else localStorage.removeItem(NAME_KEY);
 	} catch {
@@ -86,7 +87,7 @@ export function rememberName(name: string): void {
 
 export function recallName(): string {
 	try {
-		return (localStorage.getItem(NAME_KEY) ?? '').trim().slice(0, 14);
+		return cleanName(localStorage.getItem(NAME_KEY) ?? '');
 	} catch {
 		return '';
 	}

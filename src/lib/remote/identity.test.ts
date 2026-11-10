@@ -39,7 +39,7 @@ describe('remembered name', () => {
 
 	it('trims and caps at the length the name field allows', () => {
 		rememberName('   Bartholomew the Third   ');
-		expect(recallName()).toBe('Bartholomew th');
+		expect(recallName()).toBe('Bartholomew');
 	});
 
 	it('clears rather than storing a blank', () => {

@@ -34,7 +34,7 @@ test('the tutorial walks a new player through three bids to the end', async ({ p
 	await button(/Tap to reveal/).click();
 	await expect(tip).toContainText('Coach opened at $2');
 	await gotIt();
-	await button(/Sell to Coach/).click();
+	await button(/^Let Coach have it/).click();
 	await gotIt();
 	await button(/Next item/).click();
 

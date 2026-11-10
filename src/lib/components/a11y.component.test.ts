@@ -63,6 +63,13 @@ describe('accessibility', () => {
 		game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 4));
 		render(BidScreen);
 		await expect.element(page.getByText('Sri leads')).toBeVisible();
+		// Let the stamp finish landing: it fades in, and mid-drop fails contrast.
+		await Promise.all(
+			document
+				.querySelector('.price')!
+				.getAnimations()
+				.map((a) => a.finished)
+		);
 		await expectNoViolations();
 	});
 
@@ -94,7 +101,7 @@ describe('accessibility', () => {
 		game.replace(withStandingBid(contested({ roster, deck }), 0, 3));
 		render(BidScreen);
 
-		await page.getByRole('button', { name: /Sell to/ }).click();
+		await page.getByRole('button', { name: /^Let .+ have it/ }).click();
 		await expect.element(page.getByText(/pick at/)).toBeVisible();
 		await expectNoViolations();
 	});
