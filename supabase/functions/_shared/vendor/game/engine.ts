@@ -15,8 +15,12 @@ import type { Action, Award, GameConfig, GameState, ItemMode, Player, PlayerId }
 export const DEFAULT_BUDGET = 20;
 export const DEFAULT_SLOTS = 5;
 export const MIN_BID = 1;
+/** Longest player name: what still fits the player panels and bid buttons on a small phone. */
+export const NAME_MAX = 12;
 
 const OTHER: Record<PlayerId, PlayerId> = { 0: 1, 1: 0 };
+
+export const cleanName = (name: string): string => name.trim().slice(0, NAME_MAX).trim();
 
 export const other = (id: PlayerId): PlayerId => OTHER[id];
 
@@ -303,8 +307,8 @@ export function applyAction(state: GameState, action: Action): GameState {
 				phase: 'reveal',
 				config: action.config,
 				players: [
-					blankPlayer(0, nameA.trim() || 'Player 1', action.config.budget),
-					blankPlayer(1, nameB.trim() || 'Player 2', action.config.budget)
+					blankPlayer(0, cleanName(nameA) || 'Player 1', action.config.budget),
+					blankPlayer(1, cleanName(nameB) || 'Player 2', action.config.budget)
 				],
 				deck: action.deck,
 				bench: action.bench ?? []

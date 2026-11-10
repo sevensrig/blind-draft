@@ -1,4 +1,5 @@
 import { containsSlur } from '../_shared/vendor/data/moderation.ts';
+import { cleanName } from '../_shared/vendor/game/engine.ts';
 import type { GameState } from '../_shared/vendor/game/types.ts';
 import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
 		return json({ roomId: room.id, seat: existing.seat, rejoined: true });
 	}
 
-	const name = String(body.name ?? '').slice(0, 14).trim() || 'Player 2';
+	const name = cleanName(String(body.name ?? '')) || 'Player 2';
 	if (containsSlur(name)) return fail('bad_request', "Slurs aren't allowed in names");
 
 	// The unique (room_id, seat) constraint settles a race between two devices

@@ -1,18 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from '$lib/data';
-import { openRoster, slotSuits } from '$lib/data/types';
 import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
+import { openRoster, slotSuits } from '$lib/data/types';
 import { buildBench, buildDeck } from './deck';
 import {
 	applyAction,
 	canReceive,
 	canSell,
+	cleanName,
 	defaultConfig,
 	defaultSlotFor,
 	initialState,
 	itemMode,
 	maxBid,
 	minBid,
+	NAME_MAX,
 	openSlots,
 	other,
 	solventPlayer,
@@ -98,6 +100,22 @@ function winItem(state: GameState, player: PlayerId, amount = 1): GameState {
 	next = applyAction(next, { type: 'sold', player: other(player) });
 	return applyAction(next, { type: 'next' });
 }
+
+describe('player names', () => {
+	it('caps names at NAME_MAX and falls back when blank', () => {
+		const state = applyAction(startGame(items(2)), { type: 'reset' });
+		const started = applyAction(state, {
+			type: 'start',
+			deck: items(2),
+			names: ['  Bartholomew the Third  ', '   '],
+			config: { ...defaultConfig(), slots: 1, roster: openRoster(1), categoryLabel: 'Test' }
+		});
+		expect(started.players[0].name).toBe('Bartholomew');
+		expect(started.players[0].name.length).toBeLessThanOrEqual(NAME_MAX);
+		expect(started.players[1].name).toBe('Player 2');
+		expect(cleanName('Alex')).toBe('Alex');
+	});
+});
 
 describe('bidding (rule 4, 5, 6)', () => {
 	it('needs someone to open before anything can be sold', () => {
