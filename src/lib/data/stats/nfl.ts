@@ -307,15 +307,6 @@ export const NFL_CURRENT_STATS: StatTable = {
 		recYds: 602,
 		recTd: 2
 	},
-	'Ezekiel Elliott': {
-		kind: 'nfl-skill',
-		g: 15,
-		rushYds: 226,
-		rushTd: 3,
-		rec: 12,
-		recYds: 69,
-		recTd: 0
-	}, // 2024
 	'Najee Harris': {
 		kind: 'nfl-skill',
 		g: 17,

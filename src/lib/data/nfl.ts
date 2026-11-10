@@ -70,7 +70,6 @@ export const NFL_CURRENT: ItemSeed[] = [
 	{ name: 'Anthony Richardson', tier: 'bad', position: 'QB' },
 	{ name: 'Cooper Kupp', tier: 'bad', position: 'WR' },
 	{ name: 'Jerry Jeudy', tier: 'bad', position: 'WR' },
-	{ name: 'Ezekiel Elliott', tier: 'bad', position: 'RB' },
 	{ name: 'Najee Harris', tier: 'bad', position: 'RB' },
 	{ name: 'Kyle Pitts', tier: 'bad', position: 'TE' },
 	{ name: 'Bryce Young', tier: 'bad', position: 'QB' }
