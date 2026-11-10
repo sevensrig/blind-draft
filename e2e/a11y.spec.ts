@@ -99,8 +99,12 @@ test('bid screen is accessible before and after a bid lands', async ({ page }) =
 	await scan(page, 'bid screen with no bids');
 
 	// A standing bid disables the holder's button and inverts its colours.
-	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/ }).click();
+	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/i }).click();
 	await expect(page.getByText('Sri leads')).toBeVisible();
+	// The stamp fades in as it lands; scanning mid-drop measures a half-transparent one.
+	await page
+		.locator('.price')
+		.evaluate((el) => Promise.all(el.getAnimations().map((a) => a.finished)));
 	await scan(page, 'bid screen with a standing bid');
 });
 
@@ -108,8 +112,8 @@ test('award screen is accessible', async ({ page }) => {
 	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
 
 	await page.getByRole('button', { name: /Tap to reveal/ }).click();
-	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/ }).click();
-	await page.getByRole('button', { name: /^Sell to/ }).click();
+	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/i }).click();
+	await page.getByRole('button', { name: /^Let .+ have it/ }).click();
 
 	await expect(page.locator('.stamp')).toBeVisible();
 	await scan(page, 'award screen');
@@ -144,8 +148,8 @@ test('positional roster and slot picker are accessible', async ({ page }) => {
 	await page.getByRole('button', { name: /Tap to reveal/ }).click();
 	await scan(page, 'positional bid screen');
 
-	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/ }).click();
-	await page.getByRole('button', { name: /^Sell to/ }).click();
+	await page.getByRole('button', { name: /Sri[\s\S]*bid \$/i }).click();
+	await page.getByRole('button', { name: /^Let .+ have it/ }).click();
 	await expect(page.getByText(/pick at/)).toBeVisible();
 	await scan(page, 'positional award screen with slot picker');
 });

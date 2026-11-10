@@ -95,7 +95,7 @@ export const STEPS: Step[] = [
 		body: 'The dial sets your bid. Tap + twice to make it $3, then tap your button to bid.',
 		target: ['dial', 'bid-0'],
 		expect: bid(0, 3),
-		hint: 'Set the dial to $3 first, then tap “You”.'
+		hint: 'Set the dial to $3 first, then tap “Bid $3”.'
 	},
 	{ kind: 'tutor', action: bid(1, 4) },
 	{
@@ -110,7 +110,7 @@ export const STEPS: Step[] = [
 		body: 'The dial already jumped to $5, the minimum raise. Tap your button.',
 		target: ['bid-0'],
 		expect: bid(0, 5),
-		hint: 'Leave the dial at $5 and tap “You”.'
+		hint: 'Leave the dial at $5 and tap “Bid $5”.'
 	},
 	{ kind: 'tutor', action: { type: 'sold', player: 1 } },
 	{
@@ -173,7 +173,7 @@ export const STEPS: Step[] = [
 		body: 'The chips jump the dial. Tap +5 to make it $6, then bid. “All in” bets everything — there’s no minimum you have to keep.',
 		target: ['dial', 'bid-0'],
 		expect: bid(0, 6),
-		hint: 'Set the dial to $6 (tap +5), then tap “You”.'
+		hint: 'Set the dial to $6 (tap +5), then tap “Bid $6”.'
 	},
 	{ kind: 'tutor', action: { type: 'sold', player: 1 } },
 	{

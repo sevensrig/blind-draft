@@ -97,6 +97,29 @@
 
 	/** Dial position. Null means "sitting at the minimum". */
 	let override = $state<number | null>(null);
+
+	let board: HTMLDivElement;
+	/**
+	 * Moving the dial doesn't bid, which new players miss: give the live bid
+	 * buttons a quick rattle so the next tap is obvious.
+	 */
+	function setAmount(next: number) {
+		override = next;
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		for (const button of board.querySelectorAll<HTMLButtonElement>('[data-rattle]:not(:disabled)')) {
+			button.animate(
+				[
+					{ rotate: '0deg', scale: '1' },
+					{ rotate: '-2.5deg', scale: '1.05', offset: 0.2 },
+					{ rotate: '2.5deg', offset: 0.4 },
+					{ rotate: '-1.5deg', offset: 0.6 },
+					{ rotate: '1deg', scale: '1.02', offset: 0.8 },
+					{ rotate: '0deg', scale: '1' }
+				],
+				{ duration: 360, easing: 'ease-out' }
+			);
+		}
+	}
 	const amount = $derived(Math.min(Math.max(override ?? floor, floor), Math.max(floor, ceiling)));
 
 	$effect(() => {
@@ -111,11 +134,21 @@
 
 	const nameOf = (id: PlayerId) => s.players[id].name;
 
+	/** Colour says whose button it is, so the label is only the action. */
 	function bidLabel(id: PlayerId): string {
-		if (s.bid?.holder === id) return `holding $${s.bid.amount}`;
-		if (amount > s.players[id].money) return `only $${s.players[id].money} left`;
-		return `bid $${amount}`;
+		if (s.bid?.holder === id) return `Winning at $${s.bid.amount}`;
+		if (amount > s.players[id].money) return `Only $${s.players[id].money} left`;
+		return `Bid $${amount}`;
 	}
+
+	/** With one seat on this device, the button also says whose move it is. */
+	function bidHint(id: PlayerId): string | null {
+		if (seat === null || !s.bid) return null;
+		return s.bid.holder === id ? `${nameOf(other(id))}'s move` : 'your move';
+	}
+
+	/** Online and against the bot, only this device's own button is shown. */
+	const bidders = $derived<PlayerId[]>(seat === null ? [0, 1] : [seat]);
 
 	/**
 	 * Whoever isn't holding the bid — accepting it is giving up, so it can't be the
@@ -128,11 +161,11 @@
 	function soldLabel(): string {
 		if (!s.bid) return 'Nobody has opened';
 		if (!yours) return `Waiting on ${nameOf(conceder)}`;
-		return `Sell to ${nameOf(s.bid.holder)}`;
+		return `Let ${nameOf(s.bid.holder)} have it`;
 	}
 
 	function soldHint(): string {
-		if (!s.bid) return 'every item gets claimed — someone has to bid';
+		if (!s.bid) return 'someone has to bid first';
 		if (!yours) return 'only they can hand it over';
 		// One device speaks for both seats, so nobody in particular is conceding.
 		return seat === null ? 'nobody else is raising' : 'stop raising and hand it over';
@@ -145,7 +178,7 @@
 	}
 </script>
 
-<div class="shell board">
+<div class="shell board" bind:this={board}>
 	<header class="bar">
 		<div class="bar__meta">
 			<span class="eyebrow">
@@ -211,6 +244,26 @@
 			{#if item.note}
 				<p class="item__note">{item.note}</p>
 			{/if}
+			{#if s.phase === 'resolve' && mode === 'contest'}
+				<!-- The price lives on the card so the controls below are only controls. -->
+				{#if s.bid}
+					<!-- Keyed so every new bid re-mounts, and slams down again. -->
+					{#key `${s.bid.holder}:${s.bid.amount}`}
+						<div
+							class="price"
+							data-tour="standing"
+							style:--accent={s.bid.holder === 0 ? 'var(--p1)' : 'var(--p2)'}
+						>
+							<span class="price__amount">${s.bid.amount}</span>
+							<span class="price__who">{nameOf(s.bid.holder)} leads</span>
+						</div>
+					{/key}
+				{:else}
+					<div class="price price--idle" data-tour="standing">
+						<span class="price__who">No bids · anyone can open</span>
+					</div>
+				{/if}
+			{/if}
 		</div>
 	{/if}
 
@@ -251,37 +304,30 @@
 	{:else if s.phase === 'resolve'}
 		{#if mode === 'contest'}
 			<div class="resolve">
-				<div class="standing" data-tour="standing" class:standing--idle={!s.bid}>
-					{#if s.bid}
-						<span class="standing__amount">${s.bid.amount}</span>
-						<span class="standing__who">{nameOf(s.bid.holder)} leads</span>
-					{:else}
-						<span class="standing__amount">$&mdash;</span>
-						<span class="standing__who">No bids · anyone can open</span>
-					{/if}
-				</div>
-
 				<AmountDial
 					value={amount}
 					min={floor}
 					max={ceiling}
 					label={s.bid ? 'raise to' : 'open at'}
-					onchange={(next) => (override = next)}
+					onchange={setAmount}
 				/>
 
-				<div class="duel">
-					{#each [0, 1] as const as id (id)}
+				<div class="duel" class:duel--solo={bidders.length === 1}>
+					{#each bidders as id (id)}
+						{@const hint = bidHint(id)}
 						<button
 							class="btn duel__btn"
+							data-rattle
 							class:duel__btn--holding={s.bid?.holder === id}
 							data-tour="bid-{id}"
 							style:--accent={id === 0 ? 'var(--p1)' : 'var(--p2)'}
 							type="button"
+							aria-label="{nameOf(id)}: {bidLabel(id)}{hint ? `, ${hint}` : ''}"
 							disabled={!canBid(s, id, amount) || !controls(id)}
 							onclick={() => send({ type: 'bid', player: id, amount })}
 						>
-							{nameOf(id)}
-							<span class="btn__sub">{bidLabel(id)}</span>
+							{bidLabel(id)}
+							{#if hint}<span class="btn__sub">{hint}</span>{/if}
 						</button>
 					{/each}
 				</div>
@@ -312,11 +358,12 @@
 					min={MIN_BID}
 					max={maxBid(s, seller)}
 					label="name your price"
-					onchange={(next) => (override = next)}
+					onchange={setAmount}
 				/>
 
 				<button
 					class="btn btn--hot"
+					data-rattle
 					type="button"
 					disabled={!canBuy(s, seller, amount) || !controls(seller)}
 					onclick={() => send({ type: 'buy', player: seller, amount })}
@@ -451,7 +498,7 @@
 
 	.players {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.6rem;
 		margin-bottom: 0.2rem;
 	}
@@ -553,6 +600,49 @@
 		text-transform: uppercase;
 	}
 
+	/* The leader's stamp on the card, in their colour, slammed down on every bid. */
+	.price {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		margin-top: 0.7rem;
+		padding: 0.3rem 0.4rem 0.3rem 0.6rem;
+		background: var(--accent);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+		animation: price-slam 420ms linear;
+	}
+
+	.price--idle {
+		padding: 0.35rem 0.6rem;
+		background: var(--cream);
+		box-shadow: none;
+		animation: none;
+	}
+
+	.price__amount {
+		font-size: 2rem;
+		font-weight: 900;
+		line-height: 1;
+		letter-spacing: -0.05em;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.price__who {
+		padding: 0.15rem 0.35rem;
+		background: var(--white);
+		border: var(--bw-thin) solid var(--ink);
+		font-size: 0.64rem;
+		font-weight: 900;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+
+	.price--idle .price__who {
+		padding: 0;
+		border: 0;
+	}
+
 	/* ---------- controls ---------- */
 
 	/* `auto` is a no-op while the card is flex:1, and pins the controls down
@@ -565,53 +655,25 @@
 		padding-top: 0.4rem;
 	}
 
-	.standing {
-		display: flex;
-		align-items: baseline;
-		justify-content: center;
-		gap: 0.5rem;
-		padding: 0.4rem 0.6rem;
-		/* Money on the table, so --money rather than a player's colour. */
-		background: var(--money);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-	}
-
-	.standing--idle {
-		background: var(--white);
-	}
-
-	.standing__amount {
-		font-size: 1.8rem;
-		font-weight: 900;
-		line-height: 1;
-		letter-spacing: -0.05em;
-		font-variant-numeric: tabular-nums;
-	}
-
-	.standing__who {
-		font-size: 0.64rem;
-		font-weight: 900;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-	}
-
 	.duel {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.5rem;
+	}
+
+	.duel--solo {
+		grid-template-columns: 1fr;
 	}
 
 	.duel__btn {
 		background: var(--accent);
-		font-size: 0.92rem;
+		font-size: 1.05rem;
 	}
 
-	/* Disabled because they're winning, not because anything is wrong — so it
-	   inverts rather than washing out. Same for `.sold--waiting` below. */
+	/* Disabled because they're winning, not because anything is wrong — so it keeps
+	   its colour and just sits pressed in. Same idea for `.sold--waiting` below. */
 	.duel__btn--holding:disabled {
-		background: var(--ink);
-		color: var(--cream);
+		background: var(--accent);
 		opacity: 1;
 	}
 
@@ -732,6 +794,30 @@
 	@keyframes card-flip {
 		from {
 			transform: rotate(1deg) perspective(60rem) rotateY(-90deg) scale(1.07);
+		}
+	}
+
+	/* Drops from above the card (big, high shadow), hits flat, rebounds a touch on Z, settles. */
+	@keyframes price-slam {
+		0% {
+			opacity: 0;
+			transform: perspective(40rem) translateZ(18rem) rotate(-8deg);
+			box-shadow: 18px 18px 0 var(--ink);
+			animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+		}
+		45% {
+			opacity: 1;
+			transform: perspective(40rem) translateZ(-2.5rem) rotate(0deg);
+			box-shadow: 0 0 0 var(--ink);
+			animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1);
+		}
+		70% {
+			transform: perspective(40rem) translateZ(1.5rem);
+			box-shadow: 5px 5px 0 var(--ink);
+			animation-timing-function: cubic-bezier(0.55, 0, 0.45, 1);
+		}
+		100% {
+			transform: none;
 		}
 	}
 

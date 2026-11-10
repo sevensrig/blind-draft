@@ -24,7 +24,7 @@ test('plays a full draft against the bot', async ({ page }) => {
 			await button(/Next item|See the results/).click();
 		else if (await ready(/takes it\s*free/)) await button(/takes it\s*free/).click();
 		else if (await ready(/Sri takes it for/)) await button(/Sri takes it for/).click();
-		else if (await ready(/Sell to Bot/)) await button(/Sell to Bot/).click();
+		else if (await ready(/^Let Bot have it/)) await button(/^Let Bot have it/).click();
 		else if ((await page.getByText('No bids').isVisible()) && (await ready(/^Sri/))) {
 			// Gives the bot first refusal, so both openers get exercised.
 			await page.waitForTimeout(1500);

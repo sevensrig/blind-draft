@@ -95,29 +95,30 @@ test('two devices play a remote round through the server', async ({ browser }) =
 
 	// A device may bid only for its own seat.
 	await expect(host.locator('.duel__btn').first()).toBeEnabled();
-	await expect(host.locator('.duel__btn').nth(1)).toBeDisabled();
+	// Online, only this device's own bid button is drawn.
+	await expect(host.locator('.duel__btn')).toHaveCount(1);
 
 	// Host bids; the guest sees it without doing anything.
 	await host.locator('.duel__btn').first().click();
-	await expect(guest.locator('.standing__amount')).not.toHaveText('$—', { timeout: 15_000 });
+	await expect(guest.locator('.price__amount')).not.toHaveText('$—', { timeout: 15_000 });
 
 	// Guest raises; the host sees who leads. The host hears the raise before the
 	// server has it, so wait for the server too — the reload below would cancel it.
 	const raised = guest.waitForResponse((res) => res.url().includes('/room-action'));
-	await guest.locator('.duel__btn').nth(1).click();
+	await guest.locator('.duel__btn').click();
 	await raised;
-	await expect(host.locator('.standing__who')).toContainText(/alex/i, { timeout: 15_000 });
+	await expect(host.locator('.price__who')).toContainText(/alex/i, { timeout: 15_000 });
 
-	const standing = (await host.locator('.standing__amount').textContent())?.trim();
+	const standing = (await host.locator('.price__amount').textContent())?.trim();
 
 	// Reconnecting mid-bid resyncs to the live bid, not a cached one.
 	await guest.reload();
-	await expect(guest.locator('.standing__amount')).toHaveText(standing ?? '', { timeout: 20_000 });
+	await expect(guest.locator('.price__amount')).toHaveText(standing ?? '', { timeout: 20_000 });
 
 	// Accepting a bid is not a self-serve win button: Alex holds the standing bid,
 	// so only Sri, by giving up, can end the auction.
 	await expect(guest.getByRole('button', { name: /^Waiting on Sri/ })).toBeDisabled();
-	await expect(guest.getByRole('button', { name: /^Sell to/ })).toHaveCount(0);
+	await expect(guest.getByRole('button', { name: /^Let .+ have it/ })).toHaveCount(0);
 
 	/*
 	 * And the server doesn't take the client's word for it. A seat check of
@@ -154,7 +155,7 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	// And nothing landed: the card is still on the table, unsold.
 	await expect(guest.locator('.stamp__to')).toHaveCount(0);
 
-	const sell = host.getByRole('button', { name: /^Sell to Alex/ });
+	const sell = host.getByRole('button', { name: /^Let Alex have it/ });
 	await expect(sell).toBeEnabled();
 
 	/*
@@ -315,10 +316,10 @@ test('the opponent sees a bid before the server has it', async ({ browser }) => 
 	});
 
 	await host.locator('.duel__btn').first().click();
-	await expect(host.locator('.standing__who')).toContainText(/sri/i);
+	await expect(host.locator('.price__who')).toContainText(/sri/i);
 	// Still held: only the announcement can have told the guest.
-	await expect(guest.locator('.standing__who')).toContainText(/sri/i, { timeout: 3_000 });
-	const shown = (await guest.locator('.standing__amount').textContent())?.trim();
+	await expect(guest.locator('.price__who')).toContainText(/sri/i, { timeout: 3_000 });
+	const shown = (await guest.locator('.price__amount').textContent())?.trim();
 
 	// Once the server has it, the guess gives way to the same bid, confirmed.
 	const confirmed = host.waitForResponse((res) => res.url().includes('/room-action'));
@@ -327,8 +328,8 @@ test('the opponent sees a bid before the server has it', async ({ browser }) => 
 	await host.unrouteAll({ behavior: 'wait' });
 	await confirmed;
 	await guest.reload();
-	await expect(guest.locator('.standing__amount')).toHaveText(shown ?? '', { timeout: 20_000 });
-	await expect(guest.locator('.standing__who')).toContainText(/sri/i);
+	await expect(guest.locator('.price__amount')).toHaveText(shown ?? '', { timeout: 20_000 });
+	await expect(guest.locator('.price__who')).toContainText(/sri/i);
 });
 
 test('an announced bid the server never got lapses on the other screen', async ({ browser }) => {
@@ -338,10 +339,10 @@ test('an announced bid the server never got lapses on the other screen', async (
 	await host.route('**/functions/v1/room-action', (route) => route.abort());
 	await host.locator('.duel__btn').first().click();
 
-	await expect(guest.locator('.standing__who')).toContainText(/sri/i, { timeout: 3_000 });
+	await expect(guest.locator('.price__who')).toContainText(/sri/i, { timeout: 3_000 });
 	// Nothing backs it, so it's gone again — on both screens.
-	await expect(guest.locator('.standing__amount')).toHaveText('$—', { timeout: 10_000 });
-	await expect(host.locator('.standing__amount')).toHaveText('$—');
+	await expect(guest.locator('.price__who')).toHaveText(/no bids/i, { timeout: 10_000 });
+	await expect(host.locator('.price__who')).toHaveText(/no bids/i);
 });
 
 /*
@@ -360,26 +361,26 @@ test('a raise straight over an announced bid still lands', async ({ browser }) =
 	});
 
 	await host.locator('.duel__btn').first().click();
-	await expect(guest.locator('.standing__who')).toContainText(/sri/i, { timeout: 3_000 });
+	await expect(guest.locator('.price__who')).toContainText(/sri/i, { timeout: 3_000 });
 
 	// Alex raises over the bid the server hasn't seen yet. The raise is held back
 	// until Sri's bid lands, so its answer only comes after the release.
 	const raised = guest.waitForResponse((res) => res.url().includes('/room-action'));
-	await guest.locator('.duel__btn').nth(1).click();
-	await expect(guest.locator('.standing__who')).toContainText(/alex/i);
+	await guest.locator('.duel__btn').click();
+	await expect(guest.locator('.price__who')).toContainText(/alex/i);
 
 	release();
 	// Lets the held request finish before the route goes.
 	await host.unrouteAll({ behavior: 'wait' });
 
-	await expect(host.locator('.standing__who')).toContainText(/alex/i, { timeout: 15_000 });
+	await expect(host.locator('.price__who')).toContainText(/alex/i, { timeout: 15_000 });
 	// The host hears the raise before the server has it; the reload below would
 	// cancel a raise still in flight.
 	expect((await raised).ok()).toBe(true);
 	await expect(guest.getByText(/got there first|didn't go through/)).toHaveCount(0);
 	// And it's the server's word, not a leftover guess.
 	await guest.reload();
-	await expect(guest.locator('.standing__who')).toContainText(/alex/i, { timeout: 20_000 });
+	await expect(guest.locator('.price__who')).toContainText(/alex/i, { timeout: 20_000 });
 });
 
 test('a host can open a room on their own typed list', async ({ browser }) => {
@@ -713,6 +714,8 @@ async function tapFirst(page: Page, names: RegExp[]): Promise<boolean> {
 }
 
 test('emotes cross during the draft and chat opens at the end', async ({ browser }) => {
+	// A whole draft through the server, so it sits right at the default 30s.
+	test.setTimeout(60_000);
 	const host = await device(browser, 'Sri');
 	const guest = await device(browser, 'Alex');
 
@@ -736,8 +739,14 @@ test('emotes cross during the draft and chat opens at the end', async ({ browser
 	await expect(alexPanel(guest).locator('.emote')).toContainText('Bid!');
 
 	// Sri buys three for $1 each, then the rest go to Alex free.
-	const sri = [/Tap to reveal/, /^Sri bid \$1/, /See the results/, /Next item/];
-	const alex = [/^Sell to Sri/, /^Alex takes it/, /Tap to reveal/, /Next item/, /See the results/];
+	const sri = [/Tap to reveal/, /^Sri: Bid \$1/, /See the results/, /Next item/];
+	const alex = [
+		/^Let Sri have it/,
+		/^Alex takes it/,
+		/Tap to reveal/,
+		/Next item/,
+		/See the results/
+	];
 	const chatTitle = (page: Page) => page.getByRole('heading', { name: 'Talk it out' });
 	for (let turn = 0; turn < 60 && !(await chatTitle(host).isVisible()); turn++) {
 		const moved = (await tapFirst(host, sri)) || (await tapFirst(guest, alex));
@@ -798,8 +807,8 @@ async function startRoom(host: Page, guest: Page): Promise<void> {
  * guest sells, so the host fills up and the guest takes the rest free.
  */
 async function playRemoteToResults(host: Page, guest: Page): Promise<void> {
-	const sri = [/Tap to reveal/, /^Sri bid \$1/, /See the results/, /Next item/, /takes it/];
-	const alex = [/^Sell to Sri/, /takes it/, /Tap to reveal/, /Next item/, /See the results/];
+	const sri = [/Tap to reveal/, /^Sri: Bid \$1/, /See the results/, /Next item/, /takes it/];
+	const alex = [/^Let Sri have it/, /takes it/, /Tap to reveal/, /Next item/, /See the results/];
 	const done = async () =>
 		(await host.getByRole('button', { name: /Share results/ }).isVisible()) &&
 		(await guest.getByRole('button', { name: /Share results/ }).isVisible());

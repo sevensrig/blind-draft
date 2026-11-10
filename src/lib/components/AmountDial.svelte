@@ -13,8 +13,8 @@
 	const clamp = (n: number) => Math.min(max, Math.max(min, n));
 	const nudge = (delta: number) => onchange(clamp(value + delta));
 
-	/** Jump chips sized to the range so short ranges don't show useless steps. */
-	const jumps = $derived([1, 2, 5].filter((step) => min + step <= max));
+	/** Jump chips sized to the range. No +1: the + knob already does that. */
+	const jumps = $derived([2, 5].filter((step) => min + step <= max));
 	const atMax = $derived(value >= max);
 </script>
 
