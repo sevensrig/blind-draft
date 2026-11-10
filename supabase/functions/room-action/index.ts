@@ -28,7 +28,15 @@ function actorMismatch(action: Action, seat: PlayerId): boolean {
 	return (action as { player?: PlayerId }).player !== seat;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/**
+ * Actions that replace the whole game. The engine accepts them in any phase,
+ * and `start` carries its own deck and config, so letting one through would let
+ * a player deal themselves a known deck or wipe the game. Rooms are dealt by
+ * create-room and rematch, never through here.
+ */
+const SERVER_ONLY = new Set<Action['type']>(['start', 'reset']);
+
+const UUID =/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 Deno.serve(async (req) => {
 	if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -48,6 +56,7 @@ Deno.serve(async (req) => {
 	if (!token || !roomId || !action?.type) {
 		return fail('bad_request', 'roomId, token and action are required');
 	}
+	if (SERVER_ONLY.has(action.type)) return fail('forbidden', 'That action is not allowed here');
 	if (!Number.isInteger(expected)) return fail('bad_request', 'A version is required');
 	// The RPC takes a uuid, and a malformed one would surface as a server error.
 	if (!UUID.test(roomId)) return fail('not_found', 'No game in that room');
