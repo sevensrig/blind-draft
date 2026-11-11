@@ -67,7 +67,7 @@ export const STEPS: Step[] = [
 	{
 		kind: 'info',
 		title: 'Your wallets',
-		body: 'Purple is you, yellow is Coach. The big number is money left; the blocks underneath are your roster slots.',
+		body: 'Purple is you, yellow is Coach — your bid button is purple too. The big number is money left; the blocks underneath are your roster slots.',
 		target: ['players']
 	},
 	{
@@ -86,13 +86,13 @@ export const STEPS: Step[] = [
 	{
 		kind: 'info',
 		title: 'Pizza is up',
-		body: 'No bids yet. There are no turns — whoever wants it can open.',
+		body: 'No bids yet, so the card says anyone can open. There are no turns — whoever wants it goes first.',
 		target: ['standing']
 	},
 	{
 		kind: 'do',
 		title: 'Open the bidding',
-		body: 'The dial sets your bid. Tap + twice to make it $3, then tap your button to bid.',
+		body: 'Tap + twice to set the amount to $3. That only sets it — your button shakes to remind you. Then tap “Bid $3”.',
 		target: ['dial', 'bid-0'],
 		expect: bid(0, 3),
 		hint: 'Set the dial to $3 first, then tap “Bid $3”.'
@@ -101,13 +101,13 @@ export const STEPS: Step[] = [
 	{
 		kind: 'info',
 		title: 'Coach raised to $4',
-		body: 'Coach leads now. Raises go up by at least $1, back and forth, until someone stops.',
-		target: ['standing']
+		body: 'Coach’s yellow stamp landed on the card, and your button says it’s your move. Raises go up by at least $1, back and forth, until someone stops.',
+		target: ['standing', 'bid-0']
 	},
 	{
 		kind: 'do',
 		title: 'Raise back',
-		body: 'The dial already jumped to $5, the minimum raise. Tap your button.',
+		body: 'The amount already jumped to $5, the minimum raise. Tap “Bid $5”.',
 		target: ['bid-0'],
 		expect: bid(0, 5),
 		hint: 'Leave the dial at $5 and tap “Bid $5”.'
@@ -143,7 +143,7 @@ export const STEPS: Step[] = [
 	{
 		kind: 'do',
 		title: 'Let it go',
-		body: 'Stop raising and hand it to Coach.',
+		body: 'Stop raising: tap “Let Coach have it”.',
 		target: ['sold'],
 		expect: { type: 'sold', player: 0 }
 	},
@@ -170,7 +170,7 @@ export const STEPS: Step[] = [
 	{
 		kind: 'do',
 		title: 'Sushi — go get it',
-		body: 'The chips jump the dial. Tap +5 to make it $6, then bid. “All in” bets everything — there’s no minimum you have to keep.',
+		body: 'The chips jump the amount. Tap +5 to make it $6, then tap “Bid $6”. “All in” bets everything — there’s no minimum you have to keep.',
 		target: ['dial', 'bid-0'],
 		expect: bid(0, 6),
 		hint: 'Set the dial to $6 (tap +5), then tap “Bid $6”.'

@@ -332,7 +332,6 @@
 	<footer class="feedback">
 		<a href={FEEDBACK_URL} target="_blank" rel="noopener">Send feedback</a>
 		<a class="privacy" href="/privacy">Privacy</a>
-		<p class="hi">hi trevor</p>
 	</footer>
 </div>
 
@@ -735,12 +734,6 @@
 	.feedback .privacy {
 		font-size: 0.64rem;
 		font-weight: 700;
-		color: var(--ink-muted);
-	}
-
-	.feedback .hi {
-		margin: 0;
-		font-size: 0.6rem;
 		color: var(--ink-muted);
 	}
 </style>
