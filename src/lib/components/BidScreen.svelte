@@ -91,8 +91,17 @@
 
 	/** Lowest legal amount for the dial, given who's acting. */
 	const floor = $derived(mode === 'solo' ? MIN_BID : minBid(s));
+	/**
+	 * Highest amount for the dial. On a shared device it covers whichever
+	 * player can bid the most; online and against the bot it is only this
+	 * device's own wallet, so "All in" means your money, not the richer side's.
+	 */
 	const ceiling = $derived(
-		mode === 'solo' ? maxBid(s, solventPlayer(s)) : Math.max(maxBid(s, 0), maxBid(s, 1), floor)
+		mode === 'solo'
+			? maxBid(s, solventPlayer(s))
+			: seat !== null
+				? Math.max(maxBid(s, seat), floor)
+				: Math.max(maxBid(s, 0), maxBid(s, 1), floor)
 	);
 
 	/** Dial position. Null means "sitting at the minimum". */
