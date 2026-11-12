@@ -87,13 +87,30 @@ function poolRanks(variantId: string, table: StatTable): Map<string, number> {
 	return ranks;
 }
 
+/** A pool scored by an outside ranking alone, with no stat lines to blend in. */
+function ratingRanks(variantId: string, ratings: Record<string, number>): Map<string, number> {
+	const cached = cache.get(variantId);
+	if (cached) return cached;
+	const ranks = percentiles(Object.entries(ratings));
+	cache.set(variantId, ranks);
+	return ranks;
+}
+
 /** Same 10–100 scale as tiers, so the steal maths works for every category. */
 function basePoints(item: Item, variantId: string): { base: number; stat: StatLine | null } {
 	const table = statTable(variantId);
 	const stat = table?.[item.name] ?? null;
-	if (!table || !stat) return { base: TIER_POINTS[item.tier], stat: null };
-	const rank = poolRanks(variantId, table).get(item.name) ?? 0;
-	return { base: Math.round(10 + 90 * rank), stat };
+	if (table && stat) {
+		const rank = poolRanks(variantId, table).get(item.name) ?? 0;
+		return { base: Math.round(10 + 90 * rank), stat };
+	}
+	const ratings = table ? null : ratingTable(variantId);
+	// Players off the list fall back to their tier.
+	if (ratings && item.name in ratings) {
+		const rank = ratingRanks(variantId, ratings).get(item.name) ?? 0;
+		return { base: Math.round(10 + 90 * rank), stat: null };
+	}
+	return { base: TIER_POINTS[item.tier], stat: null };
 }
 
 /** Custom games have no ratings to score against, so they get no scoreboard. */

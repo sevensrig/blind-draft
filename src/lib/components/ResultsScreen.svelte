@@ -45,8 +45,10 @@
 	const scoreOf = (player: Player) => board?.players[player.id];
 	const pickFor = (player: Player, slotId: string): PickScore | undefined =>
 		scoreOf(player)?.picks.find((pick) => pick.entry.slotId === slotId);
-	/* Per-pick points only for stat-ranked picks; elsewhere they'd just read out the hidden tier. */
-	const itemised = $derived(!!board && !!statTable(s.config.variantId));
+	/* Per-pick points only for stat- or rank-scored picks; elsewhere they'd just read out the hidden tier. */
+	const itemised = $derived(
+		!!board && !!(statTable(s.config.variantId) ?? ratingTable(s.config.variantId))
+	);
 
 	/**
 	 * Same names and settings, brand new blind order. A custom game carries its

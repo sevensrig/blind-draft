@@ -24,6 +24,7 @@ import { NBA_CURRENT, NBA_ALL_TIME } from './nba';
 import { NFL_CURRENT, NFL_ALL_TIME } from './nfl';
 import { MLB_CURRENT, MLB_ALL_TIME } from './mlb';
 import { NHL_CURRENT, NHL_ALL_TIME } from './nhl';
+import { SOCCER_CURRENT } from './soccer';
 import { CELEBRITIES } from './celebrities';
 import { CARTOONS } from './cartoons';
 import { TV_SHOWS } from './tv-shows';
@@ -95,6 +96,14 @@ export const CATEGORIES: Category[] = [
 			variant('nhl-current', 'Current', NHL_CURRENT),
 			variant('nhl-all-time', 'All-Time', NHL_ALL_TIME)
 		]
+	},
+	{
+		id: 'soccer',
+		label: 'Soccer Players',
+		icon: 'futbol',
+		blurb: 'The World Cup top 100.',
+		accent: 'blue',
+		variants: [variant('soccer-current', 'World Cup 2026', SOCCER_CURRENT)]
 	},
 	{
 		id: 'celebrities',

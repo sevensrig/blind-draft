@@ -29,6 +29,17 @@ describe('stat tables', () => {
 		}
 	);
 
+	it('ranks the whole Fox Sports top 100, every one in the soccer pool', () => {
+		const pool = new Set(
+			CATEGORIES.find((c) => c.id === 'soccer')!.variants[0].items.map((i) => i.name)
+		);
+		const ratings = ratingTable('soccer-current')!;
+		expect(Object.keys(ratings)).toHaveLength(100);
+		expect(Object.keys(ratings).filter((name) => !pool.has(name))).toEqual([]);
+		expect(new Set(Object.values(ratings)).size).toBe(100);
+		expect(ratings['Lamine Yamal']).toBeGreaterThan(ratings['Kylian Mbappé']);
+	});
+
 	it('flips the NFL Top 100 so No. 1 rates highest', () => {
 		const nfl = ratingTable('nfl-current')!;
 		expect(nfl['Josh Allen']).toBeGreaterThan(nfl['Brock Purdy']);

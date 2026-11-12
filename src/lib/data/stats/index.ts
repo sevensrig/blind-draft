@@ -15,6 +15,7 @@ import {
 	NFL_CURRENT_TOP100
 } from './nfl';
 import { NHL_ALL_TIME_STATS, NHL_CURRENT_STATS } from './nhl';
+import { SOCCER_CURRENT_FOX } from './soccer';
 import type { StatLine, StatTable } from './types';
 
 export type { StatLine, StatTable } from './types';
@@ -43,7 +44,9 @@ const RATINGS: Record<string, Record<string, number>> = {
 	'nba-current': NBA_CURRENT_2K,
 	'nba-all-time': fromRanks(NBA_ALL_TIME_BR),
 	'nfl-current': fromRanks(NFL_CURRENT_TOP100),
-	'nfl-all-time': fromRanks(NFL_ALL_TIME_CBS)
+	'nfl-all-time': fromRanks(NFL_ALL_TIME_CBS),
+	// Ranking only: soccer has no stat line that compares a keeper with a striker.
+	'soccer-current': fromRanks(SOCCER_CURRENT_FOX)
 };
 
 export function ratingTable(variantId: string): Record<string, number> | null {

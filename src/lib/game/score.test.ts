@@ -146,6 +146,17 @@ describe('scoreGame', () => {
 		}
 	);
 
+	it('scores soccer by the Fox Sports rank', () => {
+		const pool = getCategory('soccer')!.variants[0].items;
+		const named = (name: string) => pool.find((item) => item.name === name)!;
+		const config = { categoryId: 'soccer', variantId: 'soccer-current' };
+		const base = (item: Item) =>
+			scoreGame(finished([[item, 1]], [['mid', 1]], config))!.players[0].picks[0].base;
+		expect(base(named('Lamine Yamal'))).toBe(100);
+		expect(base(named('Pervis Estupiñán'))).toBe(10);
+		expect(base(named('Harry Kane'))).toBeGreaterThan(base(named('Phil Foden')));
+	});
+
 	it('falls back to the tier when a sports item has no stat line', () => {
 		const ghost: Item = { id: 'x', name: 'Not A Player', tier: 'good' };
 		const board = scoreGame(
