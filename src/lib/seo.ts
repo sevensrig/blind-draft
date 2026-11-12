@@ -57,7 +57,7 @@ export const FAQ: Faq[] = [
 	},
 	{
 		q: 'What can you draft?',
-		a: 'Seventeen built-in categories, including NBA, NFL, MLB and NHL players, iconic movies, celebrities, childhood cartoons and nostalgia, foods, desserts and pizza toppings — plus a Make Your Own mode where you type the list yourself.'
+		a: 'Eighteen built-in categories, including NBA, NFL, MLB, NHL and soccer players, iconic movies, celebrities, childhood cartoons and nostalgia, foods, desserts and pizza toppings — plus a Make Your Own mode where you type the list yourself.'
 	}
 ];
 

@@ -17,6 +17,7 @@ const WANTED = [
 	'football',
 	'baseball-bat-ball',
 	'hockey-puck',
+	'futbol',
 	'star',
 	'tv',
 	'couch',

@@ -127,6 +127,14 @@ test('a positional category drafts a labelled starting five', async ({ page }) =
 	await expect(page.locator('.item__tag--pos')).toBeVisible();
 });
 
+test('soccer drafts an open roster and scores every pick', async ({ page }) => {
+	await setUpGame(page, { names: ['Sri', 'Alex'], category: 'Soccer Players', slots: '4' });
+	await expect(page.getByText('of 8')).toBeVisible();
+
+	await playToResults(page, { winner: 'Sri' });
+	await expect(page.locator('.pick__price')).toHaveCount(8);
+});
+
 test('resumes an in-progress draft after a reload', async ({ page }) => {
 	await setUpGame(page, { names: ['Sri', 'Alex'], budget: '$20', slots: '3' });
 	await playRound(page, { winner: 'Sri' });

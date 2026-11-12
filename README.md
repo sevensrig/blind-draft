@@ -8,7 +8,7 @@
 
 <img src="https://img.shields.io/badge/price-free-ffd93d?style=flat-square&labelColor=000000" alt="Free">
 <img src="https://img.shields.io/badge/account-not%20needed-c4b5fd?style=flat-square&labelColor=000000" alt="No account needed">
-<img src="https://img.shields.io/badge/categories-17-8ecae6?style=flat-square&labelColor=000000" alt="17 categories">
+<img src="https://img.shields.io/badge/categories-18-8ecae6?style=flat-square&labelColor=000000" alt="18 categories">
 <img src="https://img.shields.io/badge/modes-local%20%C2%B7%20online%20%C2%B7%20bot-ff6b6b?style=flat-square&labelColor=000000" alt="Local, online and bot modes">
 <a href="https://github.com/sevensrig/blind-draft/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/sevensrig/blind-draft/ci.yml?branch=main&style=flat-square&labelColor=000000&label=CI" alt="CI status"></a>
 
@@ -72,7 +72,7 @@ Plays from what it can see: the card, both wallets, what's gone by. Never the de
 
 | | |
 | --- | --- |
-| 🏀 **Sports** | NBA · NFL · MLB · NHL, current or all-time. NBA and NFL draft a real starting lineup by position. |
+| 🏀 **Sports** | NBA · NFL · MLB · NHL, current or all-time, plus soccer from Fox Sports' World Cup 2026 top 100. NBA and NFL draft a real starting lineup by position. |
 | 📺 **Nostalgia** | Childhood cartoons · TV shows · childhood stuff · fictional duos |
 | 🎬 **Screen & people** | Iconic movies · celebrities |
 | 🍕 **Food** | Foods · drinks · desserts · pizza toppings · Trader Joe's |
