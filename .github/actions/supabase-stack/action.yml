@@ -13,9 +13,18 @@ runs:
       with:
         version: latest
 
+    # Registry rate limits and half-started containers holding ports have both
+    # failed this before, so tear down and retry rather than fail the job.
     - name: Start Supabase
       shell: bash
-      run: supabase start
+      run: |
+        for attempt in 1 2 3; do
+          if supabase start; then exit 0; fi
+          echo "::warning::supabase start failed (attempt $attempt of 3)"
+          supabase stop --no-backup || true
+          [ "$attempt" -lt 3 ] && sleep $((attempt * 20))
+        done
+        exit 1
 
     - name: Serve the Edge Functions
       shell: bash
