@@ -3,12 +3,6 @@
 
 import type { ItemSeed } from './types.ts';
 
-/**
- * Childhood Nostalgia — toys, trends, snacks, games and internet moments.
- *
- * Reference window is a 2008-2020 childhood, i.e. players aged 14-26. Anything
- * that peaked before ~2007 belongs to someone else's childhood and gets cut.
- */
 export const NOSTALGIA: ItemSeed[] = [
 	// great
 	{ name: 'Nintendo Wii', tier: 'great' },

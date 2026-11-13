@@ -15,6 +15,7 @@ export const DUOS: ItemSeed[] = [
 	{ name: 'Ash & Pikachu', tier: 'great', note: 'Pokemon' },
 	{ name: 'Eleven & Mike', tier: 'great', note: 'Stranger Things' },
 	{ name: 'Zuko & Iroh', tier: 'great', note: 'Avatar: The Last Airbender' },
+	{ name: 'Tom & Jerry', tier: 'great', note: 'Tom and Jerry' },
 
 	// good
 	{ name: 'Timon & Pumbaa', tier: 'good', note: 'The Lion King' },
@@ -32,18 +33,15 @@ export const DUOS: ItemSeed[] = [
 	{ name: 'Peter & Stewie', tier: 'good', note: 'Family Guy' },
 	{ name: 'Marty & Doc', tier: 'good', note: 'Back to the Future' },
 	{ name: 'Master Chief & Cortana', tier: 'good', note: 'Halo' },
+	{ name: 'Bob & Stuart', tier: 'good', note: 'Minions' },
 
 	// mid
 	{ name: 'Cosmo & Wanda', tier: 'mid', note: 'The Fairly OddParents' },
-	{ name: 'Tom & Jerry', tier: 'mid', note: 'Tom and Jerry' },
 	{ name: 'Batman & Robin', tier: 'mid', note: 'DC Comics' },
 	{ name: 'Frodo & Sam', tier: 'mid', note: 'The Lord of the Rings' },
 	{ name: 'Nemo & Dory', tier: 'mid', note: 'Finding Nemo' },
-	{ name: 'Anna & Elsa', tier: 'mid', note: 'Frozen' },
 	{ name: 'Deadpool & Wolverine', tier: 'mid', note: 'Marvel' },
-	{ name: 'Sherlock & Watson', tier: 'mid', note: 'Sherlock' },
 	{ name: 'Calvin & Hobbes', tier: 'mid', note: 'Calvin and Hobbes' },
-	{ name: 'Luffy & Zoro', tier: 'mid', note: 'One Piece' },
 	{ name: 'Mr. Incredible & Frozone', tier: 'mid', note: 'The Incredibles' },
 	{ name: 'Stan & Kyle', tier: 'mid', note: 'South Park' },
 	{ name: 'Kratos & Atreus', tier: 'mid', note: 'God of War' },
@@ -55,7 +53,5 @@ export const DUOS: ItemSeed[] = [
 	// bad
 	{ name: 'Dora & Boots', tier: 'bad', note: 'Dora the Explorer' },
 	{ name: 'Caillou & Rosie', tier: 'bad', note: 'Caillou' },
-	{ name: 'Peppa & George', tier: 'bad', note: 'Peppa Pig' },
-	{ name: 'Bob & Stuart', tier: 'bad', note: 'Minions' },
-	{ name: 'Fanboy & Chum Chum', tier: 'bad', note: 'Fanboy & Chum Chum' }
+	{ name: 'Peppa & George', tier: 'bad', note: 'Peppa Pig' }
 ];

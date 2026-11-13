@@ -15,7 +15,6 @@ export const DRINKS: ItemSeed[] = [
 	{ name: 'Icee', tier: 'great' },
 
 	// good
-	{ name: 'Cold brew', tier: 'good' },
 	{ name: 'Mountain Dew', tier: 'good' },
 	{ name: 'Fanta', tier: 'good' },
 	{ name: 'Slushie', tier: 'good' },
@@ -27,6 +26,7 @@ export const DRINKS: ItemSeed[] = [
 	{ name: 'Arnold Palmer', tier: 'good' },
 	{ name: 'Vanilla Coke', tier: 'good' },
 	{ name: 'Chick-fil-A lemonade', tier: 'good' },
+	{ name: 'Fresca', tier: 'good' },
 
 	// mid
 	{ name: 'Gatorade', tier: 'mid' },
