@@ -8,7 +8,7 @@ describe('shareText', () => {
 		const state = finishedGame({ slots: 3, names: ['Sri', 'Alex'] });
 		const lines = shareText(state).split('\n');
 
-		expect(lines[0]).toBe('$20 Draft · Foods · $20 each');
+		expect(lines[0]).toBe('$20 Draft · Fast Food · $20 each');
 		const board = scoreGame(state)!;
 		expect(lines[1].startsWith(`Sri (${board.players[0].total} pts): `)).toBe(true);
 		expect(lines[2].startsWith(`Alex (${board.players[1].total} pts): `)).toBe(true);

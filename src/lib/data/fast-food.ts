@@ -1,0 +1,46 @@
+import type { ItemSeed } from './types';
+
+export const FAST_FOOD: ItemSeed[] = [
+	// great
+	{ name: 'Chick-fil-A', tier: 'great' },
+	{ name: 'Chipotle', tier: 'great' },
+	{ name: 'In-N-Out', tier: 'great' },
+	{ name: "Raising Cane's", tier: 'great' },
+	{ name: 'Taco Bell', tier: 'great' },
+	{ name: "McDonald's", tier: 'great' },
+	{ name: 'Popeyes', tier: 'great' },
+	{ name: 'Wingstop', tier: 'great' },
+	{ name: 'Shake Shack', tier: 'great' },
+	{ name: 'Five Guys', tier: 'great' },
+
+	// good
+	{ name: "Wendy's", tier: 'good' },
+	{ name: 'Panda Express', tier: 'good' },
+	{ name: "Jersey Mike's", tier: 'good' },
+	{ name: "Dave's Hot Chicken", tier: 'good' },
+	{ name: 'Cava', tier: 'good' },
+	{ name: "Domino's", tier: 'good' },
+	{ name: 'KFC', tier: 'good' },
+	{ name: 'Sonic', tier: 'good' },
+	{ name: 'Burger King', tier: 'good' },
+	{ name: 'Buffalo Wild Wings', tier: 'good' },
+
+	// mid
+	{ name: 'Subway', tier: 'mid' },
+	{ name: 'Panera', tier: 'mid' },
+	{ name: 'Little Caesars', tier: 'mid' },
+	{ name: 'Pizza Hut', tier: 'mid' },
+	{ name: "Papa John's", tier: 'mid' },
+	{ name: "Arby's", tier: 'mid' },
+	{ name: 'Jack in the Box', tier: 'mid' },
+	{ name: "Carl's Jr.", tier: 'mid' },
+	{ name: 'Qdoba', tier: 'mid' },
+	{ name: 'Firehouse Subs', tier: 'mid' },
+	{ name: "Jimmy John's", tier: 'mid' },
+	{ name: "Zaxby's", tier: 'mid' },
+	{ name: 'Dairy Queen', tier: 'mid' },
+	{ name: 'White Castle', tier: 'mid' },
+
+	// bad
+	{ name: 'Quiznos', tier: 'bad' }
+];
