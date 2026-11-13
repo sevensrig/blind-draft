@@ -4,15 +4,14 @@ import { between, sample, shuffle, type Rng, defaultRng } from './rng';
 /**
  * Deck curation. Exactly `2 x slots` items, so the two rosters consume it
  * precisely. Tiers never surface in the UI — they only shape the curve:
- * ~15-20% great, the rest mid+good (mid dominant), re-rolled inside those bands
- * every game so repeat decks don't feel stamped from one mould.
+ * ~15-20% great, the rest mid+good, re-rolled every game. Inside that band every
+ * good and mid item is equally likely, so the split follows the pool: a fixed
+ * split overdrew whichever tier was smaller and dealt its items every game.
  *
  * Positional categories satisfy their position multiset first, then honour the
  * curve as closely as that allows.
  */
 
-/** `good`'s share of the mid+good band. Mid keeps the majority either way. */
-const GOOD_SHARE_OF_MIDDLE = [0.25, 0.35] as const;
 const GREAT_BAND = [0.15, 0.2] as const;
 
 /**
@@ -66,15 +65,17 @@ function groupByTier(pool: readonly Item[]): Record<Tier, Item[]> {
 }
 
 /** Target count per tier for a deck of `size`, before pool shortfalls. */
-function targetCounts(size: number, rng: Rng): Record<Tier, number> {
+function targetCounts(
+	size: number,
+	groups: Record<Tier, readonly Item[]>,
+	rng: Rng
+): Record<Tier, number> {
 	const great = Math.max(1, Math.round(size * between(GREAT_BAND[0], GREAT_BAND[1], rng)));
 	const bad = rng() < BAD_CARD_CHANCE ? 1 : 0;
 	const middle = Math.max(0, size - great - bad);
-	// Below two slots there's no room to split the band; mid wins outright.
-	const good =
-		middle < 2
-			? 0
-			: Math.round(middle * between(GOOD_SHARE_OF_MIDDLE[0], GOOD_SHARE_OF_MIDDLE[1], rng));
+	// Fill the band as if drawing from good and mid pooled together.
+	const band = [...groups.good, ...groups.mid];
+	const good = sample(band, middle, rng).filter((item) => item.tier === 'good').length;
 	return { great, good, mid: middle - good, bad };
 }
 
@@ -138,7 +139,7 @@ function sinkBadToTail(deck: Item[]): boolean {
 /** Free-form decks: sample straight off the tier curve. */
 function buildOpenDeck(pool: readonly Item[], size: number, rng: Rng): Item[] {
 	const groups = groupByTier(pool);
-	const wanted = targetCounts(size, rng);
+	const wanted = targetCounts(size, groups, rng);
 
 	const picked: Item[] = [];
 	const leftovers: Record<Tier, Item[]> = { bad: [], mid: [], good: [], great: [] };
@@ -213,7 +214,7 @@ function buildPositionalDeck(
 ): Item[] {
 	const demand = positionDemand(roster, pool, rng);
 	const supply = countByPosition(pool);
-	const quota = targetCounts(size, rng);
+	const quota = targetCounts(size, groupByTier(pool), rng);
 
 	const scarcestFirst = shuffle(demand, rng).sort(
 		(a, b) => (supply.get(a) ?? 0) - (supply.get(b) ?? 0)
