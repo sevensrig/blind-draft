@@ -10,7 +10,7 @@ How to edit (plain text, no formatting needed):
 - Text after `|` is the small note shown on the card, e.g. `- Spider-Man | Marvel`.
 - A line starting with `>` is a comment or question for me.
 
-How tiers shape a deck: about 15–20% of each deck is **great**. The rest is mid and good, mostly mid. **Bad** turns up in only 1 in 4 decks, as one card dealt last. A pool needs at least 16 items, and 40–50 keeps repeat games fresh.
+How tiers shape a deck: about 15–20% of each deck is **great**. The rest is **good** and **mid**, and every good and mid item is equally likely, so a tier with more items fills more of the deck. **Bad** turns up in only 1 in 4 decks, as one card dealt last. A pool needs at least 16 items, and 40–50 keeps repeat games fresh.
 
 ## Celebrities
 
