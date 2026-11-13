@@ -34,13 +34,15 @@ import { TV_SHOWS } from './tv-shows.ts';
 import { NOSTALGIA } from './nostalgia.ts';
 import { DUOS } from './duos.ts';
 import { MOVIES } from './movies.ts';
-import { FOODS } from './foods.ts';
+import { FAST_FOOD } from './fast-food.ts';
 import { DRINKS } from './drinks.ts';
 import { DESSERTS } from './desserts.ts';
 import { PIZZA_TOPPINGS } from './pizza-toppings.ts';
 import { TRADER_JOES } from './trader-joes.ts';
 import { PERFECT_LIFE } from './perfect-life.ts';
 import { SUMMER_DAY } from './summer-day.ts';
+import { SUPERHEROES } from './superheroes.ts';
+import { DREAM_HOUSE } from './dream-house.ts';
 
 /** The content registry. Everything ships in the bundle — no runtime fetches. */
 export const CATEGORIES: Category[] = [
@@ -157,12 +159,20 @@ export const CATEGORIES: Category[] = [
 		variants: [variant('movies', 'Movies', MOVIES)]
 	},
 	{
-		id: 'foods',
-		label: 'Foods',
-		icon: 'pizza-slice',
-		blurb: 'yum.',
+		id: 'superheroes',
+		label: 'Superheroes & Villains',
+		icon: 'mask',
+		blurb: 'Marvel and DC, capes and all.',
+		accent: 'red',
+		variants: [variant('superheroes', 'Superheroes', SUPERHEROES)]
+	},
+	{
+		id: 'fast-food',
+		label: 'Fast Food',
+		icon: 'burger',
+		blurb: 'Order at the drive-thru.',
 		accent: 'green',
-		variants: [variant('foods', 'Foods', FOODS)]
+		variants: [variant('fast-food', 'Fast Food', FAST_FOOD)]
 	},
 	{
 		id: 'drinks',
@@ -211,6 +221,14 @@ export const CATEGORIES: Category[] = [
 		blurb: 'Assemble the perfect day.',
 		accent: 'yellow',
 		variants: [variant('summer-day', 'Summer Day', SUMMER_DAY)]
+	},
+	{
+		id: 'dream-house',
+		label: 'Dream House',
+		icon: 'house-chimney',
+		blurb: 'Build the house you always wanted.',
+		accent: 'yellow',
+		variants: [variant('dream-house', 'Dream House', DREAM_HOUSE)]
 	}
 ];
 

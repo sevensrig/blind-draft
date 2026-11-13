@@ -22,7 +22,6 @@ export const CARTOONS: ItemSeed[] = [
 	{ name: 'Danny Phantom', tier: 'good' },
 	{ name: 'The Fairly OddParents', tier: 'good' },
 	{ name: 'Scooby-Doo', tier: 'good' },
-	{ name: "Foster's Home for Imaginary Friends", tier: 'good' },
 
 	// mid
 	{ name: 'Teen Titans Go!', tier: 'mid' },
@@ -30,10 +29,6 @@ export const CARTOONS: ItemSeed[] = [
 	{ name: 'Miraculous Ladybug', tier: 'mid' },
 	{ name: 'The Loud House', tier: 'mid' },
 	{ name: 'Ninjago', tier: 'mid' },
-	{ name: 'Attack on Titan', tier: 'mid' },
-	{ name: 'Demon Slayer', tier: 'mid' },
-	{ name: 'Ed, Edd n Eddy', tier: 'mid' },
-	{ name: 'Courage the Cowardly Dog', tier: 'mid' },
 	{ name: 'The Powerpuff Girls', tier: 'mid' },
 	{ name: 'Beyblade', tier: 'mid' },
 	{ name: 'Jimmy Neutron', tier: 'mid' },
@@ -41,9 +36,9 @@ export const CARTOONS: ItemSeed[] = [
 	{ name: 'Transformers: Prime', tier: 'mid' },
 	{ name: 'Bakugan', tier: 'mid' },
 	{ name: 'Star Wars Rebels', tier: 'mid' },
+	{ name: 'Johnny Test', tier: 'mid' },
 
 	// bad
-	{ name: 'Johnny Test', tier: 'bad' },
 	{ name: 'Caillou', tier: 'bad' },
 	{ name: 'Dora the Explorer', tier: 'bad' },
 	{ name: 'PAW Patrol', tier: 'bad' },

@@ -207,13 +207,13 @@ describe('botSuggestionEvent', () => {
 
 describe('botWaitEvent', () => {
 	it('records which game the host picked once someone joined', () => {
-		expect(botWaitEvent('bot_wait_resolved', 'foods', 4, 'room')).toEqual({
+		expect(botWaitEvent('bot_wait_resolved', 'fast-food', 4, 'room')).toEqual({
 			name: 'bot_wait_resolved',
-			props: { category: 'foods', bot_items_played: 4, choice: 'room' }
+			props: { category: 'fast-food', bot_items_played: 4, choice: 'room' }
 		});
 	});
 
 	it('has no choice yet when the modal first shows', () => {
-		expect(botWaitEvent('bot_wait_interrupted', 'foods', 0).props.choice).toBeNull();
+		expect(botWaitEvent('bot_wait_interrupted', 'fast-food', 0).props.choice).toBeNull();
 	});
 });

@@ -31,9 +31,9 @@ export const CELEBRITIES: ItemSeed[] = [
 	{ name: 'Denzel Washington', tier: 'good' },
 	{ name: 'Tom Cruise', tier: 'good' },
 	{ name: 'Metro Boomin', tier: 'good' },
+	{ name: 'David Attenborough', tier: 'good' },
 
 	// mid
-	{ name: 'David Attenborough', tier: 'mid' },
 	{ name: 'Jack Black', tier: 'mid' },
 	{ name: 'Danny DeVito', tier: 'mid' },
 	{ name: 'Adam Sandler', tier: 'mid' },
@@ -42,7 +42,6 @@ export const CELEBRITIES: ItemSeed[] = [
 	{ name: 'Steve Carell', tier: 'mid' },
 	{ name: 'Morgan Freeman', tier: 'mid' },
 	{ name: 'Jim Carrey', tier: 'mid' },
-	{ name: 'Bear Grylls', tier: 'mid' },
 	{ name: 'Seth Rogen', tier: 'mid' },
 	{ name: 'Bill Nye', tier: 'mid' },
 
@@ -50,7 +49,5 @@ export const CELEBRITIES: ItemSeed[] = [
 	{ name: 'Jimmy Fallon', tier: 'bad' },
 	{ name: 'Steve Harvey', tier: 'bad' },
 	{ name: 'Mark Zuckerberg', tier: 'bad' },
-	{ name: 'Jake Paul', tier: 'bad' },
-	{ name: 'James Corden', tier: 'bad' },
-	{ name: 'Machine Gun Kelly', tier: 'bad' }
+	{ name: 'Jake Paul', tier: 'bad' }
 ];

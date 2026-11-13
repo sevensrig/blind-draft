@@ -17,6 +17,14 @@ function seeded(seed: number): () => number {
 
 const TIERS: Tier[] = ['bad', 'mid', 'good', 'great'];
 
+function tierItems(tier: Tier, n: number): Item[] {
+	return Array.from({ length: n }, (_, i) => ({
+		id: `${tier}-x${i}`,
+		name: `${tier} x${i}`,
+		tier
+	}));
+}
+
 function pool(perTier: number): Item[] {
 	return TIERS.flatMap((tier) =>
 		Array.from({ length: perTier }, (_, i) => ({ id: `${tier}-${i}`, name: `${tier} ${i}`, tier }))
@@ -100,9 +108,21 @@ describe('buildDeck', () => {
 		expect(avg((d) => share(d, 'great'))).toBeLessThanOrEqual(0.22);
 		expect(avg((d) => share(d, 'mid', 'good'))).toBeGreaterThanOrEqual(0.72);
 		expect(avg((d) => share(d, 'mid', 'good'))).toBeLessThanOrEqual(0.86);
+	});
 
-		// Inside the middle band, mid is the one carrying the hesitation.
-		expect(avg((d) => share(d, 'mid'))).toBeGreaterThan(avg((d) => share(d, 'good')));
+	it('deals every good and mid item about equally often, however the pool splits', () => {
+		// Lopsided on purpose: a fixed good/mid split would overdeal the small tier.
+		const items = [...pool(4).filter((item) => item.tier !== 'mid'), ...tierItems('mid', 24)];
+		const rng = seeded(8);
+		const seen = new Map<string, number>();
+		for (let i = 0; i < 4000; i++)
+			for (const item of buildDeck(items, openRoster(5), rng))
+				seen.set(item.tier, (seen.get(item.tier) ?? 0) + 1);
+
+		const perGood = (seen.get('good') ?? 0) / 4;
+		const perMid = (seen.get('mid') ?? 0) / 24;
+		expect(perGood / perMid).toBeGreaterThan(0.85);
+		expect(perGood / perMid).toBeLessThan(1.15);
 	});
 
 	it('deals at most one bad item, about a quarter of the time, always last', () => {
@@ -205,7 +225,6 @@ describe('positional decks', () => {
 			decks.reduce((sum, deck) => sum + fn(deck), 0) / decks.length;
 
 		expect(avg((d) => share(d, 'mid', 'good'))).toBeGreaterThan(0.5);
-		expect(avg((d) => share(d, 'mid'))).toBeGreaterThan(avg((d) => share(d, 'good')));
 	});
 
 	it('bends the curve rather than failing when a pool is all one tier', () => {

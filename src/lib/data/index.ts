@@ -31,13 +31,15 @@ import { TV_SHOWS } from './tv-shows';
 import { NOSTALGIA } from './nostalgia';
 import { DUOS } from './duos';
 import { MOVIES } from './movies';
-import { FOODS } from './foods';
+import { FAST_FOOD } from './fast-food';
 import { DRINKS } from './drinks';
 import { DESSERTS } from './desserts';
 import { PIZZA_TOPPINGS } from './pizza-toppings';
 import { TRADER_JOES } from './trader-joes';
 import { PERFECT_LIFE } from './perfect-life';
 import { SUMMER_DAY } from './summer-day';
+import { SUPERHEROES } from './superheroes';
+import { DREAM_HOUSE } from './dream-house';
 
 /** The content registry. Everything ships in the bundle — no runtime fetches. */
 export const CATEGORIES: Category[] = [
@@ -154,12 +156,20 @@ export const CATEGORIES: Category[] = [
 		variants: [variant('movies', 'Movies', MOVIES)]
 	},
 	{
-		id: 'foods',
-		label: 'Foods',
-		icon: 'pizza-slice',
-		blurb: 'yum.',
+		id: 'superheroes',
+		label: 'Superheroes & Villains',
+		icon: 'mask',
+		blurb: 'Marvel and DC, capes and all.',
+		accent: 'red',
+		variants: [variant('superheroes', 'Superheroes', SUPERHEROES)]
+	},
+	{
+		id: 'fast-food',
+		label: 'Fast Food',
+		icon: 'burger',
+		blurb: 'Order at the drive-thru.',
 		accent: 'green',
-		variants: [variant('foods', 'Foods', FOODS)]
+		variants: [variant('fast-food', 'Fast Food', FAST_FOOD)]
 	},
 	{
 		id: 'drinks',
@@ -208,6 +218,14 @@ export const CATEGORIES: Category[] = [
 		blurb: 'Assemble the perfect day.',
 		accent: 'yellow',
 		variants: [variant('summer-day', 'Summer Day', SUMMER_DAY)]
+	},
+	{
+		id: 'dream-house',
+		label: 'Dream House',
+		icon: 'house-chimney',
+		blurb: 'Build the house you always wanted.',
+		accent: 'yellow',
+		variants: [variant('dream-house', 'Dream House', DREAM_HOUSE)]
 	}
 ];
 

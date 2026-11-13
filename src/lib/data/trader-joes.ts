@@ -9,7 +9,6 @@ export const TRADER_JOES: ItemSeed[] = [
 	{ name: 'Kimbap', tier: 'great' },
 	{ name: 'Soup Dumplings', tier: 'great' },
 	{ name: 'Dark Chocolate PB Cups', tier: 'great' },
-	{ name: "Joe-Joe's", tier: 'great' },
 	{ name: 'Chicken Tikka Masala', tier: 'great' },
 
 	// good
@@ -22,14 +21,12 @@ export const TRADER_JOES: ItemSeed[] = [
 	{ name: 'Japanese Fried Rice', tier: 'good' },
 	{ name: 'Mochi', tier: 'good' },
 	{ name: 'Hashbrowns', tier: 'good' },
-	{ name: 'Gone Bananas', tier: 'good', note: 'Chocolate-dipped bananas' },
 	{ name: 'Elote Dip', tier: 'good' },
 	{ name: 'Butter Chicken', tier: 'good' },
 	{ name: 'Mini tote bag', tier: 'good' },
 
 	// mid
 	{ name: 'Scandinavian Swimmers', tier: 'mid' },
-	{ name: 'Bulgogi Beef', tier: 'mid' },
 	{ name: 'Garlic Naan', tier: 'mid' },
 	{ name: 'Mac & Cheese', tier: 'mid' },
 	{ name: 'Chocolate Lava Cakes', tier: 'mid' },

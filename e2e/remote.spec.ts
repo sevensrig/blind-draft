@@ -69,7 +69,7 @@ test('two devices play a remote round through the server', async ({ browser }) =
 	const guest = await device(browser, 'Alex');
 
 	// Host opens a room.
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: '3', exact: true }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
@@ -210,7 +210,7 @@ async function seatedRoom(browser: Browser): Promise<{ host: Page; guest: Page }
 	const host = await device(browser, 'Sri');
 	const guest = await device(browser, 'Alex');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
@@ -418,7 +418,7 @@ test('quitting mid-draft leaves the room and ends it for the opponent', async ({
 	const host = await device(browser, 'Sri');
 	const guest = await device(browser, 'Alex');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: '3', exact: true }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
@@ -463,7 +463,7 @@ test('quitting mid-draft leaves the room and ends it for the opponent', async ({
 test('an invite link asks the guest who they are before seating them', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: '3', exact: true }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
@@ -498,7 +498,7 @@ test('an invite link asks the guest who they are before seating them', async ({ 
 test('the rooms browser asks a nameless player who they are', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: '3', exact: true }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
@@ -533,7 +533,7 @@ test('the rooms browser asks a nameless player who they are', async ({ browser }
 test('a name typed on /online carries into a rooms browser join', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: '3', exact: true }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
@@ -554,7 +554,7 @@ test('a name typed on /online carries into a rooms browser join', async ({ brows
 test('leaving a lobby drops it from the public rooms browser', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
@@ -579,7 +579,7 @@ test('a host plays the bot while waiting and hops back in when someone joins', a
 	const host = await device(browser, 'Sri');
 	const guest = await device(browser, 'Alex');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
@@ -616,7 +616,7 @@ test('a host who stays with the bot closes the room on the guest', async ({ brow
 	const host = await device(browser, 'Sri');
 	const guest = await device(browser, 'Alex');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 	const code = ((await host.locator('.code strong').textContent()) ?? '').trim();
@@ -638,7 +638,7 @@ test('a host who stays with the bot closes the room on the guest', async ({ brow
 test('a lobby whose host drops off leaves the rooms browser', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
@@ -662,7 +662,7 @@ test('a lobby whose host drops off leaves the rooms browser', async ({ browser }
 
 test('the deck never reaches a client', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 
@@ -676,7 +676,7 @@ test('the deck never reaches a client', async ({ browser }) => {
 
 test('a stranger cannot read a room they have not joined', async ({ browser }) => {
 	const host = await device(browser, 'Sri');
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
 	const roomId = new URL(host.url()).searchParams.get('id') ?? '';
@@ -719,7 +719,7 @@ test('emotes cross during the draft and chat opens at the end', async ({ browser
 	const host = await device(browser, 'Sri');
 	const guest = await device(browser, 'Alex');
 
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: '3', exact: true }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
@@ -789,9 +789,9 @@ test('emotes cross during the draft and chat opens at the end', async ({ browser
 	await scan(host, 'results with chat');
 });
 
-/** Opens a 3-slot Foods room as `host` and seats `guest` by code. */
+/** Opens a 3-slot Fast Food room as `host` and seats `guest` by code. */
 async function startRoom(host: Page, guest: Page): Promise<void> {
-	await host.getByRole('button', { name: /^Foods/ }).click();
+	await host.getByRole('button', { name: /^Fast Food/ }).click();
 	await host.getByRole('button', { name: '3', exact: true }).click();
 	await host.getByRole('button', { name: /Create room/ }).click();
 	await host.waitForURL(/\/online\/room\?id=/);
@@ -868,7 +868,7 @@ test('leaving the results tells the other player no rematch is coming', async ({
 	await host.getByRole('button', { name: /^Play again/ }).click();
 	await host
 		.getByRole('dialog', { name: 'Pick the next draft' })
-		.getByRole('button', { name: /^Offer Foods/ })
+		.getByRole('button', { name: /^Offer Fast Food/ })
 		.click();
 	await expect(guest.getByText('Sri wants to play again')).toBeVisible({ timeout: 15_000 });
 
