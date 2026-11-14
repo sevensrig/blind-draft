@@ -1,6 +1,7 @@
 import { page } from 'vitest/browser';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { cleanup, render } from 'vitest-browser-svelte';
+import { saveSetupCarry } from '$lib/game/persist';
 import { game } from '$lib/game/store.svelte';
 import SetupScreen from './SetupScreen.svelte';
 
@@ -11,6 +12,7 @@ import SetupScreen from './SetupScreen.svelte';
 describe('SetupScreen', () => {
 	beforeEach(() => {
 		localStorage.clear();
+		sessionStorage.clear();
 		game.dispatch({ type: 'reset' });
 	});
 
@@ -58,6 +60,45 @@ describe('SetupScreen', () => {
 			await page.getByRole('button', { name: /Start the draft/ }).click();
 			expect(game.state.config.bot).toBe(1);
 			expect(game.state.config.categoryId).toBe('fast-food');
+		} finally {
+			history.replaceState(null, '', location.pathname);
+		}
+	});
+
+	it('refills names and mode left by "New setup"', async () => {
+		saveSetupCarry({ names: ['Sri', 'Alex'], vsBot: false });
+		render(SetupScreen);
+
+		await expect.element(page.getByPlaceholder('Player 1')).toHaveValue('Sri');
+		await expect.element(page.getByPlaceholder('Player 2')).toHaveValue('Alex');
+		await expect
+			.element(page.getByRole('button', { name: /Pass & play/ }))
+			.toHaveAttribute('aria-pressed', 'true');
+	});
+
+	it('refills bot mode left by "New setup"', async () => {
+		saveSetupCarry({ names: ['Sri', ''], vsBot: true });
+		render(SetupScreen);
+
+		await expect
+			.element(page.getByRole('button', { name: 'Vs. the bot' }))
+			.toHaveAttribute('aria-pressed', 'true');
+		await expect.element(page.getByPlaceholder('Player 1')).toHaveValue('Sri');
+		await page.getByRole('button', { name: /Fast Food/ }).click();
+		await page.getByRole('button', { name: /Start the draft/ }).click();
+		expect(game.state.config.bot).toBe(1);
+	});
+
+	it('lets ?opponent=bot override a pass-and-play carry-over', async () => {
+		saveSetupCarry({ names: ['Sri', 'Alex'], vsBot: false });
+		localStorage.setItem('blind-draft:name:v1', 'Online');
+		history.replaceState(null, '', '?opponent=bot');
+		try {
+			render(SetupScreen);
+			await expect
+				.element(page.getByRole('button', { name: 'Vs. the bot' }))
+				.toHaveAttribute('aria-pressed', 'true');
+			await expect.element(page.getByPlaceholder('Player 1')).toHaveValue('Online');
 		} finally {
 			history.replaceState(null, '', location.pathname);
 		}
