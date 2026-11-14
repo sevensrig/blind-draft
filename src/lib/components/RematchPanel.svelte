@@ -31,10 +31,21 @@
 	let busy = $state(false);
 	let dialog = $state<HTMLDialogElement | null>(null);
 	let form = $state<SettingsForm | null>(null);
+	let prompt = $state<HTMLDialogElement | null>(null);
+	/** The incoming offer the pop-up last showed, so each new offer pops up once. */
+	let prompted: string | null = null;
 
 	const mine = $derived(offer?.by === seat);
 	const summary = (o: RematchOffer) =>
 		`${o.categoryLabel}${o.variantLabel ? ` · ${o.variantLabel}` : ''} · $${o.budget} · ${o.slots} slots`;
+
+	// Pop the incoming offer up front, once per offer; closing it leaves the inline card.
+	$effect(() => {
+		const incoming = offer && !mine && !opponentGone ? JSON.stringify(offer) : null;
+		if (incoming && incoming !== prompted && !dialog?.open) prompt?.showModal();
+		if (!incoming) prompt?.close();
+		prompted = incoming;
+	});
 
 	async function run(action: () => Promise<void>) {
 		if (busy) return;
@@ -59,6 +70,7 @@
 			customName: draft?.name,
 			customItems: draft?.text.split('\n')
 		});
+		prompt?.close();
 		dialog?.showModal();
 	}
 
@@ -106,6 +118,26 @@
 		<span class="btn__sub">same opponent · change the category if you like</span>
 	</button>
 {/if}
+
+<dialog bind:this={prompt} class="picker prompt" aria-labelledby="rematch-prompt-title">
+	{#if offer && !mine}
+		<div class="picker__body">
+			<span class="eyebrow">Rematch?</span>
+			<h2 id="rematch-prompt-title">{opponentName} wants to play again</h2>
+			<p class="prompt__deal">{summary(offer)}</p>
+		</div>
+		<div class="picker__dock">
+			<button class="btn btn--hot" type="button" onclick={() => run(onAccept)} disabled={busy}>
+				{busy ? 'Starting…' : 'Play again'}
+				<span class="btn__sub">fresh deck, same opponent</span>
+			</button>
+			<button class="btn" type="button" onclick={openPicker} disabled={busy}>
+				Pick something else
+			</button>
+			<button class="btn btn--ghost" type="button" onclick={() => prompt?.close()}>Not now</button>
+		</div>
+	{/if}
+</dialog>
 
 <dialog bind:this={dialog} class="picker" aria-labelledby="rematch-title" onclose={() => (form = null)}>
 	{#if form}
@@ -183,6 +215,15 @@
 	.picker h2 {
 		margin: -0.6rem 0 0;
 		font-size: 1.5rem;
+	}
+
+	.prompt__deal {
+		margin: 0;
+		padding: 0.6rem 0.7rem;
+		background: var(--yellow);
+		border: var(--bw) solid var(--ink);
+		font-size: 1rem;
+		font-weight: 900;
 	}
 
 	.picker__dock {
