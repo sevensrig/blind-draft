@@ -111,3 +111,44 @@ export function loadCustomDraft(): CustomDraft | null {
 		return null;
 	}
 }
+
+/* ------------------------------------------------------------------ *
+ * "New setup" carry-over
+ *
+ * Leaving a finished local game for setup keeps who was playing and how, so
+ * the next game doesn't start with retyping names. Session-scoped: it's a
+ * convenience for this sitting, not a profile.
+ * ------------------------------------------------------------------ */
+
+const SETUP_KEY = 'blind-draft:setup:v1';
+
+export interface SetupCarry {
+	/** As typed; empty where the player kept the placeholder. */
+	names: [string, string];
+	vsBot: boolean;
+}
+
+export function saveSetupCarry(carry: SetupCarry): void {
+	try {
+		sessionStorage.setItem(SETUP_KEY, JSON.stringify(carry));
+	} catch {
+		// See saveState.
+	}
+}
+
+export function loadSetupCarry(): SetupCarry | null {
+	try {
+		const raw = sessionStorage.getItem(SETUP_KEY);
+		if (!raw) return null;
+		const parsed: unknown = JSON.parse(raw);
+		if (!parsed || typeof parsed !== 'object') return null;
+		const carry = parsed as Partial<SetupCarry>;
+		const names = carry.names;
+		if (!Array.isArray(names) || names.length !== 2) return null;
+		if (!names.every((name) => typeof name === 'string')) return null;
+		if (typeof carry.vsBot !== 'boolean') return null;
+		return { names: [names[0], names[1]], vsBot: carry.vsBot };
+	} catch {
+		return null;
+	}
+}

@@ -5,7 +5,7 @@
 	import { variant as buildVariant } from '$lib/data/types';
 	import { buildBench, buildDeck, deckSizeFor, maxSlotsFor } from '$lib/game/deck';
 	import { DEFAULT_BUDGET, DEFAULT_SLOTS, NAME_MAX } from '$lib/game/engine';
-	import { loadCustomDraft, saveCustomDraft } from '$lib/game/persist';
+	import { loadCustomDraft, loadSetupCarry, saveCustomDraft } from '$lib/game/persist';
 	import { remoteEnabled } from '$lib/remote/client';
 	import { recallName } from '$lib/remote/identity';
 	import { game } from '$lib/game/store.svelte';
@@ -70,6 +70,12 @@
 			customName = saved.name;
 			customText = saved.text;
 		}
+		// Back from a finished game via "New setup": same people, same mode.
+		const carry = loadSetupCarry();
+		if (carry) {
+			names = [carry.names[0], carry.names[1]];
+			vsBot = carry.vsBot;
+		}
 		// A landing page sends `?category=nba`, so arriving from one lands on that
 		// tile already selected. Unknown ids are ignored rather than cleared.
 		const params = new URLSearchParams(location.search);
@@ -79,7 +85,7 @@
 		// they already typed there comes along so they don't type it twice.
 		if (params.get('opponent') === 'bot') {
 			vsBot = true;
-			names[0] = recallName();
+			names[0] = recallName() || names[0];
 		}
 	});
 

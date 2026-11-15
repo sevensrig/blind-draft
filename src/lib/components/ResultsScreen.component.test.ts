@@ -3,6 +3,7 @@ import { page } from 'vitest/browser';
 import { render } from 'vitest-browser-svelte';
 import { getCategory, getVariant } from '$lib/data';
 import { totalSpent } from '$lib/game/engine';
+import { loadSetupCarry } from '$lib/game/persist';
 import { scoreGame } from '$lib/game/score';
 import { game } from '$lib/game/store.svelte';
 import type { Player } from '$lib/game/types';
@@ -14,6 +15,7 @@ import ResultsScreen from './ResultsScreen.svelte';
 describe('ResultsScreen', () => {
 	beforeEach(() => {
 		localStorage.clear();
+		sessionStorage.clear();
 		game.dispatch({ type: 'reset' });
 	});
 
@@ -156,6 +158,35 @@ describe('ResultsScreen', () => {
 
 		await page.getByRole('button', { name: /New setup/ }).click();
 		expect(game.state.phase).toBe('setup');
+	});
+
+	it('keeps names and pass-and-play mode for the next setup', async () => {
+		game.replace(finishedGame({ slots: 3, names: ['Sri', 'Player 2'] }));
+		render(ResultsScreen);
+
+		await page.getByRole('button', { name: /New setup/ }).click();
+		// A default name goes back blank, so the placeholder shows instead.
+		expect(loadSetupCarry()).toEqual({ names: ['Sri', ''], vsBot: false });
+	});
+
+	it('keeps the human name and bot mode for the next setup', async () => {
+		const finished = finishedGame({ slots: 3, names: ['Sri', 'Bot'] });
+		game.replace({ ...finished, config: { ...finished.config, bot: 1 } });
+		render(ResultsScreen);
+
+		await page.getByRole('button', { name: /New setup/ }).click();
+		expect(game.state.phase).toBe('setup');
+		expect(loadSetupCarry()).toEqual({ names: ['Sri', ''], vsBot: true });
+	});
+
+	it('leaves the carry-over alone when the page supplies its own leave', async () => {
+		game.replace(finishedGame({ slots: 3, names: ['Sri', 'Alex'] }));
+		const onLeave = vi.fn();
+		render(ResultsScreen, { onLeave, leaveLabel: 'Back to the lobby' });
+
+		await page.getByRole('button', { name: /Back to the lobby/ }).click();
+		expect(onLeave).toHaveBeenCalledOnce();
+		expect(loadSetupCarry()).toBeNull();
 	});
 
 	it('asks for feedback in a new tab', async () => {

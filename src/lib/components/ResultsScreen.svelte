@@ -6,7 +6,8 @@
 	import { getCategory, getVariant } from '$lib/data';
 	import { buildBench, buildDeck } from '$lib/game/deck';
 	import { ratingTable, statTable } from '$lib/data/stats';
-	import { entryInSlot, totalSpent } from '$lib/game/engine';
+	import { entryInSlot, other, totalSpent } from '$lib/game/engine';
+	import { saveSetupCarry } from '$lib/game/persist';
 	import { scoreGame, type PickScore } from '$lib/game/score';
 	import { game } from '$lib/game/store.svelte';
 	import type { GameState, Player } from '$lib/game/types';
@@ -66,6 +67,19 @@
 			deck,
 			bench: buildBench(pool, s.config.roster, deck)
 		});
+	}
+
+	/**
+	 * Back to setup with the same people and mode filled in. Local only: online
+	 * screens pass their own `onLeave`, including the waiting room's bot game.
+	 * A default name ("Player 1") goes back as blank so the placeholder shows.
+	 */
+	function newSetup() {
+		const vsBot = s.config.bot !== undefined;
+		const typed = (player: Player) => (player.name === `Player ${player.id + 1}` ? '' : player.name);
+		const human = vsBot ? s.players[other(s.config.bot!)] : p1;
+		saveSetupCarry({ names: [typed(human), vsBot ? '' : typed(p2)], vsBot });
+		game.dispatch({ type: 'reset' });
 	}
 
 	// Rendered ahead of the tap: iOS drops the share sheet if the click awaits first.
@@ -207,7 +221,7 @@
 		<button
 			class="btn btn--ghost"
 			type="button"
-			onclick={onLeave ?? (() => game.dispatch({ type: 'reset' }))}
+			onclick={onLeave ?? newSetup}
 		>
 			{leaveLabel}
 		</button>
