@@ -835,19 +835,21 @@ test('both players can rematch and change the category on the way', async ({ bro
 	await guestPicker.getByRole('button', { name: /^Offer Desserts/ }).click();
 	await expect(guest.getByText('Waiting on Sri to accept')).toBeVisible({ timeout: 15_000 });
 
-	// The host sees it and counters with Drinks instead.
-	await expect(host.getByText('Alex wants to play again')).toBeVisible({ timeout: 15_000 });
-	await expect(host.getByText(/Desserts · \$20 · 3 slots/)).toBeVisible();
+	// The host gets a pop-up and counters with Drinks instead.
+	const hostPrompt = host.getByRole('dialog', { name: 'Alex wants to play again' });
+	await expect(hostPrompt).toBeVisible({ timeout: 15_000 });
+	await expect(hostPrompt.getByText(/Desserts · \$20 · 3 slots/)).toBeVisible();
 	await scan(host, 'incoming rematch offer');
-	await host.getByRole('button', { name: 'Pick something else' }).click();
+	await hostPrompt.getByRole('button', { name: 'Pick something else' }).click();
 	const hostPicker = host.getByRole('dialog', { name: 'Pick the next draft' });
 	await scan(host, 'rematch picker');
 	await hostPicker.getByRole('button', { name: /^Drinks/ }).click();
 	await hostPicker.getByRole('button', { name: /^Offer Drinks/ }).click();
 
 	// Now it's the guest's call, and accepting deals a fresh Drinks draft for both.
-	await expect(guest.getByText('Sri wants to play again')).toBeVisible({ timeout: 15_000 });
-	await guest.getByRole('button', { name: /^Accept/ }).click();
+	const guestPrompt = guest.getByRole('dialog', { name: 'Sri wants to play again' });
+	await expect(guestPrompt).toBeVisible({ timeout: 15_000 });
+	await guestPrompt.getByRole('button', { name: /^Play again/ }).click();
 	for (const page of [host, guest]) {
 		await expect(page.getByText('Tap to reveal')).toBeVisible({ timeout: 15_000 });
 		await expect(page.getByText(/^Drinks/).first()).toBeVisible();
@@ -870,7 +872,12 @@ test('leaving the results tells the other player no rematch is coming', async ({
 		.getByRole('dialog', { name: 'Pick the next draft' })
 		.getByRole('button', { name: /^Offer Fast Food/ })
 		.click();
-	await expect(guest.getByText('Sri wants to play again')).toBeVisible({ timeout: 15_000 });
+	const prompt = guest.getByRole('dialog', { name: 'Sri wants to play again' });
+	await expect(prompt).toBeVisible({ timeout: 15_000 });
+	// Dismissing the pop-up leaves the offer on the results sheet.
+	await prompt.getByRole('button', { name: 'Not now' }).click();
+	await expect(prompt).toBeHidden();
+	await expect(guest.getByRole('button', { name: /^Accept/ })).toBeVisible();
 
 	await guest.getByRole('button', { name: 'Leave room' }).click();
 	await guest.waitForURL(/\/online$/, { timeout: 20_000 });
