@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openRoster } from '$lib/data/types';
 import { defaultConfig, initialState } from './engine';
-import { clearState, loadCustomDraft, loadState, saveCustomDraft, saveState } from './persist';
+import {
+	clearState,
+	loadCustomDraft,
+	loadSetupCarry,
+	loadState,
+	saveCustomDraft,
+	saveSetupCarry,
+	saveState
+} from './persist';
 import type { GameState } from './types';
 
 const KEY = 'blind-draft:state:v2';
@@ -241,5 +249,66 @@ describe('custom draft persistence', () => {
 		// Losing a typed list is a shame; throwing mid-setup is a broken game.
 		expect(() => saveCustomDraft({ name: 'Cereals', text: 'Weetabix' })).not.toThrow();
 		expect(loadCustomDraft()).toBeNull();
+	});
+});
+
+describe('setup carry-over', () => {
+	const SETUP_KEY = 'blind-draft:setup:v1';
+	let store: Map<string, string>;
+
+	beforeEach(() => {
+		store = new Map<string, string>();
+		vi.stubGlobal('sessionStorage', {
+			getItem: (k: string) => store.get(k) ?? null,
+			setItem: (k: string, v: string) => void store.set(k, v)
+		});
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('round-trips names and mode', () => {
+		saveSetupCarry({ names: ['Ann', ''], vsBot: true });
+		expect(loadSetupCarry()).toEqual({ names: ['Ann', ''], vsBot: true });
+	});
+
+	it('returns null when nothing was saved', () => {
+		expect(loadSetupCarry()).toBeNull();
+	});
+
+	it('rejects anything that is not a well-formed carry', () => {
+		for (const junk of [
+			'not json',
+			'null',
+			'42',
+			'{"vsBot":false}',
+			'{"names":["Ann"],"vsBot":false}',
+			'{"names":["Ann",7],"vsBot":false}',
+			'{"names":["Ann","Bo"]}',
+			'{"names":["Ann","Bo"],"vsBot":"yes"}'
+		]) {
+			store.set(SETUP_KEY, junk);
+			expect(loadSetupCarry(), junk).toBeNull();
+		}
+	});
+
+	it('ignores extra fields rather than passing them through', () => {
+		store.set(SETUP_KEY, '{"names":["Ann","Bo"],"vsBot":false,"evil":true}');
+		expect(loadSetupCarry()).toEqual({ names: ['Ann', 'Bo'], vsBot: false });
+	});
+
+	it('survives unwritable storage', () => {
+		vi.stubGlobal('sessionStorage', {
+			getItem: () => {
+				throw new Error('blocked');
+			},
+			setItem: () => {
+				throw new Error('blocked');
+			}
+		});
+
+		expect(() => saveSetupCarry({ names: ['Ann', 'Bo'], vsBot: false })).not.toThrow();
+		expect(loadSetupCarry()).toBeNull();
 	});
 });
