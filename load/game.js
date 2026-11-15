@@ -65,7 +65,7 @@ const staleConflicts = new Counter('stale_conflicts');
 const illegalMoves = new Counter('illegal_moves');
 const gameDuration = new Trend('game_duration', true);
 
-const CATEGORIES = ['foods', 'movies', 'nba', 'drinks', 'nfl', 'cartoons'];
+const CATEGORIES = ['fast-food', 'movies', 'nba', 'drinks', 'nfl', 'cartoons'];
 const MAX_STEPS = 400;
 
 const randomToken = () =>
