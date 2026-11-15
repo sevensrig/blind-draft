@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { CATEGORIES } from '$lib/data';
+import { CATEGORIES, getCategory, getVariant } from '$lib/data';
 import { openRoster } from '$lib/data/types';
 import type { Item, SlotSpec, Tier } from '$lib/data/types';
 import { botAction, botLimit, isWild, openingDelay } from './bot';
-import { buildDeck } from './deck';
+import { buildBench, buildDeck } from './deck';
 import { shuffle } from './rng';
 import {
 	applyAction,
@@ -13,8 +13,10 @@ import {
 	itemMode,
 	maxBid,
 	minBid,
+	slotsLeft,
 	solventPlayer
 } from './engine';
+import { itemPoints, scoreGame } from './score';
 import type { GameState, Player, PlayerId } from './types';
 
 const BOT: PlayerId = 1;
@@ -171,9 +173,49 @@ describe('the bot with a broke opponent', () => {
 		expect(act(broke('bad'))).toEqual({ type: 'decline', player: BOT });
 	});
 
+	it('pays a dollar for a high scorer whatever its tier', () => {
+		// Nico Collins is a `mid` that scores 83: passing him was a free gift.
+		const state = withMoney(nflGame(['Nico Collins', 'Najee Harris', 'Breece Hall']), [0, 10]);
+		expect(act(state)).toEqual({ type: 'buy', player: BOT, amount: 1 });
+	});
+
 	it('leaves the price to the human when the bot is the broke one', () => {
 		const state = withMoney(revealed(deckOf(['great', 'mid', 'mid', 'mid'])), [10, 0]);
 		expect(act(state)).toBeNull();
+	});
+});
+
+const NFL = getCategory('nfl');
+const NFL_CURRENT = NFL && getVariant(NFL, 'nfl-current');
+
+/** A real NFL Current game, so cards carry the scoreboard's points. */
+function nflGame(names: string[]): GameState {
+	if (!NFL || !NFL_CURRENT) throw new Error('no NFL pool');
+	const named = names.map((name) => {
+		const item = NFL_CURRENT.items.find((candidate) => candidate.name === name);
+		if (!item) throw new Error(`${name} is not in the pool`);
+		return item;
+	});
+	// Padded to three slots each, so a single slot's whole budget doesn't cap both.
+	const filler = NFL_CURRENT.items.filter((item) => !names.includes(item.name));
+	const deck = [...named, ...filler].slice(0, 6);
+	const state = startGame(deck, openRoster(3));
+	return applyAction(
+		{ ...state, config: { ...state.config, categoryId: NFL.id, variantId: NFL_CURRENT.id } },
+		{ type: 'reveal' }
+	);
+}
+
+describe('the bot reads points, not tiers', () => {
+	it('values a mid-tier high scorer over a great-tier name that scores low', () => {
+		const tyreek = nflGame(['Tyreek Hill', 'Breece Hall']);
+		const nico = nflGame(['Nico Collins', 'Breece Hall']);
+		expect(itemPoints(nico.deck[0], nico.config)).toBeGreaterThan(
+			itemPoints(tyreek.deck[0], tyreek.config)
+		);
+		expect(botLimit(nico, BOT, nico.deck[0])).toBeGreaterThan(
+			botLimit(tyreek, BOT, tyreek.deck[0])
+		);
 	});
 });
 
@@ -211,8 +253,13 @@ describe('how the bot reads the room', () => {
 	const midCard = revealed(deckOf(['mid', 'mid', 'mid', 'mid', 'mid', 'mid']), 40);
 
 	it('fights harder in a bidding war over a card it rates', () => {
-		const calm = botLimit(goodCard, BOT, goodCard.deck[0], { raises: 0 });
-		const war = botLimit(goodCard, BOT, goodCard.deck[0], { raises: 8 });
+		// A wild card is already at its ceiling, so pick a sane one.
+		const card = Array.from({ length: 50 }, (_, i) => ({ ...goodCard.deck[0], id: `g${i}` })).find(
+			(c) => !isWild(goodCard, c)
+		);
+		if (!card) throw new Error('no sane card');
+		const calm = botLimit(goodCard, BOT, card, { raises: 0 });
+		const war = botLimit(goodCard, BOT, card, { raises: 8 });
 		expect(war).toBeGreaterThan(calm);
 	});
 
@@ -227,8 +274,8 @@ describe('how the bot reads the room', () => {
 			Array.from({ length: 400 }, (_, i) => ({ id: `w${i}`, name: 'W', tier }));
 		const wild = cards('great').filter((card) => isWild(goodCard, card));
 
-		expect(wild.length).toBeGreaterThan(400 * 0.05);
-		expect(wild.length).toBeLessThan(400 * 0.2);
+		expect(wild.length).toBeGreaterThan(400 * 0.1);
+		expect(wild.length).toBeLessThan(400 * 0.3);
 		expect(cards('bad').some((card) => isWild(goodCard, card))).toBe(false);
 		// Wild means real money: well past an even split of the budget.
 		const most = Math.max(...wild.map((card) => botLimit(goodCard, BOT, card)));
@@ -335,5 +382,100 @@ describe('full games against the bot', () => {
 			expect(end.phase).toBe('results');
 			for (const player of end.players) expect(player.roster).toHaveLength(template.length);
 		}
+	});
+});
+
+/**
+ * A player who knows roughly what everyone scores and bids to about a fair
+ * price. Stands in for a person who's paying attention, not a perfect one.
+ */
+function sharpPlayer(rng: () => number) {
+	const limits = new Map<string, number>();
+	return (state: GameState) => {
+		const item = currentItem(state);
+		if (!item) return null;
+		const points = itemPoints(item, state.config);
+		if (itemMode(state) === 'solo') {
+			return points >= 45
+				? { type: 'buy' as const, player: HUMAN, amount: 1 }
+				: { type: 'decline' as const, player: HUMAN };
+		}
+		const key = `${item.id}|${state.players[HUMAN].money}`;
+		if (!limits.has(key)) {
+			const perSlot = state.players[HUMAN].money / Math.max(1, slotsLeft(state, HUMAN));
+			const fair = perSlot * (points / 58) * (0.8 + 0.35 * rng());
+			limits.set(key, Math.min(maxBid(state, HUMAN), Math.round(fair)));
+		}
+		const limit = limits.get(key) ?? 0;
+		if (!state.bid) {
+			return { type: 'bid' as const, player: HUMAN, amount: Math.max(1, Math.round(limit * 0.4)) };
+		}
+		if (state.bid.holder === HUMAN) return null;
+		return state.bid.amount + 1 <= limit
+			? { type: 'bid' as const, player: HUMAN, amount: state.bid.amount + 1 }
+			: { type: 'sold' as const, player: HUMAN };
+	};
+}
+
+describe('how hard the bot is', () => {
+	const pools = ['nfl', 'nba', 'foods', 'celebrities', 'movies'].flatMap((id) => {
+		const category = getCategory(id);
+		return category ? category.variants.map((variant) => ({ category, variant })) : [];
+	});
+
+	/*
+	 * Goldilocks, checked over a few hundred games: points made it far stronger
+	 * than the tier-reading bot, and these bounds keep the tuning from sliding
+	 * back into a pushover or on into something nobody can beat.
+	 */
+	it('beats an attentive player about half the time', () => {
+		const rng = seeded(7);
+		let botWins = 0;
+		let decided = 0;
+
+		for (const { category, variant } of pools) {
+			const roster = category.roster ?? openRoster(5);
+			for (let run = 0; run < 60; run++) {
+				const deck = buildDeck(variant.items, roster, rng);
+				let state = applyAction(startGame(deck, roster), { type: 'reveal' });
+				state = {
+					...state,
+					config: { ...state.config, categoryId: category.id, variantId: variant.id },
+					bench: buildBench(variant.items, roster, deck, rng)
+				};
+				const human = sharpPlayer(rng);
+				let raises = 0;
+				let index = state.index;
+
+				for (let step = 0; step < 1000 && state.phase !== 'results'; step++) {
+					if (state.index !== index) [index, raises] = [state.index, 0];
+					const mode = itemMode(state);
+					const action =
+						state.phase === 'reveal'
+							? { type: 'reveal' as const }
+							: state.phase === 'award'
+								? { type: 'next' as const }
+								: mode === 'alternate' || mode === 'forced'
+									? { type: 'claim' as const }
+									: state.bid?.holder === HUMAN ||
+											(!state.bid && step % 2 === 0 && mode === 'contest')
+										? // Half the time the bot gets first look at an unopened card.
+											(botAction(state, BOT, { raises })?.action ?? human(state))
+										: (human(state) ?? botAction(state, BOT, { raises })?.action);
+					if (!action) throw new Error('nobody moved');
+					const next = applyAction(state, action);
+					if (action.type === 'bid' && next !== state) raises++;
+					state = next;
+				}
+
+				const board = scoreGame(state);
+				if (board?.winner === BOT) botWins++;
+				if (board?.winner !== null) decided++;
+			}
+		}
+
+		const rate = botWins / decided;
+		expect(rate).toBeGreaterThan(0.35);
+		expect(rate).toBeLessThan(0.6);
 	});
 });
