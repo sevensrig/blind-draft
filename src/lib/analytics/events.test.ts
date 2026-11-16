@@ -5,14 +5,15 @@ import type { GameConfig, Phase } from '$lib/game/types';
 import {
 	botSuggestionEvent,
 	botWaitEvent,
+	decoyEvent,
+	type GameSnapshot,
 	isoWeek,
 	localMode,
 	scrubDeep,
 	scrubText,
 	scrubUrl,
 	shareEvent,
-	transitionEvent,
-	type GameSnapshot
+	transitionEvent
 } from './events';
 
 const config = {
@@ -215,5 +216,30 @@ describe('botWaitEvent', () => {
 
 	it('has no choice yet when the modal first shows', () => {
 		expect(botWaitEvent('bot_wait_interrupted', 'fast-food', 0).props.choice).toBeNull();
+	});
+});
+
+describe('decoyEvent', () => {
+	const snap = (disguised: boolean) => ({
+		...at('reveal'),
+		config: {
+			...at('reveal').config,
+			bot: 1 as const,
+			...(disguised ? { disguised: true as const } : {})
+		}
+	});
+
+	it('follows a fake-room start with its own event, as mode decoy', () => {
+		const started = transitionEvent(at('setup'), snap(true), 'bot');
+		expect(decoyEvent(started, snap(true))).toMatchObject({
+			name: 'decoy_game_started',
+			props: { mode: 'decoy', decoy: true }
+		});
+	});
+
+	it('stays quiet for ordinary bot games and for anything but a start', () => {
+		expect(decoyEvent(transitionEvent(at('setup'), snap(false), 'bot'), snap(false))).toBeNull();
+		const finished = transitionEvent(at('award', 9), { ...snap(true), phase: 'results' }, 'bot');
+		expect(decoyEvent(finished, snap(true))).toBeNull();
 	});
 });

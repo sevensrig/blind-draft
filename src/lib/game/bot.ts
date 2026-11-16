@@ -53,6 +53,8 @@ const OPENING_ODDS: Record<Tier, readonly [number, number, number, number]> = {
 const OPENING_DELAYS = [300, 2000, 5000] as const;
 /** For everything that isn't an opening bid: a beat of "thinking". */
 const THINKING = [700, 1300] as const;
+/** Letting a card go takes longer, and varies, so it reads as a decision rather than a reflex. */
+const SELLING = [1000, 3000] as const;
 
 export interface BotMove {
 	action: Action;
@@ -190,7 +192,7 @@ export function botAction(
 		return { action: { type: 'bid', player: seat, amount }, delay };
 	}
 
-	const sold = think(item, { type: 'sold', player: seat }, bid.amount);
+	const sold = think(item, { type: 'sold', player: seat }, bid.amount, SELLING);
 	if (bid.amount + 1 > limit) return sold;
 
 	// The closer the price gets to its limit, the likelier it lets go early instead
@@ -206,7 +208,11 @@ export function botAction(
 	return think(item, { type: 'bid', player: seat, amount }, bid.amount);
 }
 
-function think(item: Item, action: Action, salt: string | number = ''): BotMove {
-	const [low, high] = THINKING;
-	return { action, delay: low + (high - low) * noise(item.id, salt, 'think') };
+function think(
+	item: Item,
+	action: Action,
+	salt: string | number = '',
+	[low, high]: readonly [number, number] = THINKING
+): BotMove {
+	return { action, delay: low + (high - low) * noise(item.id, salt, action.type, 'think') };
 }

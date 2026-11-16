@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { CATEGORIES } from '$lib/data';
-import { openRoster } from '$lib/data/types';
 import type { Item, SlotSpec, Tier } from '$lib/data/types';
+import { openRoster } from '$lib/data/types';
 import { botAction, botLimit, isWild, openingDelay } from './bot';
 import { buildDeck } from './deck';
-import { shuffle } from './rng';
 import {
 	applyAction,
 	currentItem,
@@ -15,6 +14,7 @@ import {
 	minBid,
 	solventPlayer
 } from './engine';
+import { shuffle } from './rng';
 import type { GameState, Player, PlayerId } from './types';
 
 const BOT: PlayerId = 1;
@@ -84,6 +84,22 @@ describe('the bot in a contest', () => {
 		const state = withMoney(revealed(deckOf(['bad', 'mid', 'mid', 'mid'])), [20, 2]);
 		expect(botLimit(state, BOT, currentItem(state)!)).toBe(0);
 		expect(act(state)).toBeNull();
+	});
+
+	it('takes 1-3 seconds to let a card go, and not the same beat every time', () => {
+		const delays = new Set<number>();
+		for (const budget of [10, 20, 30]) {
+			const state = revealed(deckOf(['mid', 'mid', 'mid', 'mid']), budget);
+			const limit = botLimit(state, BOT, currentItem(state)!);
+			for (let amount = limit + 1; amount <= budget; amount++) {
+				const move = botAction(applyAction(state, { type: 'bid', player: HUMAN, amount }), BOT);
+				expect(move?.action.type).toBe('sold');
+				expect(move!.delay).toBeGreaterThanOrEqual(1000);
+				expect(move!.delay).toBeLessThanOrEqual(3000);
+				delays.add(Math.round(move!.delay / 100));
+			}
+		}
+		expect(delays.size).toBeGreaterThan(3);
 	});
 
 	it('never goes past its limit', () => {

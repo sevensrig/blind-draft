@@ -3,11 +3,33 @@
 	import { goto } from '$app/navigation';
 	import { track } from '$lib/analytics';
 	import { botSuggestionEvent } from '$lib/analytics/events';
+	import BidScreen from '$lib/components/BidScreen.svelte';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
+	import RematchPanel from '$lib/components/RematchPanel.svelte';
+	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
+	import { loadState } from '$lib/game/persist';
+	import { game } from '$lib/game/store.svelte';
 	import { LOBBY_HOSTS, RemoteError, supabase } from '$lib/remote/client';
+	import {
+		ACCEPT_DELAY_MS,
+		DECOY_REMATCHES,
+		DECOY_TTL_MS,
+		type Decoy,
+		OFFER_DELAY_MS,
+		between,
+		decoyAge,
+		decoyDeal,
+		decoySettings,
+		isDecoy,
+		makeDecoy,
+		offerFor,
+		recallDecoy,
+		rememberDecoy,
+		settingsOf
+	} from '$lib/remote/decoy';
 	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
-	import type { RoomListing } from '$lib/remote/types';
+	import type { RematchOffer, RoomListing, RoomSettings } from '$lib/remote/types';
 	import { SITE_NAME } from '$lib/site';
 
 	/**
@@ -24,6 +46,17 @@
 			.filter((entry): entry is RoomListing => !!entry)
 			.sort((a, b) => b.created_at.localeCompare(a.created_at))
 	);
+	/** Stands in while no real room is open. One per device per `DECOY_TTL_MS`, reloads included. */
+	let decoy = $state<Decoy | null>(null);
+	/** Rematches played against this decoy's bot. */
+	let rematches = $state(0);
+	const shown = $derived(rooms.length > 0 ? rooms : decoy ? [decoy.listing] : []);
+	/** The disguised bot game, played here like the waiting room's so the URL stays put. */
+	let decoyGame = $state(false);
+	const playing = $derived(decoyGame && game.state.phase !== 'setup');
+	/** Few enough real rooms that the bot is still worth offering for another category. */
+	const SUGGEST_BELOW = 3;
+
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 	let joining = $state<string | null>(null);
@@ -35,8 +68,79 @@
 
 	/** Once per visit: the list emptying and refilling shouldn't count as many sightings. */
 	let suggested = false;
+	function adopt(next: Decoy, count = 0) {
+		decoy = next;
+		rematches = count;
+		rememberDecoy({ decoy: next, rematches: count });
+	}
+
 	$effect(() => {
-		if (loading || error || rooms.length > 0 || suggested) return;
+		if (loading || error || rooms.length > 0 || decoy) return;
+		const saved = recallDecoy();
+		if (saved && decoyAge(saved.decoy) < DECOY_TTL_MS) adopt(saved.decoy, saved.rematches);
+		else adopt(makeDecoy(Math.random, saved?.decoy));
+	});
+
+	// Swapped once it's had its minute, but never out from under a join or a game.
+	$effect(() => {
+		const current = decoy;
+		if (!current || playing || pending || joining) return;
+		const timer = setTimeout(
+			() => adopt(makeDecoy(Math.random, current)),
+			Math.max(0, DECOY_TTL_MS - decoyAge(current))
+		);
+		return () => clearTimeout(timer);
+	});
+
+	/* The bot's side of the online rematch flow, so a decoy results screen behaves like one. */
+	let offer = $state<RematchOffer | null>(null);
+	let botLeft = $state(false);
+	/** This results screen's offer (or exit) already happened, so the bot doesn't ask twice. */
+	let settled = $state(false);
+	let acceptTimer: ReturnType<typeof setTimeout> | undefined;
+	const atResults = $derived(playing && game.state.phase === 'results');
+	const botName = $derived(game.state.players[1].name);
+
+	$effect(() => {
+		if (!atResults || settled) return;
+		const timer = setTimeout(() => {
+			settled = true;
+			if (rematches >= DECOY_REMATCHES) botLeft = true;
+			else offer = offerFor(settingsOf(game.state.config), 1);
+		}, between(OFFER_DELAY_MS));
+		return () => clearTimeout(timer);
+	});
+
+	function playAgain(settings: RoomSettings) {
+		const [human, bot] = game.state.players;
+		offer = null;
+		settled = false;
+		if (decoy) adopt(decoy, rematches + 1);
+		game.dispatch(decoyDeal(settings, [human.name, bot.name]));
+	}
+
+	async function proposeRematch(settings: RoomSettings) {
+		settled = true;
+		offer = offerFor(settings, 0);
+		clearTimeout(acceptTimer);
+		acceptTimer = setTimeout(() => {
+			if (rematches < DECOY_REMATCHES) return playAgain(settings);
+			offer = null;
+			botLeft = true;
+		}, between(ACCEPT_DELAY_MS));
+	}
+
+	async function acceptRematch() {
+		playAgain(settingsOf(game.state.config));
+	}
+
+	async function cancelRematch() {
+		clearTimeout(acceptTimer);
+		offer = null;
+	}
+
+	$effect(() => {
+		if (loading || error || rooms.length >= SUGGEST_BELOW || suggested) return;
 		suggested = true;
 		track(botSuggestionEvent('bot_suggestion_shown', 'empty_lobby', null));
 	});
@@ -48,6 +152,17 @@
 	const COLUMNS = 'room_id, category_label, variant_label, budget, slots, created_at';
 
 	onMount(() => {
+		// A reload mid decoy game resumes it here. Any other saved game is left for
+		// `/`, since hydrating it would start its bot ticking on this page.
+		if (loadState()?.config.disguised) {
+			game.hydrate();
+			decoyGame = game.state.phase !== 'setup';
+			const saved = recallDecoy();
+			if (decoyGame && saved) {
+				decoy = saved.decoy;
+				rematches = saved.rematches;
+			}
+		}
 		try {
 			const client = supabase();
 			channel = client
@@ -103,6 +218,7 @@
 	}
 
 	onDestroy(() => {
+		clearTimeout(acceptTimer);
 		if (channel) void supabase().removeChannel(channel);
 	});
 
@@ -125,6 +241,17 @@
 		void join(listing, name.trim());
 	}
 
+	/** Back to the list, where somebody new replaces the room just played. */
+	function leaveDecoy() {
+		clearTimeout(acceptTimer);
+		decoyGame = false;
+		offer = null;
+		botLeft = false;
+		settled = false;
+		if (game.state.phase !== 'setup') game.dispatch({ type: 'reset' });
+		adopt(makeDecoy(Math.random, decoy));
+	}
+
 	function cancel() {
 		pending = null;
 		error = null;
@@ -134,6 +261,18 @@
 		if (joining) return;
 		joining = listing.room_id;
 		error = null;
+		if (decoy && isDecoy(listing)) {
+			rememberName(playerName);
+			track(botSuggestionEvent('bot_suggestion_clicked', 'decoy_room', decoy.categoryId));
+			// A real join takes a beat; an instant one would read as a trick.
+			await new Promise((resolve) => setTimeout(resolve, 700));
+			adopt(decoy);
+			game.dispatch(decoyDeal(decoySettings(decoy), [playerName, decoy.hostName]));
+			decoyGame = true;
+			pending = null;
+			joining = null;
+			return;
+		}
 		try {
 			rememberName(playerName);
 			const { roomId } = await room.join({ roomId: listing.room_id, name: playerName });
@@ -154,7 +293,27 @@
 
 <svelte:head><title>Open rooms — {SITE_NAME}</title></svelte:head>
 
-{#if pending}
+{#if playing}
+	<!-- No `view`: the decoy game lives in the local store. -->
+	{#if game.state.phase === 'results'}
+		<ResultsScreen onLeave={leaveDecoy} leaveLabel="Back to rooms">
+			{#snippet rematch()}
+				<RematchPanel
+					{offer}
+					seat={0}
+					opponentName={botName}
+					opponentGone={botLeft}
+					config={game.state.config}
+					onPropose={proposeRematch}
+					onAccept={acceptRematch}
+					onCancel={cancelRematch}
+				/>
+			{/snippet}
+		</ResultsScreen>
+	{:else}
+		<BidScreen seat={0} onQuit={leaveDecoy} />
+	{/if}
+{:else if pending}
 	<!-- Nothing is claimed on the server until this is submitted, so the seat is
 	     still up for grabs and a lost race lands back here. -->
 	<NamePrompt
@@ -186,17 +345,9 @@
 
 		{#if loading}
 			<p class="empty">Looking…</p>
-		{:else if rooms.length === 0}
-			<p class="empty">Nothing open right now. Play the bot, or start a room and share the link.</p>
-			<a
-				class="btn btn--hot"
-				href="/?opponent=bot"
-				onclick={() => track(botSuggestionEvent('bot_suggestion_clicked', 'empty_lobby', null))}
-			>Play vs. the bot</a>
-			<a class="btn btn--ghost" href="/online">Start a room</a>
 		{:else}
 			<ul class="list">
-				{#each rooms as listing (listing.room_id)}
+				{#each shown as listing (listing.room_id)}
 					<!-- Test hook: the visible row shows only category and budget, so a
 					     spec watching one room drop off has nothing else to grab. -->
 					<li data-room-id={listing.room_id}>
@@ -215,6 +366,15 @@
 					</li>
 				{/each}
 			</ul>
+			{#if rooms.length < SUGGEST_BELOW}
+				<p class="empty">Want a different category? Play the bot, or start a room and share the link.</p>
+				<a
+					class="btn btn--hot"
+					href="/?opponent=bot"
+					onclick={() => track(botSuggestionEvent('bot_suggestion_clicked', 'empty_lobby', null))}
+				>Play vs. the bot</a>
+				<a class="btn btn--ghost" href="/online">Start a room</a>
+			{/if}
 		{/if}
 	</div>
 {/if}
