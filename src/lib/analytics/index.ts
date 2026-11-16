@@ -1,11 +1,12 @@
+import type { PostHog } from 'posthog-js';
 import { browser } from '$app/environment';
 import { env } from '$env/dynamic/public';
-import type { PostHog } from 'posthog-js';
 import {
+	decoyEvent,
 	type GameEvent,
 	type GameSnapshot,
-	type PlayMode,
 	isoWeek,
+	type PlayMode,
 	scrubDeep,
 	transitionEvent
 } from './events';
@@ -102,5 +103,8 @@ export function reportError(error: unknown): void {
 }
 
 export function trackTransition(prev: GameSnapshot, next: GameSnapshot, mode: PlayMode): void {
-	if (client) track(transitionEvent(prev, next, mode));
+	if (!client) return;
+	const event = transitionEvent(prev, next, mode);
+	track(event);
+	track(decoyEvent(event, next));
 }

@@ -39,6 +39,8 @@ export interface GameConfig {
 	customItems?: Item[];
 	/** The seat a bot plays, for single-player games. Absent when two people play. */
 	bot?: PlayerId;
+	/** The bot posed as a stranger from the rooms browser's fake room. Never shown to the player. */
+	disguised?: true;
 }
 
 export type Phase = 'setup' | 'reveal' | 'resolve' | 'award' | 'results';

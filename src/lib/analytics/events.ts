@@ -19,7 +19,8 @@ export type GameEventName =
 	| 'bot_suggestion_shown'
 	| 'bot_suggestion_clicked'
 	| 'bot_wait_interrupted'
-	| 'bot_wait_resolved';
+	| 'bot_wait_resolved'
+	| 'decoy_game_started';
 
 export interface GameEvent {
 	name: GameEventName;
@@ -42,7 +43,8 @@ export function gameEvent(name: GameEventName, state: GameSnapshot, mode: PlayMo
 			variant: config.variantId,
 			budget: config.budget,
 			slots: config.slots,
-			items_played: state.history.length
+			items_played: state.history.length,
+			...(config.disguised ? { decoy: true } : {})
 		}
 	};
 }
@@ -57,7 +59,7 @@ export function categoryLandingEvent(categoryId: string): GameEvent {
 }
 
 /** Where the "play the bot instead" nudge appeared. */
-export type BotSuggestionSource = 'waiting_room' | 'empty_lobby';
+export type BotSuggestionSource = 'waiting_room' | 'empty_lobby' | 'decoy_room';
 
 /**
  * The nudge toward the bot, shown and tapped. Clicked over shown is the take-up
@@ -113,6 +115,15 @@ export function transitionEvent(
 		return gameEvent('game_quit', prev, mode);
 	}
 	return null;
+}
+
+/**
+ * A bot game started from a fake room in the rooms browser, on top of its
+ * `game_started` (mode `bot`). Carries mode `decoy` so a by-mode chart gets its own line.
+ */
+export function decoyEvent(event: GameEvent | null, next: GameSnapshot): GameEvent | null {
+	if (event?.name !== 'game_started' || !next.config.disguised) return null;
+	return { name: 'decoy_game_started', props: { ...event.props, mode: 'decoy' } };
 }
 
 /** ISO 8601 week, e.g. `2026-W43`, in UTC so a week boundary doesn't depend on time zone. */
