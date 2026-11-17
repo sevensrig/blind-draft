@@ -146,36 +146,52 @@ describe('the bot in a contest', () => {
 
 describe('when the bot opens', () => {
 	const state = revealed(deckOf(['mid', 'mid', 'mid', 'mid']));
-	const share = (tier: Tier, delay: number | null) =>
+	const share = (tier: Tier, delay: number) =>
 		cards(tier).filter((card) => !isWild(state, card) && openingDelay(state, card) === delay)
 			.length / cards(tier).filter((card) => !isWild(state, card)).length;
 
-	it('splits ordinary cards evenly across instant, 2s, 5s and never', () => {
-		for (const delay of [300, 2000, 5000, null]) {
+	it('splits ordinary cards evenly across 0.7s, 2s, 5s and 20s', () => {
+		for (const delay of [700, 2000, 5000, 20000]) {
 			expect(share('mid', delay)).toBeGreaterThan(0.18);
 			expect(share('mid', delay)).toBeLessThan(0.32);
 		}
 	});
 
 	it('is keener on better cards', () => {
-		expect(share('great', 300)).toBeGreaterThan(share('mid', 300));
-		expect(share('great', null)).toBeLessThan(share('mid', null));
-		expect(share('bad', null)).toBeGreaterThan(share('mid', null));
+		expect(share('great', 700)).toBeGreaterThan(share('mid', 700));
+		expect(share('great', 20000)).toBeLessThan(share('mid', 20000));
+		expect(share('bad', 20000)).toBeGreaterThan(share('mid', 20000));
 	});
 
 	it('waits out the delay it picked before placing the bid', () => {
 		const opener = cards('great').find((card) => openingDelay(state, card) === 5000)!;
 		// Second card, so the game's seed (the first card) stays put.
 		const onBlock = { ...state, index: 1, deck: [state.deck[0], opener, ...state.deck.slice(2)] };
-		expect(botAction(onBlock, BOT)).toMatchObject({
-			action: { type: 'bid', player: BOT },
-			delay: 5000
-		});
+		const move = botAction(onBlock, BOT);
+		expect(move?.action.type).toBe('bid');
+		expect(move!.delay).toBeGreaterThanOrEqual(5000);
 	});
 
-	it('opens a wild card straight away', () => {
+	it('always opens eventually, and takes longer to dial a bigger bid', () => {
+		const openings = cards('great')
+			.map((card) => {
+				const onBlock = { ...state, index: 1, deck: [state.deck[0], card, ...state.deck.slice(2)] };
+				const move = botAction(onBlock, BOT);
+				return move?.action.type === 'bid'
+					? { amount: move.action.amount, delay: move.delay }
+					: null;
+			})
+			.filter((move) => move !== null);
+
+		expect(openings.length).toBeGreaterThan(0);
+		for (const { amount, delay } of openings) {
+			expect(delay).toBeGreaterThanOrEqual(700 + 100 * (amount - 1));
+		}
+	});
+
+	it('opens a wild card as fast as it ever opens', () => {
 		const wild = cards('great').find((card) => isWild(state, card))!;
-		expect(openingDelay(state, wild)).toBe(300);
+		expect(openingDelay(state, wild)).toBe(700);
 	});
 });
 
