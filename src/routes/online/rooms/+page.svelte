@@ -4,6 +4,7 @@
 	import { track } from '$lib/analytics';
 	import { botSuggestionEvent } from '$lib/analytics/events';
 	import BidScreen from '$lib/components/BidScreen.svelte';
+	import EmoteBar from '$lib/components/EmoteBar.svelte';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import RematchPanel from '$lib/components/RematchPanel.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
@@ -15,7 +16,10 @@
 		DECOY_REMATCHES,
 		DECOY_TTL_MS,
 		type Decoy,
+		EMOTE_DELAY_MS,
+		EMOTE_QUIET_MS,
 		OFFER_DELAY_MS,
+		awardEmote,
 		between,
 		decoyAge,
 		decoyDeal,
@@ -25,11 +29,13 @@
 		offerFor,
 		recallDecoy,
 		rememberDecoy,
+		replyEmote,
 		settingsOf
 	} from '$lib/remote/decoy';
+	import { EMOTE_MS, type EmoteId, emoteById } from '$lib/remote/emotes';
 	import { recallName, rememberName } from '$lib/remote/identity';
 	import { room } from '$lib/remote/room.svelte';
-	import type { RematchOffer, RoomListing, RoomSettings } from '$lib/remote/types';
+	import type { EmoteEvent, RematchOffer, RoomListing, RoomSettings } from '$lib/remote/types';
 	import { SITE_NAME } from '$lib/site';
 
 	/**
@@ -109,6 +115,64 @@
 			else offer = offerFor(settingsOf(game.state.config), 1);
 		}, between(OFFER_DELAY_MS));
 		return () => clearTimeout(timer);
+	});
+
+	/* Emotes, kept here since there's no room channel: the player's, and the bot's own. */
+	let bubbles = $state<EmoteEvent[]>([]);
+	let emoteKey = 0;
+	const emoteTimers = new Set<ReturnType<typeof setTimeout>>();
+	const emotes = $derived(
+		Object.fromEntries(
+			bubbles.flatMap((bubble) => {
+				const emote = emoteById(bubble.emote);
+				return emote ? [[bubble.seat, emote]] : [];
+			})
+		)
+	);
+	const names = $derived(game.state.players.map((player) => player.name) as [string, string]);
+
+	function later(run: () => void, ms: number) {
+		const timer = setTimeout(() => {
+			emoteTimers.delete(timer);
+			run();
+		}, ms);
+		emoteTimers.add(timer);
+	}
+
+	function showEmote(seat: 0 | 1, emote: EmoteId) {
+		const key = ++emoteKey;
+		bubbles = [...bubbles.slice(-3), { key, seat, emote }];
+		later(() => (bubbles = bubbles.filter((bubble) => bubble.key !== key)), EMOTE_MS);
+	}
+
+	/** When the bot last emoted (or is about to), for its quiet spell. */
+	let botEmotedAt = 0;
+	function botEmote(emote: EmoteId | null) {
+		const now = Date.now();
+		if (!emote || now - botEmotedAt < EMOTE_QUIET_MS) return;
+		const delay = between(EMOTE_DELAY_MS);
+		botEmotedAt = now + delay;
+		later(() => showEmote(1, emote), delay);
+	}
+
+	function sendEmote(id: EmoteId) {
+		showEmote(0, id);
+		botEmote(replyEmote(id));
+	}
+
+	function clearEmotes() {
+		for (const timer of emoteTimers) clearTimeout(timer);
+		emoteTimers.clear();
+		bubbles = [];
+	}
+
+	/** The award the bot last reacted to. Plain, so reacting doesn't re-run the effect. */
+	let reacted: unknown = null;
+	$effect(() => {
+		const award = game.state.lastAward;
+		if (!playing || !award || award === reacted) return;
+		reacted = award;
+		botEmote(awardEmote(award, 1));
 	});
 
 	function playAgain(settings: RoomSettings) {
@@ -219,6 +283,7 @@
 
 	onDestroy(() => {
 		clearTimeout(acceptTimer);
+		clearEmotes();
 		if (channel) void supabase().removeChannel(channel);
 	});
 
@@ -244,6 +309,7 @@
 	/** Back to the list, where somebody new replaces the room just played. */
 	function leaveDecoy() {
 		clearTimeout(acceptTimer);
+		clearEmotes();
 		decoyGame = false;
 		offer = null;
 		botLeft = false;
@@ -311,7 +377,11 @@
 			{/snippet}
 		</ResultsScreen>
 	{:else}
-		<BidScreen seat={0} onQuit={leaveDecoy} />
+		<BidScreen seat={0} onQuit={leaveDecoy} {emotes}>
+			{#snippet toolbar()}
+				<EmoteBar seat={0} {names} {bubbles} send={sendEmote} />
+			{/snippet}
+		</BidScreen>
 	{/if}
 {:else if pending}
 	<!-- Nothing is claimed on the server until this is submitted, so the seat is

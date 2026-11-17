@@ -41,8 +41,8 @@ const HEAT_PER_RAISE = 0.08;
 const HEAT_CAP = 1.3;
 
 /**
- * Chance of opening instantly, after 2s, after 5s, or never (leaving it to the
- * human). Better cards get opened sooner.
+ * Chance of opening after 0.7s, 2s, 5s or 20s. Better cards get opened sooner;
+ * the long wait gives the human first go without leaving a card stuck.
  */
 const OPENING_ODDS: Record<Tier, readonly [number, number, number, number]> = {
 	great: [0.4, 0.3, 0.2, 0.1],
@@ -50,7 +50,12 @@ const OPENING_ODDS: Record<Tier, readonly [number, number, number, number]> = {
 	mid: [0.25, 0.25, 0.25, 0.25],
 	bad: [0.1, 0.15, 0.25, 0.5]
 };
-const OPENING_DELAYS = [300, 2000, 5000] as const;
+const OPENING_DELAYS = [700, 2000, 5000, 20000] as const;
+/** Time to dial a bigger opening up past $1, as a person tapping the stepper would; capped. */
+const DIAL_PER_DOLLAR = 100;
+const DIAL_CAP = 3000;
+/** Up to this much on top, so two openings never land on the same beat. */
+const OPENING_JITTER = 800;
 /** For everything that isn't an opening bid: a beat of "thinking". */
 const THINKING = [700, 1300] as const;
 /** Letting a card go takes longer, and varies, so it reads as a decision rather than a reflex. */
@@ -139,16 +144,16 @@ export function botLimit(
 	return Math.min(maxBid(state, seat), Math.round(value));
 }
 
-/** How long the bot waits before opening this card, or null if it never will. */
-export function openingDelay(state: GameState, item: Item): number | null {
+/** How long the bot waits before opening this card. */
+export function openingDelay(state: GameState, item: Item): number {
 	if (isWild(state, item)) return OPENING_DELAYS[0];
 	const roll = noise(item.id, gameSeed(state), 'open');
 	let edge = 0;
 	for (const [i, odds] of OPENING_ODDS[item.tier].entries()) {
 		edge += odds;
-		if (roll < edge) return OPENING_DELAYS[i] ?? null;
+		if (roll < edge) return OPENING_DELAYS[i];
 	}
-	return null;
+	return OPENING_DELAYS[OPENING_DELAYS.length - 1];
 }
 
 export function botAction(
@@ -184,12 +189,14 @@ export function botAction(
 	const unbeatable = state.players[other(seat)].money + 1;
 
 	if (!bid) {
-		// Not worth a dollar, or not one it fancies opening: the human has to.
+		// Not worth a dollar: the human has to open it.
+		if (limit < 1) return null;
 		const delay = openingDelay(state, item);
-		if (limit < 1 || delay === null) return null;
 		const opening = isWild(state, item) ? 0.7 : 0.4;
 		const amount = Math.min(Math.max(1, Math.round(limit * opening)), unbeatable);
-		return { action: { type: 'bid', player: seat, amount }, delay };
+		const dial = Math.min(DIAL_CAP, DIAL_PER_DOLLAR * (amount - 1));
+		const jitter = OPENING_JITTER * noise(item.id, amount, 'dial');
+		return { action: { type: 'bid', player: seat, amount }, delay: delay + dial + jitter };
 	}
 
 	const sold = think(item, { type: 'sold', player: seat }, bid.amount, SELLING);
