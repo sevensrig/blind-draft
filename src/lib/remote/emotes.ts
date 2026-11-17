@@ -8,6 +8,9 @@ export const EMOTES = [
 	{ id: 'laugh', icon: 'face-grin-squint-tears', label: 'LOL' }
 ] as const satisfies readonly { id: string; icon: IconName; label: string }[];
 
+/** How long an emote bubble stays up. */
+export const EMOTE_MS = 2500;
+
 export type EmoteId = (typeof EMOTES)[number]['id'];
 
 export function emoteById(id: unknown) {

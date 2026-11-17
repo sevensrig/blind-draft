@@ -2,7 +2,7 @@ import { gameEvent, track, trackTransition } from '$lib/analytics';
 import { canBid, other } from '$lib/game/engine';
 import type { Action, PlayerId } from '$lib/game/types';
 import { toGameState } from './adapt';
-import { emoteById, type EmoteId } from './emotes';
+import { EMOTE_MS, emoteById, type EmoteId } from './emotes';
 import { LOBBY_HOSTS, RemoteError, callFunction, supabase } from './client';
 import { deviceToken, forgetSeat, rememberSeat } from './identity';
 import {
@@ -23,8 +23,6 @@ import type {
 	RoomSettings
 } from './types';
 
-/** How long an emote bubble stays up. */
-const EMOTE_MS = 2500;
 /** Typing pings go out at most this often while someone types. */
 const TYPING_PING_MS = 2000;
 /** Idle this long and the typer's device says it stopped. */

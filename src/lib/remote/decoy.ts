@@ -3,7 +3,8 @@ import { customSeeds } from '$lib/data/custom';
 import { variant as buildVariant } from '$lib/data/types';
 import { buildBench, buildDeck } from '$lib/game/deck';
 import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
-import type { Action, GameConfig, PlayerId } from '$lib/game/types';
+import type { Action, Award, GameConfig, PlayerId } from '$lib/game/types';
+import type { EmoteId } from './emotes';
 import type { RematchOffer, RoomListing, RoomSettings } from './types';
 
 /**
@@ -64,6 +65,32 @@ export const DECOY_REMATCHES = 5;
 export const OFFER_DELAY_MS = [2500, 3500] as const;
 /** How long it takes to accept the player's own rematch offer. */
 export const ACCEPT_DELAY_MS = [1000, 2000] as const;
+
+/** A beat before the bot's emote, as if it had to reach for the button. */
+export const EMOTE_DELAY_MS = [2000, 5000] as const;
+/** After one emote the bot keeps quiet at least this long, so it never chatters. */
+export const EMOTE_QUIET_MS = 10_000;
+
+/**
+ * The bot's reaction to a card going, or null (it usually keeps quiet). It gloats
+ * over a good card it bought, sulks when the player takes one, and laughs at a
+ * player who paid big for a dud.
+ */
+export function awardEmote(award: Award, bot: PlayerId, random = Math.random): EmoteId | null {
+	if (award.free) return null;
+	const good = award.item.tier === 'good' || award.item.tier === 'great';
+	if (award.playerId === bot) return good && random() < 0.35 ? 'happy' : null;
+	if (good) return random() < 0.3 ? 'mad' : null;
+	return award.price >= 6 && random() < 0.35 ? 'laugh' : null;
+}
+
+/** Sometimes answers the player's emote, the way an opponent might. */
+const REPLIES: Partial<Record<EmoteId, EmoteId>> = { laugh: 'laugh', mad: 'laugh', happy: 'mad' };
+
+export function replyEmote(sent: EmoteId, random = Math.random): EmoteId | null {
+	const reply = REPLIES[sent];
+	return reply && random() < 1 / 3 ? reply : null;
+}
 
 export const between = ([low, high]: readonly [number, number], random = Math.random) =>
 	low + (high - low) * random();

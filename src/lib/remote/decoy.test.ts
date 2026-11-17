@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { getCategory, getVariant } from '$lib/data';
 import { applyAction, initialState } from '$lib/game/engine';
+import type { Award } from '$lib/game/types';
 import {
+	awardEmote,
 	DECOY_MODES,
 	DECOY_NAMES,
 	decoyDeal,
@@ -9,6 +11,7 @@ import {
 	isDecoy,
 	makeDecoy,
 	offerFor,
+	replyEmote,
 	settingsOf
 } from './decoy';
 
@@ -90,5 +93,40 @@ describe('decoy rooms', () => {
 		});
 		expect(custom.deck).toHaveLength(6);
 		expect(settingsOf(custom.config).customItems).toEqual(expect.arrayContaining(['Tacos']));
+	});
+
+	describe('bot emotes', () => {
+		const award = (over: Partial<Award>): Award => ({
+			playerId: 1,
+			item: { id: 'x', name: 'X', tier: 'great' },
+			price: 4,
+			free: false,
+			mode: 'contest',
+			declined: false,
+			slotId: 'slot-1',
+			slotLabel: '1',
+			...over
+		});
+		const always = () => 0;
+		const never = () => 0.99;
+
+		it('gloats over a good card it bought and sulks when the player takes one', () => {
+			expect(awardEmote(award({}), 1, always)).toBe('happy');
+			expect(awardEmote(award({ playerId: 0 }), 1, always)).toBe('mad');
+		});
+
+		it('laughs at the player overpaying for a dud, and says nothing about free cards', () => {
+			const dud = { id: 'y', name: 'Y', tier: 'bad' as const };
+			expect(awardEmote(award({ playerId: 0, item: dud, price: 8 }), 1, always)).toBe('laugh');
+			expect(awardEmote(award({ playerId: 0, item: dud, price: 2 }), 1, always)).toBeNull();
+			expect(awardEmote(award({ free: true }), 1, always)).toBeNull();
+		});
+
+		it('keeps quiet most of the time', () => {
+			expect(awardEmote(award({}), 1, never)).toBeNull();
+			expect(replyEmote('laugh', never)).toBeNull();
+			expect(replyEmote('laugh', always)).toBe('laugh');
+			expect(replyEmote('bid', always)).toBeNull();
+		});
 	});
 });
