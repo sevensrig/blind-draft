@@ -1,8 +1,7 @@
-import type { GameState } from '../_shared/vendor/game/types.ts';
 import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
 import { readSettings, type Settings } from '../_shared/setup.ts';
-import { redact } from '../_shared/state.ts';
+import { type ServerState, redact } from '../_shared/state.ts';
 
 /**
  * Plays again in the same room once a game has finished. One seat proposes
@@ -15,7 +14,7 @@ type Op = 'propose' | 'accept' | 'cancel';
 const OPS = new Set<Op>(['propose', 'accept', 'cancel']);
 
 interface Offer {
-	by: 0 | 1;
+	by: number;
 	settings: Settings;
 }
 
@@ -49,7 +48,7 @@ Deno.serve(async (req) => {
 		.eq('token', token)
 		.maybeSingle();
 	if (!player) return fail('forbidden', 'You are not a player in this room');
-	const seat = player.seat as 0 | 1;
+	const seat = player.seat as number;
 
 	const [{ data: room }, { data: shown }, { data: game }] = await Promise.all([
 		db.from('rooms').select('status, rematch').eq('id', roomId).maybeSingle(),
@@ -59,7 +58,7 @@ Deno.serve(async (req) => {
 	if (!room || !shown || !game) return fail('not_found', 'No game in that room');
 
 	if (room.status !== 'finished') return fail('forbidden', 'That game is not over yet.');
-	if (shown.left_by !== null) return fail('forbidden', 'Your opponent has left the room.');
+	if (shown.left_by !== null) return fail('forbidden', 'Someone has left the room.');
 
 	const offer = room.rematch as Offer | null;
 
@@ -69,7 +68,8 @@ Deno.serve(async (req) => {
 	}
 
 	if (op === 'propose') {
-		const setup = readSettings(body);
+		const players = (game.state as ServerState).players.length;
+		const setup = readSettings(body, players);
 		if (!setup.ok) return fail('bad_request', setup.message);
 		const { config } = setup;
 		const ok = await writeOffer(
@@ -91,15 +91,22 @@ Deno.serve(async (req) => {
 
 	// accept
 	if (!offer) return fail('not_found', 'That offer was withdrawn.');
-	if (offer.by === seat) return fail('forbidden', 'Your opponent has to accept your offer.');
+	if (offer.by === seat) return fail('forbidden', 'Someone else has to accept your offer.');
 
 	// Stored already validated, but the pools can change between deploys.
-	const setup = readSettings(offer.settings as unknown as Record<string, unknown>);
+	const setup = readSettings(
+		offer.settings as unknown as Record<string, unknown>,
+		(game.state as ServerState).players.length
+	);
 	if (!setup.ok) return fail('bad_request', setup.message);
 
-	const previous = game.state as GameState;
-	const state = setup.deal([previous.players[0].name, previous.players[1].name]);
-	const publicState = redact(state, 2);
+	const previous = game.state as ServerState;
+	const state: ServerState = {
+		...setup.deal(previous.players.map((player) => player.name)),
+		seatIds: previous.seatIds,
+		maxPlayers: previous.maxPlayers
+	};
+	const publicState = redact(state);
 
 	const { data: commit, error } = await db.rpc('commit_rematch', {
 		p_room_id: roomId,

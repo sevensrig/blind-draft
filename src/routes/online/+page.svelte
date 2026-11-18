@@ -14,6 +14,7 @@
 	const form = new SettingsForm();
 	let name = $state('');
 	let visibility = $state<'public' | 'private'>('public');
+	const SIZES = [2, 3, 4] as const;
 	let joinCode = $state('');
 	let busy = $state(false);
 	let error = $state<string | null>(null);
@@ -49,7 +50,12 @@
 		error = null;
 		rememberName(name);
 		try {
-			const { roomId, code } = await room.create({ ...settings, visibility, name: name.trim() });
+			const { roomId, code } = await room.create({
+				...settings,
+				visibility,
+				name: name.trim(),
+				maxPlayers: form.players
+			});
 			// Code rides in the URL so refreshing the lobby still shows it.
 			await goto(`/online/room?id=${roomId}&code=${code}`);
 		} catch (failure) {
@@ -84,7 +90,7 @@
 	<header class="head">
 		<a class="back" href="/">Back</a>
 		<h1>Play online</h1>
-		<p class="sub">Two phones, two places. Same blind draft.</p>
+		<p class="sub">Two to four phones, anywhere. Same blind draft.</p>
 		<p class="lede">
 			Create a room and send the link. You each draft from your own phone, the reveals stay in sync,
 			and nobody has to pass a device around. No account, no download — the room disappears when
@@ -140,7 +146,35 @@
 
 	<hr class="rule" />
 
-	<RoomSettingsFields {form} bind:visibility budgetTitle="Or start one" />
+	<section class="block">
+		<h2 class="block__title">Or start one · players</h2>
+		<div class="sizes" role="group" aria-label="Players">
+			{#each SIZES as size (size)}
+				<button
+					class="size"
+					class:size--on={form.players === size}
+					type="button"
+					aria-pressed={form.players === size}
+					aria-label="{size} players"
+					onclick={() => (form.players = size)}>{size}</button
+				>
+			{/each}
+		</div>
+		<p class="hint">
+			{form.players === 2
+				? 'Starts the moment your opponent joins.'
+				: `Up to ${form.players}. You start it whenever enough people are in.`}
+		</p>
+	</section>
+
+	<RoomSettingsFields {form} bind:visibility budgetTitle="Budget each" />
+
+	{#if form.category && !form.fits}
+		<p class="error" role="alert">
+			{form.label} doesn't have enough options for {form.players} players. Pick fewer players or a
+			smaller roster.
+		</p>
+	{/if}
 
 	<div class="dock">
 		<button
@@ -152,7 +186,8 @@
 			{busy ? 'Working…' : form.category ? 'Create room' : 'Pick a category'}
 			{#if form.category}
 				<span class="btn__sub">
-					{form.label} · ${form.budget} · {form.effectiveSlots} slots · {visibility === 'public'
+					{form.label} · {form.players}p · ${form.budget} · {form.effectiveSlots} slots · {visibility ===
+					'public'
 						? 'anyone'
 						: 'link only'}
 				</span>
@@ -162,6 +197,31 @@
 </div>
 
 <style>
+	.sizes {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.5rem;
+	}
+
+	.size {
+		padding: 0.6rem 0;
+		background: var(--white);
+		border: var(--bw) solid var(--ink);
+		font-size: 1.3rem;
+		font-weight: 900;
+	}
+
+	.size--on {
+		background: var(--ink);
+		color: var(--cream);
+	}
+
+	.hint {
+		margin: 0.45rem 0 0;
+		font-size: 0.78rem;
+		font-weight: 700;
+	}
+
 	.online {
 		display: flex;
 		flex-direction: column;

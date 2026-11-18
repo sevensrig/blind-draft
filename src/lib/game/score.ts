@@ -31,7 +31,7 @@ export interface PlayerScore {
 }
 
 export interface Scoreboard {
-	players: [PlayerScore, PlayerScore];
+	players: PlayerScore[];
 	/** Null on a tie. */
 	winner: PlayerId | null;
 }
@@ -126,7 +126,7 @@ export function scoreGame(state: GameState): Scoreboard | null {
 	const average = all.reduce((sum, pick) => sum + pick.base, 0) / all.length;
 	const perSlot = state.config.budget / state.config.slots;
 
-	const [a, b] = rated.map((picks) => {
+	const scores = rated.map((picks) => {
 		const scored = picks.map((pick): PickScore => {
 			const fair = (perSlot * pick.base) / average;
 			const raw = Math.round(((fair - pick.entry.price) / perSlot) * STEAL_RATE);
@@ -136,6 +136,7 @@ export function scoreGame(state: GameState): Scoreboard | null {
 		return { picks: scored, total: scored.reduce((sum, pick) => sum + pick.total, 0) };
 	});
 
-	const winner = a.total === b.total ? null : a.total > b.total ? 0 : 1;
-	return { players: [a, b], winner };
+	const best = Math.max(...scores.map((score) => score.total));
+	const leaders = scores.flatMap((score, id) => (score.total === best ? [id] : []));
+	return { players: scores, winner: leaders.length === 1 ? leaders[0] : null };
 }

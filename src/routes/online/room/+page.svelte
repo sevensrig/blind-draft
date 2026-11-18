@@ -20,6 +20,7 @@
 	import { emoteById } from '$lib/remote/emotes';
 	import { room } from '$lib/remote/room.svelte';
 	import { SITE_NAME } from '$lib/site';
+	import { playerAccent } from '$lib/components/accent';
 
 	// A query param, not a path segment: a dynamic `[roomId]` route can't be
 	// prerendered, so it would need a function and this deploy stays static.
@@ -46,7 +47,7 @@
 	// `waiting`, since a host whose guest quit isn't waiting for anybody.
 	const ended = $derived(room.opponentLeft);
 	const names = $derived(
-		(room.state?.players.map((player) => player.name) ?? ['', '']) as [string, string]
+		(room.state?.players.map((player) => player.name) ?? ['', '']) as string[]
 	);
 	/** The newest emote from each seat, for its player panel. */
 	const emotes = $derived(
@@ -57,9 +58,32 @@
 			})
 		)
 	);
+	/** Everyone sat down so far. Rooms from before lobbies seeded a placeholder second player. */
+	const lobby = $derived(room.state?.players.slice(0, room.state.seatsTaken) ?? []);
+	const maxPlayers = $derived(room.state?.maxPlayers ?? 2);
+	const joinNames = (list: string[]) =>
+		list.length <= 1 ? (list[0] ?? 'They') : `${list.slice(0, -1).join(', ')} and ${list.at(-1)}`;
+	/** Everyone else in the room, as one phrase: "Sam", or "Sam, Ali and Jo". */
 	const opponentName = $derived(
-		room.state && room.seat !== null ? room.state.players[room.seat === 0 ? 1 : 0].name : 'They'
+		joinNames(lobby.filter((player) => player.id !== room.seat).map((player) => player.name))
 	);
+	/** Whoever quit mid-draft, or walked away from the results. */
+	const leaverName = $derived(
+		room.abandonedBy !== null
+			? (names[room.abandonedBy] ?? 'They')
+			: room.leftBy !== null
+				? (names[room.leftBy] ?? 'They')
+				: opponentName
+	);
+	const alone = $derived(lobby.length < 2);
+	let starting = $state(false);
+
+	async function startDraft() {
+		if (starting) return;
+		starting = true;
+		await room.start();
+		starting = false;
+	}
 
 	/** How long a host sits alone before being offered the bot instead. */
 	const BOT_NUDGE_MS = 60_000;
@@ -70,7 +94,7 @@
 		// Restarts if the lobby is left and re-entered, so a reconnect isn't
 		// greeted by a nudge it didn't earn.
 		lonely = false;
-		if (!waiting) return;
+		if (!waiting || !alone || !room.isHost) return;
 		waitingSince = Date.now();
 		const timer = setTimeout(() => {
 			lonely = true;
@@ -88,8 +112,8 @@
 	 */
 	let botting = $state(false);
 	const botGame = $derived(botting && game.state.phase !== 'setup');
-	/** Somebody took the second seat mid bot game: time to choose. */
-	const joinedMidBot = $derived(botGame && !waiting && !ended && view !== null);
+	/** Somebody joined mid bot game: time to choose. */
+	const joinedMidBot = $derived(botGame && !alone && !ended && view !== null);
 
 	/** Same category and settings as the room, so the switch costs nothing. */
 	function playBot() {
@@ -158,7 +182,7 @@
 		await attach(seat);
 	});
 
-	async function attach(seat: 0 | 1): Promise<void> {
+	async function attach(seat: number): Promise<void> {
 		try {
 			await room.connect(roomId, seat);
 		} catch (failure) {
@@ -225,7 +249,7 @@
 	<NamePrompt
 		eyebrow="You're invited"
 		heading="Who's playing?"
-		sub="Your opponent sees this name on the board."
+		sub="Everyone in the room sees this name on the board."
 		bind:value={name}
 		busy={joining}
 		{error}
@@ -245,7 +269,7 @@
 	     honest winner to declare. -->
 	<div class="shell centre">
 		<span class="eyebrow">Game over</span>
-		<p class="status status--bad" role="alert">{opponentName} left the draft.</p>
+		<p class="status status--bad" role="alert">{leaverName} left the draft.</p>
 		<button class="btn btn--hot" type="button" onclick={() => leave()} disabled={leaving}>
 			Back to online
 		</button>
@@ -273,11 +297,15 @@
 		aria-labelledby="joined-title"
 		oncancel={(event) => event.preventDefault()}
 	>
-		<span class="eyebrow">Your room filled</span>
+		<span class="eyebrow">{waiting ? 'Someone joined' : 'Your room filled'}</span>
 		<h2 id="joined-title">{opponentName} joined</h2>
-		<p>They're waiting on the draft. Jump in, or stay with the bot and close the room.</p>
+		<p>
+			{waiting
+				? "They're in your lobby. Go back to it and start when you're ready, or stay with the bot and close the room."
+				: "They're waiting on the draft. Jump in, or stay with the bot and close the room."}
+		</p>
 		<button class="btn btn--hot" type="button" onclick={() => chooseAfterJoin('room')}>
-			Play {opponentName}
+			{waiting ? 'Back to the lobby' : `Play ${opponentName}`}
 		</button>
 		<button
 			class="btn btn--ghost"
@@ -291,8 +319,53 @@
 {:else if waiting}
 	<!-- Both join methods: a code reads out loud, a link sends. -->
 	<div class="shell lobby">
-		<h1>Waiting for your opponent</h1>
-		<p class="lobby__sub">They join, the draft starts. Nobody sees the deck.</p>
+		<h1>
+			{#if alone}
+				{maxPlayers === 2 ? 'Waiting for your opponent' : 'Waiting for players'}
+			{:else if room.isHost}
+				Start when you're ready
+			{:else}
+				Waiting for {lobby[0]?.name ?? 'the host'} to start
+			{/if}
+		</h1>
+		<p class="lobby__sub">
+			{#if maxPlayers === 2}
+				They join, the draft starts. Nobody sees the deck.
+			{:else if room.isHost && alone}
+				Send the code. Start once someone's in, or it starts itself at {maxPlayers}.
+			{:else if room.isHost}
+				Start with whoever's here, or it starts itself at {maxPlayers}. Nobody sees the deck.
+			{:else}
+				The host starts the draft, or it starts itself at {maxPlayers}.
+			{/if}
+		</p>
+
+		<section class="roll" aria-labelledby="roll-title">
+			<header class="roll__head">
+				<h2 id="roll-title">In the lobby</h2>
+				<span class="roll__count">{lobby.length} of {maxPlayers}</span>
+			</header>
+			<ol class="roll__list">
+				{#each { length: maxPlayers } as _, i (i)}
+					{@const player = lobby[i]}
+					{#if player}
+						<li class="roll__seat" style:--accent={playerAccent(i)}>
+							<span class="roll__name">{player.name}</span>
+							{#if i === 0}<span class="roll__tag">Host</span>{/if}
+							{#if i === room.seat}<span class="roll__tag roll__tag--you">You</span>{/if}
+						</li>
+					{:else}
+						<li class="roll__seat roll__seat--empty">Open seat</li>
+					{/if}
+				{/each}
+			</ol>
+		</section>
+
+		{#if room.isHost && !alone}
+			<button class="btn btn--hot" type="button" onclick={startDraft} disabled={starting}>
+				{starting ? 'Dealing…' : `Start the draft · ${lobby.length} players`}
+			</button>
+		{/if}
 
 		{#if code}
 			<div class="code">
@@ -301,7 +374,7 @@
 			</div>
 		{/if}
 
-		<button class="btn btn--hot" type="button" onclick={copyLink}>
+		<button class="btn" class:btn--hot={alone || !room.isHost} type="button" onclick={copyLink}>
 			{copied ? 'Link copied' : 'Copy invite link'}
 		</button>
 		<button class="btn btn--ghost" type="button" onclick={() => leave()} disabled={leaving}>
@@ -314,7 +387,9 @@
 				Play the bot while you wait
 			</button>
 		{/snippet}
-		{#if lonely}
+		{#if !room.isHost || !alone}
+			<!-- The bot is for a host sitting alone. -->
+		{:else if lonely}
 			<div class="nudge" role="status">
 				<p>Still nobody? Play the bot while you wait.</p>
 				{@render botButton()}
@@ -322,11 +397,16 @@
 		{:else}
 			{@render botButton()}
 		{/if}
+
+		{#if room.lastRejection}
+			<p class="status status--bad" role="alert">{room.lastRejection}</p>
+		{/if}
 	</div>
 {:else if view}
 	{#if away}
 		<p class="away" role="status">
-			Your opponent dropped out. They may be reconnecting — you can wait, or end it.
+			{lobby.length > 2 ? 'Someone' : 'Your opponent'} dropped out. They may be reconnecting — you
+			can wait, or end it.
 			<button type="button" onclick={() => leave()} disabled={leaving}>End the game</button>
 		</p>
 	{/if}
@@ -338,9 +418,10 @@
 					<RematchPanel
 						offer={room.rematch}
 						seat={room.seat}
-						{opponentName}
+						opponentName={room.opponentGone ? leaverName : opponentName}
 						opponentGone={room.opponentGone}
 						config={view.config}
+						players={view.players.length}
 						onPropose={(settings) => room.proposeRematch(settings)}
 						onAccept={() => room.acceptRematch()}
 						onCancel={() => room.cancelRematch()}
@@ -354,9 +435,9 @@
 						{names}
 						messages={room.chat}
 						send={(text) => room.say(text)}
-						opponentTyping={room.opponentTyping}
+						typingSeat={room.typingSeat}
 						onTyping={() => room.typing()}
-						closed={room.opponentGone ? `${opponentName} left, so chat is closed.` : null}
+						closed={room.opponentGone ? `${leaverName} left, so chat is closed.` : null}
 					/>
 				{/if}
 			{/snippet}
@@ -446,6 +527,85 @@
 		letter-spacing: 0.2em;
 		line-height: 1;
 		font-variant-numeric: tabular-nums;
+	}
+
+	.roll {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		padding: 0.7rem;
+		margin-bottom: 0.3rem;
+		background: var(--white);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+	}
+
+	.roll__head {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+	}
+
+	.roll__head h2 {
+		margin: 0;
+		font-size: 0.72rem;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+	}
+
+	.roll__count {
+		font-size: 1.1rem;
+		font-weight: 900;
+		font-variant-numeric: tabular-nums;
+	}
+
+	.roll__list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.roll__seat {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		padding: 0.45rem 0.6rem;
+		background: var(--accent);
+		border: var(--bw-thin) solid var(--ink);
+		font-weight: 900;
+	}
+
+	.roll__seat--empty {
+		background: var(--cream);
+		border-style: dashed;
+		font-size: 0.72rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.roll__name {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.roll__tag {
+		padding: 0.05rem 0.3rem;
+		background: var(--white);
+		border: var(--bw-thin) solid var(--ink);
+		font-size: 0.56rem;
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+	}
+
+	.roll__tag--you {
+		background: var(--ink);
+		color: var(--cream);
 	}
 
 	.nudge {

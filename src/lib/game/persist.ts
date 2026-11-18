@@ -37,7 +37,8 @@ function looksLikeGameState(value: unknown): value is GameState {
 
 	if (typeof state.phase !== 'string') return false;
 	if (!Array.isArray(state.deck) || typeof state.index !== 'number') return false;
-	if (!Array.isArray(state.players) || state.players.length !== 2) return false;
+	if (!Array.isArray(state.players) || state.players.length < 2 || state.players.length > 4)
+		return false;
 	if (!isConfig(state.config)) return false;
 
 	const slotIds = new Set(state.config.roster.map((slot) => slot.id));

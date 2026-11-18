@@ -22,8 +22,7 @@ function palette() {
 		yellow: token('--yellow'),
 		green: token('--green'),
 		orange: token('--orange'),
-		p1: token('--violet'),
-		p2: token('--yellow'),
+		players: [token('--p1'), token('--p2'), token('--p3'), token('--p4')],
 		font: css.getPropertyValue('--font').trim() || FALLBACK_FONT
 	};
 }
@@ -128,7 +127,7 @@ function drawRoster(
 	w: number,
 	h: number
 ) {
-	const tilt = ((player.id === 0 ? -0.6 : 0.6) * Math.PI) / 180;
+	const tilt = ((player.id % 2 === 0 ? -0.6 : 0.6) * Math.PI) / 180;
 	ctx.save();
 	ctx.translate(x + w / 2, y + h / 2);
 	ctx.rotate(tilt);
@@ -142,7 +141,7 @@ function drawRoster(
 		0,
 		w,
 		h,
-		player.id === 0 ? p.p1 : p.p2,
+		p.players[player.id] ?? p.players[0],
 		6,
 		board?.winner === player.id ? 18 : 10
 	);
@@ -371,7 +370,9 @@ export function renderCard(
 	);
 
 	const rosterY = margin + pad + 222;
-	const rosterH = statY - 40 - rosterY;
+	// Two across; three or four players wrap onto a second row.
+	const rows = Math.ceil(state.players.length / 2);
+	const rosterH = (statY - 40 - rosterY - gap * (rows - 1)) / rows;
 	const rosterW = (inner - gap - 10) / 2;
 	for (const player of state.players) {
 		drawRoster(
@@ -380,8 +381,8 @@ export function renderCard(
 			state,
 			player,
 			board,
-			left + player.id * (rosterW + gap),
-			rosterY,
+			left + (player.id % 2) * (rosterW + gap),
+			rosterY + Math.floor(player.id / 2) * (rosterH + gap),
 			rosterW,
 			rosterH
 		);

@@ -1,5 +1,7 @@
 import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
+import { writeLobby } from '../_shared/lobby.ts';
+import type { LobbySeat } from '../_shared/state.ts';
 
 /**
  * Ends a room early. Two writes: `rooms.status = 'abandoned'`, which the trigger
@@ -42,7 +44,7 @@ Deno.serve(async (req) => {
 		.maybeSingle();
 
 	if (!player) return fail('forbidden', 'You are not a player in this room');
-	const seat = player.seat as 0 | 1;
+	const seat = player.seat as number;
 
 	const { data: room, error: loadError } = await db
 		.from('rooms')
@@ -73,6 +75,20 @@ Deno.serve(async (req) => {
 		return json({ ok: true, status: room.status });
 	}
 	if (room.status === 'abandoned') return json({ ok: true, status: room.status });
+
+	// A guest leaving a lobby just gives the seat back. The host leaving closes it.
+	if (room.status === 'open' && seat !== 0) {
+		const { data: left, error: leaveError } = await db.rpc('leave_lobby_seat', {
+			p_room_id: roomId,
+			p_token: token
+		});
+		if (leaveError) console.error('lobby leave failed', leaveError);
+		if (left && !left.error) {
+			await writeLobby(db, roomId, left.seats as LobbySeat[], left.max, left.rev);
+			return json({ ok: true, status: 'open' });
+		}
+		// Started under us: fall through and quit the game like anyone else.
+	}
 
 	const { error: statusError } = await db
 		.from('rooms')

@@ -129,7 +129,7 @@
 			})
 		)
 	);
-	const names = $derived(game.state.players.map((player) => player.name) as [string, string]);
+	const names = $derived(game.state.players.map((player) => player.name) as string[]);
 
 	function later(run: () => void, ms: number) {
 		const timer = setTimeout(() => {
@@ -139,7 +139,7 @@
 		emoteTimers.add(timer);
 	}
 
-	function showEmote(seat: 0 | 1, emote: EmoteId) {
+	function showEmote(seat: number, emote: EmoteId) {
 		const key = ++emoteKey;
 		bubbles = [...bubbles.slice(-3), { key, seat, emote }];
 		later(() => (bubbles = bubbles.filter((bubble) => bubble.key !== key)), EMOTE_MS);
@@ -213,7 +213,8 @@
 	/** Present ids already looked up, so a key with no listing isn't fetched every sync. */
 	const looked = new Set<string>();
 
-	const COLUMNS = 'room_id, category_label, variant_label, budget, slots, created_at';
+	const COLUMNS =
+		'room_id, category_label, variant_label, budget, slots, max_players, players, created_at';
 
 	onMount(() => {
 		// A reload mid decoy game resumes it here. Any other saved game is left for
@@ -430,7 +431,10 @@
 							<span class="row__cat">
 								{listing.category_label}{listing.variant_label ? ` · ${listing.variant_label}` : ''}
 							</span>
-							<span class="row__meta">${listing.budget} · {listing.slots} slots</span>
+							<span class="row__meta">
+								${listing.budget} · {listing.slots} slots{#if (listing.max_players ?? 2) > 2}
+									· {listing.players ?? 1}/{listing.max_players} players{/if}
+							</span>
 							<span class="row__go">{joining === listing.room_id ? '…' : 'Join'}</span>
 						</button>
 					</li>

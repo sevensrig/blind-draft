@@ -1,5 +1,6 @@
 import { canBid } from '$lib/game/engine';
 import type { Action, PlayerId } from '$lib/game/types';
+import { MAX_PLAYERS } from '$lib/game/types';
 import { toGameState } from './adapt';
 import type { PublicGameState } from './types';
 
@@ -13,14 +14,19 @@ export type PendingBid = { player: PlayerId; amount: number; base: number };
 /** Draws a pending bid onto a confirmed state. Only a live auction takes one. */
 export function withBid(state: PublicGameState, bid: PendingBid): PublicGameState {
 	if (state.phase !== 'resolve') return state;
-	return { ...state, bid: { amount: bid.amount, holder: bid.player } };
+	const passed = state.bid?.passed;
+	return {
+		...state,
+		bid: { amount: bid.amount, holder: bid.player, ...(passed ? { passed } : {}) }
+	};
 }
 
 /** Reads an announcement off the wire. Anyone in the room can send one, so trust nothing. */
 export function readAnnouncement(payload: unknown): PendingBid | null {
 	if (!payload || typeof payload !== 'object') return null;
 	const { player, amount, version } = payload as Record<string, unknown>;
-	if (player !== 0 && player !== 1) return null;
+	if (typeof player !== 'number' || !Number.isInteger(player) || player < 0) return null;
+	if (player >= MAX_PLAYERS) return null;
 	if (typeof amount !== 'number' || !Number.isInteger(amount)) return null;
 	if (typeof version !== 'number' || !Number.isInteger(version)) return null;
 	return { player, amount, base: version };

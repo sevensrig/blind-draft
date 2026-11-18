@@ -199,7 +199,7 @@ export function offerFor(settings: RoomSettings, by: PlayerId): RematchOffer {
  * `disguised` only tags it for analytics. Settings come from the listing or a
  * rematch picker, which validates them before handing them over.
  */
-export function decoyDeal(settings: RoomSettings, names: [string, string]): Action {
+export function decoyDeal(settings: RoomSettings, names: string[]): Action {
 	const category = getCategory(settings.categoryId);
 	if (!category) throw new Error(`decoy category missing: ${settings.categoryId}`);
 	const custom = category.custom ? customSeeds(settings.customItems ?? []) : null;

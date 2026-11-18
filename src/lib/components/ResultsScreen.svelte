@@ -3,6 +3,7 @@
 	import { localMode, shareEvent, track } from '$lib/analytics';
 	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { playerAccent, playerTilt } from '$lib/components/accent';
 	import { getCategory, getVariant } from '$lib/data';
 	import { buildBench, buildDeck } from '$lib/game/deck';
 	import { ratingTable, statTable } from '$lib/data/stats';
@@ -106,8 +107,8 @@
 		}
 	}
 
-	const accentFor = (player: Player) => (player.id === 0 ? 'var(--p1)' : 'var(--p2)');
-	const tiltFor = (player: Player) => (player.id === 0 ? '-0.6deg' : '0.6deg');
+	const accentFor = (player: Player) => playerAccent(player.id);
+	const tiltFor = (player: Player) => playerTilt(player.id, 0.6);
 </script>
 
 <div class="shell results">

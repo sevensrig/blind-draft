@@ -42,7 +42,8 @@ describe('readAnnouncement', () => {
 		for (const junk of [
 			null,
 			'bid',
-			{ player: 2, amount: 3, version: 7 },
+			{ player: 4, amount: 3, version: 7 },
+			{ player: -1, amount: 3, version: 7 },
 			{ player: '1', amount: 3, version: 7 },
 			{ player: 1, amount: 2.5, version: 7 },
 			{ player: 1, amount: 3 },

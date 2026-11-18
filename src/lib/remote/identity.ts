@@ -4,6 +4,7 @@
  * refresh. localStorage, not sessionStorage — that dies with the tab.
  */
 import { cleanName } from '$lib/game/engine';
+import { MAX_PLAYERS } from '$lib/game/types';
 
 const TOKEN_KEY = 'blind-draft:device:v1';
 /** Which seat this device holds, per room, so a rejoin can skip the round trip. */
@@ -32,7 +33,7 @@ export function deviceToken(): string {
 	}
 }
 
-type SeatMap = Record<string, 0 | 1>;
+type SeatMap = Record<string, number>;
 
 function readSeats(): SeatMap {
 	try {
@@ -45,7 +46,7 @@ function readSeats(): SeatMap {
 	}
 }
 
-export function rememberSeat(roomId: string, seat: 0 | 1): void {
+export function rememberSeat(roomId: string, seat: number): void {
 	try {
 		localStorage.setItem(SEATS_KEY, JSON.stringify({ ...readSeats(), [roomId]: seat }));
 	} catch {
@@ -53,9 +54,37 @@ export function rememberSeat(roomId: string, seat: 0 | 1): void {
 	}
 }
 
-export function recallSeat(roomId: string): 0 | 1 | null {
+export function recallSeat(roomId: string): number | null {
 	const seat = readSeats()[roomId];
-	return seat === 0 || seat === 1 ? seat : null;
+	return Number.isInteger(seat) && seat >= 0 && seat < MAX_PLAYERS ? seat : null;
+}
+
+/**
+ * This device's `room_players` id per room. Seats close up when a lobby starts
+ * after someone left it, so the id is what finds our seat in `seatIds`.
+ */
+const PLAYER_IDS_KEY = 'blind-draft:player-ids:v1';
+
+function readPlayerIds(): Record<string, string> {
+	try {
+		const parsed: unknown = JSON.parse(localStorage.getItem(PLAYER_IDS_KEY) ?? '{}');
+		return parsed && typeof parsed === 'object' ? (parsed as Record<string, string>) : {};
+	} catch {
+		return {};
+	}
+}
+
+export function rememberPlayerId(roomId: string, id: string): void {
+	try {
+		localStorage.setItem(PLAYER_IDS_KEY, JSON.stringify({ ...readPlayerIds(), [roomId]: id }));
+	} catch {
+		// Not fatal: the stored seat still works unless the lobby closes up.
+	}
+}
+
+export function recallPlayerId(roomId: string): string | null {
+	const id = readPlayerIds()[roomId];
+	return typeof id === 'string' ? id : null;
 }
 
 export function forgetSeat(roomId: string): void {
@@ -63,6 +92,9 @@ export function forgetSeat(roomId: string): void {
 		const seats = readSeats();
 		delete seats[roomId];
 		localStorage.setItem(SEATS_KEY, JSON.stringify(seats));
+		const ids = readPlayerIds();
+		delete ids[roomId];
+		localStorage.setItem(PLAYER_IDS_KEY, JSON.stringify(ids));
 	} catch {
 		// Nothing to do.
 	}

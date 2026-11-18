@@ -5,8 +5,8 @@
 
 	interface Props {
 		/** The seat this device plays, so only the opponent's emotes are announced. */
-		seat: 0 | 1;
-		names: [string, string];
+		seat: number;
+		names: string[];
 		bubbles: EmoteEvent[];
 		send: (id: EmoteId) => void;
 	}

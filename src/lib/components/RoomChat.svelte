@@ -1,17 +1,18 @@
 <script lang="ts">
 	import { CHAT_MAX, containsSlur } from '$lib/data/moderation';
 	import type { ChatMessage } from '$lib/remote/types';
+	import { playerAccent } from './accent';
 
 	interface Props {
-		seat: 0 | 1;
-		names: [string, string];
+		seat: number;
+		names: string[];
 		messages: ChatMessage[];
 		/** Rejects with a readable message when the server refuses. */
 		send: (text: string) => Promise<void>;
 		/** Set once the other player has left: the log stays, the input goes. */
 		closed?: string | null;
-		/** The other player has typed in the last few seconds. */
-		opponentTyping?: boolean;
+		/** Whoever else has typed in the last few seconds. */
+		typingSeat?: number | null;
 		/** Called on every keystroke; the caller decides how often to pass it on. */
 		onTyping?: () => void;
 	}
@@ -22,7 +23,7 @@
 		messages,
 		send,
 		closed = null,
-		opponentTyping = false,
+		typingSeat = null,
 		onTyping
 	}: Props = $props();
 
@@ -31,9 +32,8 @@
 	let error = $state<string | null>(null);
 	let log = $state<HTMLOListElement | null>(null);
 
-	const opponent = $derived(seat === 0 ? 1 : 0);
-	/* Nobody is typing in a room the other player has left. */
-	const typing = $derived(opponentTyping && !closed);
+	/* Nobody is typing in a room someone has left. */
+	const typing = $derived(typingSeat !== null && typingSeat !== seat && !closed);
 	// Only a warning: `room-chat` is what actually refuses it.
 	const blocked = $derived(containsSlur(draft));
 
@@ -69,7 +69,7 @@
 			{#each messages as message (message.id)}
 				<li
 					class:mine={message.seat === seat}
-					style:--accent={message.seat === 0 ? 'var(--p1)' : 'var(--p2)'}
+					style:--accent={playerAccent(message.seat)}
 				>
 					<!-- Like a text thread: your own messages need no name, just your colour. -->
 					{#if message.seat === seat}
@@ -81,8 +81,8 @@
 				</li>
 			{/each}
 			{#if typing}
-				<li class="typing" style:--accent={opponent === 0 ? 'var(--p1)' : 'var(--p2)'}>
-					<b>{names[opponent]}</b>
+				<li class="typing" style:--accent={playerAccent(typingSeat ?? 0)}>
+					<b>{names[typingSeat ?? 0]}</b>
 					<span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
 					<span class="sr-only">is typing</span>
 				</li>

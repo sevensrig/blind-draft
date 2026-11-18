@@ -1,6 +1,10 @@
 import type { Item, SlotSpec } from '$lib/data/types';
 
-export type PlayerId = 0 | 1;
+/** A seat index: 0 and 1 locally, up to 3 in an online room. */
+export type PlayerId = number;
+
+export const MIN_PLAYERS = 2;
+export const MAX_PLAYERS = 4;
 
 export interface RosterEntry {
 	item: Item;
@@ -55,6 +59,8 @@ export type ItemMode = 'contest' | 'solo' | 'alternate' | 'forced';
 export interface Bid {
 	amount: number;
 	holder: PlayerId;
+	/** Bidders who dropped out of this item. Only ever set with three or more players. */
+	passed?: PlayerId[];
 }
 
 export interface Award {
@@ -73,7 +79,7 @@ export interface Award {
 export interface GameState {
 	phase: Phase;
 	config: GameConfig;
-	players: [Player, Player];
+	players: Player[];
 	deck: Item[];
 	/** Index into `deck` of the item currently in play. */
 	index: number;
@@ -89,13 +95,13 @@ export interface GameState {
 
 /** Plain serialisable data on purpose: these ship over the wire unchanged. */
 export type Action =
-	| { type: 'start'; config: GameConfig; names: [string, string]; deck: Item[]; bench?: Item[] }
+	| { type: 'start'; config: GameConfig; names: string[]; deck: Item[]; bench?: Item[] }
 	| { type: 'reveal' }
 	/** Opens the bidding, or raises a standing bid. */
 	| { type: 'bid'; player: PlayerId; amount: number }
 	/**
-	 * Nobody raises — the standing bid wins. `player` is whoever is giving up, not
-	 * whoever wins: the holder can't declare their own bid sold.
+	 * `player` stops raising. Once every other bidder has, the standing bid wins.
+	 * It's whoever is giving up, not whoever wins: the holder can't sell to themselves.
 	 */
 	| { type: 'sold'; player: PlayerId }
 	/** `solo` mode: the solvent player names a price and takes it. */

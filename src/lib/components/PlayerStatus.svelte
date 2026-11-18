@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
+	import { playerAccent, playerTilt } from './accent';
 	import type { SlotSpec } from '$lib/data/types';
 	import type { IconName } from '$lib/icons';
 	import type { Player } from '$lib/game/types';
@@ -11,15 +12,16 @@
 		positional: boolean;
 		/** Draws attention while this player holds the standing bid. */
 		leading?: boolean;
+		/** Dropped out of the current item. Only happens with three or more players. */
+		passed?: boolean;
 		/** An emote this player just sent. Pinned to their panel so it never covers the card. */
 		emote?: { icon: IconName; label: string } | null;
 	}
 
-	let { player, roster, positional, leading = false, emote = null }: Props = $props();
+	let { player, roster, positional, leading = false, passed = false, emote = null }: Props = $props();
 
-	const accent = $derived(player.id === 0 ? 'var(--p1)' : 'var(--p2)');
-	/** Opposing tilts, per the style's "slightly rotated cards". */
-	const tilt = $derived(player.id === 0 ? '-1deg' : '1deg');
+	const accent = $derived(playerAccent(player.id));
+	const tilt = $derived(playerTilt(player.id));
 	const broke = $derived(player.money <= 0);
 	const filled = $derived(new Map(player.roster.map((entry) => [entry.slotId, entry])));
 	const latest = $derived(player.roster.at(-1));
@@ -28,6 +30,8 @@
 <div class="status" class:leading style:--accent={accent} style:--tilt={tilt}>
 	{#if leading}
 		<span class="badge">Leading</span>
+	{:else if passed}
+		<span class="badge badge--passed">Passed</span>
 	{/if}
 
 	{#if emote}
@@ -105,6 +109,11 @@
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		transform: rotate(6deg);
+	}
+
+	.badge--passed {
+		background: var(--white);
+		color: var(--ink);
 	}
 
 	/* Hangs off the bottom edge, into the gap above the card. */

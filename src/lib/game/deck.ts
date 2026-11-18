@@ -2,7 +2,7 @@ import type { Item, Position, SlotSpec, Tier } from '$lib/data/types';
 import { between, sample, shuffle, type Rng, defaultRng } from './rng';
 
 /**
- * Deck curation. Exactly `2 x slots` items, so the two rosters consume it
+ * Deck curation. Exactly `players x slots` items, so the rosters consume it
  * precisely. Tiers never surface in the UI — they only shape the curve:
  * ~15-20% great, the rest mid+good, re-rolled every game. Inside that band every
  * good and mid item is equally likely, so the split follows the pool: a fixed
@@ -32,8 +32,8 @@ const BACKFILL_ORDER: Tier[] = ['mid', 'good', 'great', 'bad'];
 
 const isGreat = (item: Item) => item.tier === 'great';
 
-export function deckSizeFor(slots: number): number {
-	return slots * 2;
+export function deckSizeFor(slots: number, players = 2): number {
+	return slots * players;
 }
 
 /** A pool has to cover both rosters, so this caps the slot input on setup. */
@@ -173,7 +173,12 @@ function countByPosition(pool: readonly Item[]): Map<Position, number> {
  * the deck only — players can still slot anyone anywhere. A flex slot picks
  * a position weighted by how many the pool can spare, so a thin one isn't over-committed.
  */
-function positionDemand(roster: SlotSpec[], pool: readonly Item[], rng: Rng): Position[] {
+function positionDemand(
+	roster: SlotSpec[],
+	pool: readonly Item[],
+	rng: Rng,
+	players: number
+): Position[] {
 	const supply = countByPosition(pool);
 	const need = new Map<Position, number>();
 	const claim = (position: Position) => need.set(position, (need.get(position) ?? 0) + 1);
@@ -182,11 +187,11 @@ function positionDemand(roster: SlotSpec[], pool: readonly Item[], rng: Rng): Po
 	const forced = roster.filter((slot) => slot.drafts?.length === 1);
 	const flexible = roster.filter((slot) => (slot.drafts?.length ?? 0) > 1);
 
-	// One roster per player, so every slot is claimed twice.
-	for (let player = 0; player < 2; player++) {
+	// One roster per player, so every slot is claimed once per player.
+	for (let player = 0; player < players; player++) {
 		for (const slot of forced) claim(slot.drafts![0]);
 	}
-	for (let player = 0; player < 2; player++) {
+	for (let player = 0; player < players; player++) {
 		for (const slot of flexible) {
 			// Weighted by headroom, so a thin position still turns up sometimes.
 			const options = slot.drafts!.filter((position) => headroom(position) > 0);
@@ -210,9 +215,10 @@ function buildPositionalDeck(
 	pool: readonly Item[],
 	roster: SlotSpec[],
 	size: number,
-	rng: Rng
+	rng: Rng,
+	players: number
 ): Item[] {
-	const demand = positionDemand(roster, pool, rng);
+	const demand = positionDemand(roster, pool, rng, players);
 	const supply = countByPosition(pool);
 	const quota = targetCounts(size, groupByTier(pool), rng);
 
@@ -256,29 +262,34 @@ function buildPositionalDeck(
 }
 
 /** Whether a pool can supply every position a roster template demands. */
-export function poolSupportsRoster(pool: readonly Item[], roster: SlotSpec[]): boolean {
-	if (!isPositional(roster)) return pool.length >= roster.length * 2;
+export function poolSupportsRoster(
+	pool: readonly Item[],
+	roster: SlotSpec[],
+	players = 2
+): boolean {
+	if (!isPositional(roster)) return pool.length >= roster.length * players;
 	try {
-		positionDemand(roster, pool, defaultRng);
+		positionDemand(roster, pool, defaultRng, players);
 		return true;
 	} catch {
 		return false;
 	}
 }
 
-/** Samples `2 x roster.length` items in blind draw order. Throws on a pool too thin. */
+/** Samples `players x roster.length` items in blind draw order. Throws on a pool too thin. */
 export function buildDeck(
 	pool: readonly Item[],
 	roster: SlotSpec[],
-	rng: Rng = defaultRng
+	rng: Rng = defaultRng,
+	players = 2
 ): Item[] {
-	const size = deckSizeFor(roster.length);
+	const size = deckSizeFor(roster.length, players);
 	if (pool.length < size) {
 		throw new Error(`Pool of ${pool.length} can't fill a ${size}-item deck`);
 	}
 
 	const picked = isPositional(roster)
-		? buildPositionalDeck(pool, roster, size, rng)
+		? buildPositionalDeck(pool, roster, size, rng, players)
 		: buildOpenDeck(pool, size, rng);
 
 	const deck = shuffle(picked, rng);

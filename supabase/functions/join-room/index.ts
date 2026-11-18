@@ -1,12 +1,12 @@
 import { containsSlur } from '../_shared/vendor/data/moderation.ts';
 import { cleanName } from '../_shared/vendor/game/engine.ts';
-import type { GameState } from '../_shared/vendor/game/types.ts';
 import { serviceClient, withinRateLimit } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
-import { redact } from '../_shared/state.ts';
+import { startLobby, writeLobby } from '../_shared/lobby.ts';
+import type { LobbySeat } from '../_shared/state.ts';
 
 /**
- * Takes the second seat, by id or by code. Rejoining is the common case, not an
+ * Takes a lobby seat, by id or by code. Rejoining is the common case, not an
  * edge case: a token that already holds a seat gets it back rather than being
  * told the room is full.
  */
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
 	// refresh mid-game recover instead of hitting "room full".
 	const { data: existing } = await db
 		.from('room_players')
-		.select('seat, name')
+		.select('id, seat, name')
 		.eq('room_id', room.id)
 		.eq('token', token)
 		.maybeSingle();
@@ -62,46 +62,48 @@ Deno.serve(async (req) => {
 			.update({ last_seen_at: new Date().toISOString() })
 			.eq('room_id', room.id)
 			.eq('token', token);
-		return json({ roomId: room.id, seat: existing.seat, rejoined: true });
+		return json({ roomId: room.id, seat: existing.seat, playerId: existing.id, rejoined: true });
 	}
 
-	const name = cleanName(String(body.name ?? '')) || 'Player 2';
+	const name = cleanName(String(body.name ?? '')) || 'Player';
 	if (containsSlur(name)) return fail('bad_request', "Slurs aren't allowed in names");
 
-	// The unique (room_id, seat) constraint settles a race between two devices
-	// joining at once: one insert wins, the other gets 23505.
-	const { error: seatError } = await db
-		.from('room_players')
-		.insert({ room_id: room.id, seat: 1, name, token });
-
-	if (seatError) {
-		if (seatError.code === '23505') return fail('room_full', 'That room already has two players');
+	// Seat choice and the open check happen under the room's row lock, so two
+	// joins can't take one seat and nobody sits down after the deal.
+	const { data: taken, error: seatError } = await db.rpc('take_lobby_seat', {
+		p_room_id: room.id,
+		p_token: token,
+		p_name: name
+	});
+	if (seatError || !taken) {
 		console.error('seat insert failed', seatError);
 		return fail('server_error', 'Could not join that room');
 	}
+	if (taken.error === 'room_full') return fail('room_full', 'That room is full');
+	if (taken.error === 'started') return fail('room_full', 'That draft has already started');
+	if (taken.error) return fail('not_found', 'No room with that code');
 
-	// Second seat taken, so the trigger on `status` drops the public listing.
-	const { data: game } = await db
-		.from('games')
-		.select('state, version')
-		.eq('room_id', room.id)
-		.single();
+	const seats = taken.seats as LobbySeat[];
+	await writeLobby(db, room.id, seats, taken.max, taken.rev);
 
-	if (game) {
-		const state = game.state as GameState;
-		state.players[1].name = name;
-		await db.from('games').update({ state }).eq('room_id', room.id);
-		// Redaction runs here, in TypeScript, because it depends on the engine.
-		await db
-			.from('game_public')
-			.update({ payload: redact(state, 2), updated_at: new Date().toISOString() })
-			.eq('room_id', room.id);
+	// A full lobby has nobody left to wait for.
+	if (seats.length >= taken.max) {
+		const started = await startLobby(db, room.id);
+		if (!started.ok) console.error('auto start failed', started.message);
 	}
 
-	await db
-		.from('rooms')
-		.update({ status: 'playing', last_active_at: new Date().toISOString() })
-		.eq('id', room.id);
+	// The seat may have closed up during an auto start, so read it back.
+	const { data: mine } = await db
+		.from('room_players')
+		.select('seat')
+		.eq('room_id', room.id)
+		.eq('token', token)
+		.maybeSingle();
 
-	return json({ roomId: room.id, seat: 1, rejoined: false });
+	return json({
+		roomId: room.id,
+		seat: mine?.seat ?? taken.seat,
+		playerId: taken.id,
+		rejoined: false
+	});
 });
