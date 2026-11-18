@@ -2,12 +2,12 @@ import type { Action, GameState, PlayerId } from '../_shared/vendor/game/types.t
 import { applyAction } from '../_shared/vendor/game/engine.ts';
 import { serviceClient } from '../_shared/db.ts';
 import { CORS, actorOf, fail, json } from '../_shared/http.ts';
-import { redact } from '../_shared/state.ts';
+import { type ServerState, redact } from '../_shared/state.ts';
 
 /**
  * Applies one game action, authoritatively.
  *
- * Either player may raise at any moment, so two bids can be in flight. Each
+ * Any player may raise at any moment, so two bids can be in flight. Each
  * caller sends the version it read and the write is conditional on it: one wins,
  * the other matches zero rows and gets `stale` with the real state attached.
  */
@@ -74,18 +74,23 @@ Deno.serve(async (req) => {
 	// The engine can't catch this — abandonment lives on the room, not in `GameState`.
 	if (!context.status) return fail('not_found', 'No game in that room');
 	if (context.status === 'abandoned') return fail('forbidden', 'That game has ended.');
+	// A lobby has no game to act on, and `reset` or `start` must never arrive here.
+	if (context.status === 'open') return fail('illegal_action', 'The draft has not started yet');
+	if (action.type === 'reset' || action.type === 'start') {
+		return fail('forbidden', 'That move is not allowed online');
+	}
 
 	if (actorMismatch(action, seat)) {
 		return fail('forbidden', 'You can only act for your own seat');
 	}
 
 	if (!context.state) return fail('not_found', 'No game in that room');
-	const state = context.state as GameState;
+	const state = context.state as ServerState;
 	const version = context.version as number;
 
 	// Behind already — don't even try the write.
 	if (version !== expected) {
-		return fail('stale', 'Someone got there first', { state: redact(state, 2), version });
+		return fail('stale', 'Someone got there first', { state: redact(state), version });
 	}
 
 	// `assign` moves a just-won item between slots; only its winner may do that.
@@ -99,12 +104,12 @@ Deno.serve(async (req) => {
 	// re-deriving legality here.
 	if (next === state) {
 		return fail('illegal_action', 'That move is not legal right now', {
-			state: redact(state, 2),
+			state: redact(state),
 			version
 		});
 	}
 
-	const publicState = redact(next, 2);
+	const publicState = redact(next);
 	const { data: commit, error: writeError } = await db.rpc('commit_room_action', {
 		p_room_id: roomId,
 		p_expected: expected,
@@ -121,7 +126,7 @@ Deno.serve(async (req) => {
 	// Another request committed between our read and our write.
 	if (!commit.ok) {
 		return fail('stale', 'Someone got there first', {
-			state: commit.state ? redact(commit.state as GameState, 2) : null,
+			state: commit.state ? redact(commit.state as GameState) : null,
 			version: commit.version ?? null
 		});
 	}

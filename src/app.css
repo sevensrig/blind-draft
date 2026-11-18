@@ -23,10 +23,15 @@
 	--blue: #8ecae6;
 	/* Saturated rather than pastel, so black text still needs checking on it. */
 	--orange: #fb8500;
+	/* Between --orange and a pastel: soft enough to sit with the other seats. */
+	--peach: #fca03a;
 
-	/* Player identities. Both are light, so text on them stays black. */
+	/* Player identities. All light, so text on them stays black. Three and four
+	   only turn up in online rooms. */
 	--p1: var(--violet);
 	--p2: var(--yellow);
+	--p3: var(--green);
+	--p4: var(--peach);
 
 	/* The standing bid and the amount dial. */
 	--money: var(--blue);

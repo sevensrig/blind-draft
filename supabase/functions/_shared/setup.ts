@@ -1,7 +1,7 @@
 import { getCategory, getVariant, hasVariants, openRoster } from './vendor/data/index.ts';
 import { CUSTOM_MIN_ITEMS, CUSTOM_NAME_MAX, blockedEntry, customSeeds } from './vendor/data/custom.ts';
 import { variant as buildVariant } from './vendor/data/types.ts';
-import { buildBench, buildDeck } from './vendor/game/deck.ts';
+import { buildBench, buildDeck, poolSupportsRoster } from './vendor/game/deck.ts';
 import { applyAction, defaultConfig, initialState } from './vendor/game/engine.ts';
 import type { GameConfig, GameState } from './vendor/game/types.ts';
 
@@ -19,14 +19,14 @@ export interface Settings {
 }
 
 export type SettingsResult =
-	| { ok: true; settings: Settings; config: GameConfig; deal: (names: [string, string]) => GameState }
+	| { ok: true; settings: Settings; config: GameConfig; deal: (names: string[]) => GameState }
 	| { ok: false; message: string };
 
 /**
  * Validates untrusted settings and returns a dealer for them. The deck is built
  * here, server-side, because both players are clients.
  */
-export function readSettings(body: Record<string, unknown>): SettingsResult {
+export function readSettings(body: Record<string, unknown>, players = 2): SettingsResult {
 	const category = getCategory(String(body.categoryId ?? ''));
 	if (!category) return { ok: false, message: 'Unknown category' };
 
@@ -62,8 +62,14 @@ export function readSettings(body: Record<string, unknown>): SettingsResult {
 	if (template.length < 2 || template.length > 10) {
 		return { ok: false, message: 'Roster size must be between 2 and 10' };
 	}
-	if (variant.items.length < template.length * 2) {
-		return { ok: false, message: 'That category is too small for this roster size' };
+	if (!poolSupportsRoster(variant.items, template, players)) {
+		return {
+			ok: false,
+			message:
+				players > 2
+					? `That category is too small for ${players} players at this roster size`
+					: 'That category is too small for this roster size'
+		};
 	}
 
 	const config: GameConfig = {
@@ -93,7 +99,7 @@ export function readSettings(body: Record<string, unknown>): SettingsResult {
 		config,
 		// The same engine the local game uses. The rulebook exists once.
 		deal: (names) => {
-			const deck = buildDeck(items, template);
+			const deck = buildDeck(items, template, undefined, names.length);
 			return applyAction(initialState(), {
 				type: 'start',
 				deck,

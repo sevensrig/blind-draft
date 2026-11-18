@@ -13,8 +13,6 @@
 	const clamp = (n: number) => Math.min(max, Math.max(min, n));
 	const nudge = (delta: number) => onchange(clamp(value + delta));
 
-	/** Jump chips sized to the range. No +1: the + knob already does that. */
-	const jumps = $derived([2, 5].filter((step) => min + step <= max));
 	const atMax = $derived(value >= max);
 </script>
 
@@ -42,16 +40,10 @@
 		>
 	</div>
 
-	<div class="jumps">
-		{#each jumps as step (step)}
-			<button class="chip" type="button" onclick={() => nudge(step)} disabled={atMax}>
-				+{step}
-			</button>
-		{/each}
-		<button class="chip chip--max" type="button" onclick={() => onchange(max)} disabled={atMax}>
-			All in ${max}
-		</button>
-	</div>
+	<!-- The one shortcut. The knobs cover single dollars. -->
+	<button class="allin" type="button" onclick={() => onchange(max)} disabled={atMax}>
+		All in ${max}
+	</button>
 </div>
 
 <style>
@@ -100,10 +92,9 @@
 		justify-content: center;
 		gap: 0.05rem;
 		padding: 0.35rem;
-		/* Money, not Player 2 and not a control. */
+		/* Money, not Player 2 and not a control: flat, with no shadow, so it reads as a display. */
 		background: var(--money);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
+		border: var(--bw-thin) solid var(--ink);
 	}
 
 	.value {
@@ -114,32 +105,25 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	.jumps {
-		display: flex;
-		gap: 0.35rem;
-	}
-
-	.chip {
-		flex: 1;
-		padding: 0.45rem 0.2rem;
-		background: var(--white);
-		border: var(--bw-thin) solid var(--ink);
-		font-size: 0.72rem;
-		letter-spacing: 0.04em;
+	.allin {
+		padding: 0.7rem 0.5rem;
+		background: var(--money);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+		font-size: 0.95rem;
+		font-weight: 900;
+		letter-spacing: 0.06em;
 		text-transform: uppercase;
 	}
 
-	.chip:active:not(:disabled) {
-		background: var(--ink);
-		color: var(--cream);
+	.allin:active:not(:disabled) {
+		transform: translate(4px, 4px);
+		box-shadow: none;
 	}
 
-	.chip--max {
-		flex: 1.7;
-		background: var(--violet);
-	}
-
-	.chip:disabled {
+	.allin:disabled {
+		transform: translate(4px, 4px);
+		box-shadow: none;
 		opacity: 0.4;
 		cursor: not-allowed;
 	}

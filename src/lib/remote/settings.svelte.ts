@@ -1,6 +1,6 @@
 import { getCategory, getVariant } from '$lib/data';
 import { CUSTOM_MIN_ITEMS, blockedEntry, customSeeds } from '$lib/data/custom';
-import { deckSizeFor, maxSlotsFor } from '$lib/game/deck';
+import { poolSupportsRoster } from '$lib/game/deck';
 import { DEFAULT_BUDGET, DEFAULT_SLOTS } from '$lib/game/engine';
 import type { RoomSettings } from './types';
 
@@ -8,12 +8,15 @@ import type { RoomSettings } from './types';
 export class SettingsForm {
 	budget = $state(DEFAULT_BUDGET);
 	slots = $state(DEFAULT_SLOTS);
+	/** The room's size, which the pool has to cover. Fixed for a rematch. */
+	players = $state(2);
 	categoryId = $state<string | null>(null);
 	variantChoice = $state<Record<string, string>>({});
 	customName = $state('');
 	customText = $state('');
 
-	constructor(initial?: Partial<RoomSettings>) {
+	constructor(initial?: Partial<RoomSettings>, players = 2) {
+		this.players = players;
 		if (!initial) return;
 		if (initial.budget) this.budget = initial.budget;
 		if (initial.slots) this.slots = initial.slots;
@@ -37,16 +40,22 @@ export class SettingsForm {
 	customBlocked = $derived(!!blockedEntry(this.customName, this.seeds));
 	template = $derived(this.category?.roster ?? null);
 	poolSize = $derived(this.isCustom ? this.customCount : (this.variant?.items.length ?? 0));
-	slotCap = $derived(this.poolSize ? Math.min(10, maxSlotsFor(this.poolSize)) : 10);
+	slotCap = $derived(this.poolSize ? Math.min(10, Math.floor(this.poolSize / this.players)) : 10);
 	effectiveSlots = $derived(
 		this.template ? this.template.length : Math.min(this.slots, this.slotCap)
 	);
+	/** Whether the pool can deal a roster for every player. Positional pools run out of a position first. */
+	fits = $derived.by(() => {
+		if (!this.category) return true;
+		if (this.template && this.variant) {
+			return poolSupportsRoster(this.variant.items, this.template, this.players);
+		}
+		return this.poolSize >= this.effectiveSlots * this.players;
+	});
 	ready = $derived(
 		!!this.category &&
-			(!this.isCustom ||
-				(this.customCount >= CUSTOM_MIN_ITEMS &&
-					!this.customBlocked &&
-					this.poolSize >= deckSizeFor(this.effectiveSlots)))
+			this.fits &&
+			(!this.isCustom || (this.customCount >= CUSTOM_MIN_ITEMS && !this.customBlocked))
 	);
 
 	/** The label the dock and offers show, e.g. "NBA" or the typed custom name. */

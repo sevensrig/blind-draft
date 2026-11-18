@@ -4,7 +4,13 @@ import type { Action, PlayerId } from '$lib/game/types';
 import { toGameState } from './adapt';
 import { EMOTE_MS, emoteById, type EmoteId } from './emotes';
 import { LOBBY_HOSTS, RemoteError, callFunction, supabase } from './client';
-import { deviceToken, forgetSeat, rememberSeat } from './identity';
+import {
+	deviceToken,
+	forgetSeat,
+	recallPlayerId,
+	rememberPlayerId,
+	rememberSeat
+} from './identity';
 import {
 	type PendingBid,
 	alreadyDone,
@@ -43,9 +49,16 @@ const BUSY_MS = ANNOUNCED_TTL_MS + 1000;
  * an Edge Function instead of a local reducer. Two rules run through it —
  * connect *fetches* before subscribing, and the server always wins.
  */
+/** Past the lobby. Rooms from before lobbies dealt up front, so the seat count matters too. */
+export function isStarted(view: PublicGameState | null): boolean {
+	return !!view && view.phase !== 'setup' && view.seatsTaken >= 2;
+}
+
 class RemoteRoom {
 	#roomId = $state<string | null>(null);
-	#seat = $state<0 | 1 | null>(null);
+	#seat = $state<number | null>(null);
+	/** Our `room_players` id, which outlives a seat number. */
+	#playerId: string | null = null;
 	/** The server's word. Only `#apply` writes it, so analytics never sees a guess. */
 	#state = $state<PublicGameState | null>(null);
 	#version = $state(0);
@@ -90,14 +103,15 @@ class RemoteRoom {
 	/** Set when a move was refused, so the UI can say why without inventing state. */
 	#lastRejection = $state<string | null>(null);
 	/** Seat that quit. Null while the game is live. */
-	#abandonedBy = $state<0 | 1 | null>(null);
+	#abandonedBy = $state<number | null>(null);
 	/** Pending rematch offer, and the seat that walked away from the results. */
 	#rematch = $state<RematchOffer | null>(null);
-	#leftBy = $state<0 | 1 | null>(null);
+	#leftBy = $state<number | null>(null);
 	#emotes = $state<EmoteEvent[]>([]);
 	#chat = $state<ChatMessage[]>([]);
 	#emoteKey = 0;
-	#opponentTyping = $state(false);
+	/** Who is typing in the post-game chat, or null. */
+	#typingSeat = $state<number | null>(null);
 	#typingTimer: ReturnType<typeof setTimeout> | undefined;
 	#idleTimer: ReturnType<typeof setTimeout> | undefined;
 	#lastTypingPing = 0;
@@ -146,15 +160,20 @@ class RemoteRoom {
 	get chat() {
 		return this.#chat;
 	}
-	get opponentTyping() {
-		return this.#opponentTyping;
+	get typingSeat() {
+		return this.#typingSeat;
 	}
 
 	get rematch() {
 		return this.#rematch;
 	}
 
-	/** The other player left the results sheet, so no rematch is coming. */
+	/** The seat that walked away from the results, if anyone did. */
+	get leftBy() {
+		return this.#leftBy;
+	}
+
+	/** Someone else left the results sheet, so no rematch is coming. */
 	get opponentGone() {
 		return this.#leftBy !== null && this.#leftBy !== this.#seat;
 	}
@@ -164,22 +183,40 @@ class RemoteRoom {
 		return this.#abandonedBy !== null && this.#abandonedBy !== this.#seat;
 	}
 
-	/**
-	 * The server's count, not a name check — a fresh game seeds a placeholder name
-	 * for player two, so "has a name" reports the room full before anyone joins.
-	 */
-	get bothSeated() {
-		return (this.#state?.seatsTaken ?? 0) >= 2;
+	/** Past the lobby: dealt, with two players or more. */
+	get started() {
+		return isStarted(this.#state);
+	}
+
+	/** Seat 0 opened the room, and only they can start it. */
+	get isHost() {
+		return this.#seat === 0;
+	}
+
+	/** Deals for whoever is in the lobby. Host only; the state nudge brings the board. */
+	async start(): Promise<void> {
+		if (!this.#roomId) return;
+		this.#lastRejection = null;
+		try {
+			await callFunction('start-room', { roomId: this.#roomId, token: deviceToken() });
+			await this.#pull();
+		} catch (error) {
+			this.#lastRejection =
+				error instanceof RemoteError ? error.message : 'Something went wrong. Try that again.';
+		}
 	}
 
 	async create(
-		options: RoomSettings & { visibility: 'public' | 'private'; name: string }
+		options: RoomSettings & { visibility: 'public' | 'private'; name: string; maxPlayers?: number }
 	): Promise<{ roomId: string; code: string }> {
-		const result = await callFunction<{ roomId: string; code: string; seat: 0 }>('create-room', {
-			...options,
-			token: deviceToken()
-		});
+		const result = await callFunction<{
+			roomId: string;
+			code: string;
+			seat: 0;
+			playerId?: string;
+		}>('create-room', { ...options, token: deviceToken() });
 		rememberSeat(result.roomId, result.seat);
+		if (result.playerId) rememberPlayerId(result.roomId, result.playerId);
 		this.#code = result.code;
 		return result;
 	}
@@ -189,12 +226,13 @@ class RemoteRoom {
 		roomId?: string;
 		code?: string;
 		name?: string;
-	}): Promise<{ roomId: string; seat: 0 | 1 }> {
-		const result = await callFunction<{ roomId: string; seat: 0 | 1 }>('join-room', {
-			...target,
-			token: deviceToken()
-		});
+	}): Promise<{ roomId: string; seat: number }> {
+		const result = await callFunction<{ roomId: string; seat: number; playerId?: string }>(
+			'join-room',
+			{ ...target, token: deviceToken() }
+		);
 		rememberSeat(result.roomId, result.seat);
+		if (result.playerId) rememberPlayerId(result.roomId, result.playerId);
 		return result;
 	}
 
@@ -202,10 +240,11 @@ class RemoteRoom {
 	 * Attaches to a room: fetch, then subscribe. Subscribe-first would leave a
 	 * reconnecting player staring at nothing until the opponent moved.
 	 */
-	async connect(roomId: string, seat: 0 | 1): Promise<void> {
+	async connect(roomId: string, seat: number): Promise<void> {
 		this.disconnect();
 		this.#roomId = roomId;
 		this.#seat = seat;
+		this.#playerId = recallPlayerId(roomId);
 		this.#status = 'connecting';
 		this.#message = null;
 		this.#abandonedBy = null;
@@ -213,7 +252,7 @@ class RemoteRoom {
 		this.#leftBy = null;
 		this.#emotes = [];
 		this.#chat = [];
-		this.#setOpponentTyping(false);
+		this.#setTyping(null);
 
 		try {
 			await this.#pull();
@@ -225,7 +264,10 @@ class RemoteRoom {
 
 		const client = supabase();
 		this.#channel = client
-			.channel(`room:${roomId}`, { config: { presence: { key: String(seat) } } })
+			// Keyed by player id where known: a seat number can change when the lobby closes up.
+			.channel(`room:${roomId}`, {
+				config: { presence: { key: this.#playerId ?? `seat-${seat}` } }
+			})
 			/*
 			 * Broadcast, not Postgres Changes: `game_public`'s policy checks the
 			 * `x-player-token` header, which Realtime doesn't send, so row
@@ -246,23 +288,28 @@ class RemoteRoom {
 			// Same idea for the card. Nobody but the server knows what's on it, so
 			// this only says "it's being turned over" — enough to stop a second tap.
 			.on('broadcast', { event: 'reveal' }, ({ payload }) => this.#hearReveal(payload))
-			// `self` is off, so anything arriving here came from the other seat.
+			// `self` is off, so anything arriving here came from another seat.
 			.on('broadcast', { event: 'emote' }, ({ payload }) => {
 				const emote = emoteById(payload?.emote);
-				if (emote) this.#showEmote(other(seat), emote.id);
+				const from = this.#otherSeat(payload?.seat);
+				if (emote && from !== null) this.#showEmote(from, emote.id);
 			})
 			.on('broadcast', { event: 'chat' }, () => {
 				// Their message landing is what ends their typing.
-				this.#setOpponentTyping(false);
+				this.#setTyping(null);
 				void this.#pullChat();
 			})
 			// Contentless, like the state nudge: it only says "they're typing".
 			.on('broadcast', { event: 'typing' }, ({ payload }) =>
-				this.#setOpponentTyping(payload?.stopped !== true)
+				this.#setTyping(payload?.stopped === true ? null : this.#otherSeat(payload?.seat))
 			)
 			.on('presence', { event: 'sync' }, () => {
-				const seats = Object.keys(this.#channel?.presenceState() ?? {});
-				const opponentHere = seats.some((key) => key !== String(seat));
+				const mine = this.#playerId ?? `seat-${this.#seat}`;
+				const others = Object.keys(this.#channel?.presenceState() ?? {}).filter(
+					(key) => key !== mine
+				).length;
+				const expected = (this.#state?.players.length ?? 2) - 1;
+				const opponentHere = others >= expected;
 				// Only while the game is live: a lobby isn't an abandoned game, and
 				// 'ended' is excluded because a quitter also drops presence — that
 				// would downgrade a closed game to "maybe reconnecting".
@@ -276,9 +323,9 @@ class RemoteRoom {
 				await this.#channel?.track({ seat, at: Date.now() });
 				// The pull above may already have found a closed room; don't undo it.
 				if (this.#status !== 'ended') {
-					this.#status = this.bothSeated ? 'live' : 'waiting';
+					this.#status = this.started ? 'live' : 'waiting';
 				}
-				if (this.#status === 'waiting') void this.#advertise(roomId);
+				if (this.#status === 'waiting' && this.isHost) void this.#advertise(roomId);
 			}
 		});
 		void this.#pullChat();
@@ -288,7 +335,11 @@ class RemoteRoom {
 	emote(id: EmoteId): void {
 		if (!this.#channel || this.#seat === null) return;
 		this.#showEmote(this.#seat, id);
-		void this.#channel.send({ type: 'broadcast', event: 'emote', payload: { emote: id } });
+		void this.#channel.send({
+			type: 'broadcast',
+			event: 'emote',
+			payload: { emote: id, seat: this.#seat }
+		});
 	}
 
 	/** Called per keystroke; throttled here so a fast typist sends a ping every couple of seconds. */
@@ -299,7 +350,7 @@ class RemoteRoom {
 		this.#idleTimer = setTimeout(() => this.#stoppedTyping(), TYPING_IDLE_MS);
 		if (Date.now() - this.#lastTypingPing < TYPING_PING_MS) return;
 		this.#lastTypingPing = Date.now();
-		void this.#channel.send({ type: 'broadcast', event: 'typing', payload: {} });
+		void this.#channel.send({ type: 'broadcast', event: 'typing', payload: { seat: this.#seat } });
 	}
 
 	#stoppedTyping(): void {
@@ -347,7 +398,7 @@ class RemoteRoom {
 				await this.#settled();
 				if (this.#roomId !== roomId) return;
 				if (!landed(this.#state, answering)) {
-					this.#lastRejection = "Your opponent's bid didn't go through.";
+					this.#lastRejection = "That bid didn't go through.";
 					return;
 				}
 			}
@@ -371,7 +422,7 @@ class RemoteRoom {
 
 				this.#lastRejection =
 					error.code === 'stale'
-						? 'Your opponent got there first.'
+						? 'Someone got there first.'
 						: error.code === 'illegal_action'
 							? 'That move is not legal right now.'
 							: error.message;
@@ -449,7 +500,7 @@ class RemoteRoom {
 	async leave(): Promise<void> {
 		const roomId = this.#roomId;
 		const state = this.#state;
-		if (state && this.#abandonedBy === null && state.seatsTaken >= 2) {
+		if (state && this.#abandonedBy === null && isStarted(state)) {
 			trackTransition(state, { ...state, phase: 'setup' }, 'online');
 		}
 		if (roomId) {
@@ -463,6 +514,7 @@ class RemoteRoom {
 		this.disconnect();
 		this.#roomId = null;
 		this.#seat = null;
+		this.#playerId = null;
 		this.#state = null;
 		this.#version = 0;
 		this.#mine = null;
@@ -473,17 +525,17 @@ class RemoteRoom {
 		this.#lastRejection = null;
 		this.#emotes = [];
 		this.#chat = [];
-		this.#setOpponentTyping(false);
+		this.#setTyping(null);
 	}
 
-	#setOpponentTyping(on: boolean): void {
+	#setTyping(seat: number | null): void {
 		clearTimeout(this.#typingTimer);
-		this.#opponentTyping = on;
-		if (on)
-			this.#typingTimer = setTimeout(() => (this.#opponentTyping = false), TYPING_FALLBACK_MS);
+		this.#typingSeat = seat;
+		if (seat !== null)
+			this.#typingTimer = setTimeout(() => (this.#typingSeat = null), TYPING_FALLBACK_MS);
 	}
 
-	#showEmote(seat: 0 | 1, emote: EmoteId): void {
+	#showEmote(seat: number, emote: EmoteId): void {
 		const key = ++this.#emoteKey;
 		// Capped so a spammer can't pile bubbles up the screen.
 		this.#emotes = [...this.#emotes.slice(-3), { key, seat, emote }];
@@ -536,17 +588,17 @@ class RemoteRoom {
 		void this.#channel?.send({
 			type: 'broadcast',
 			event: 'reveal',
-			payload: { version: revealing.base }
+			payload: { version: revealing.base, seat }
 		});
 		return revealing;
 	}
 
 	#hearReveal(payload: unknown): void {
 		const base = readRevealAnnouncement(payload);
-		const seat = this.#seat;
-		if (base === null || seat === null) return;
+		const by = this.#otherSeat((payload as { seat?: unknown } | null)?.seat);
+		if (base === null || by === null) return;
 		if (base !== this.#version || this.#state?.phase !== 'reveal') return;
-		this.#setRevealing({ by: other(seat), base });
+		this.#setRevealing({ by, base });
 	}
 
 	/** Same lapse as an announced bid: ask the server, then let the card go back down. */
@@ -628,12 +680,12 @@ class RemoteRoom {
 		// Outside `#apply`'s version guard: quitting is no game action, so it bumps
 		// no version and a guarded update would drop it.
 		const abandonedBy = data.abandoned_by as number | null;
-		this.#abandonedBy = abandonedBy === 0 || abandonedBy === 1 ? abandonedBy : null;
+		this.#abandonedBy = typeof abandonedBy === 'number' ? abandonedBy : null;
 		if (this.#abandonedBy !== null) this.#status = 'ended';
 		// Same reason: an offer or a departure changes the row, not the version.
 		this.#rematch = (data.rematch as RematchOffer | null) ?? null;
 		const leftBy = data.left_by as number | null;
-		this.#leftBy = leftBy === 0 || leftBy === 1 ? leftBy : null;
+		this.#leftBy = typeof leftBy === 'number' ? leftBy : null;
 	}
 
 	#apply(state: PublicGameState, version: number): void {
@@ -645,10 +697,30 @@ class RemoteRoom {
 		// landed (and is in `state`) or lost a race. Either way it's no guess now.
 		if (this.#theirs && version > this.#theirs.base) this.#dropTheirs();
 		if (this.#revealing && version > this.#revealing.base) this.#dropRevealing();
+		this.#findSeat(state);
 		if (this.#status === 'connecting' || this.#status === 'waiting') {
-			this.#status = this.bothSeated ? 'live' : 'waiting';
+			this.#status = this.started ? 'live' : 'waiting';
 		}
-		if (this.bothSeated) this.#unadvertise();
+		if (this.started) this.#unadvertise();
+	}
+
+	/** A lobby that closed up after a guest left can move our seat; the id says where. */
+	#findSeat(state: PublicGameState): void {
+		if (!this.#playerId || !state.seatIds || !this.#roomId) return;
+		const seat = state.seatIds.indexOf(this.#playerId);
+		if (seat < 0 || seat === this.#seat) return;
+		this.#seat = seat;
+		rememberSeat(this.#roomId, seat);
+	}
+
+	/** A seat named on the wire, if it's someone else's real seat. Anyone can send one. */
+	#otherSeat(value: unknown): PlayerId | null {
+		const players = this.#state?.players.length ?? 2;
+		if (typeof value !== 'number' || !Number.isInteger(value)) {
+			// Older clients sent no seat, which was only ever unambiguous with two.
+			return players === 2 && this.#seat !== null ? other(this.#seat) : null;
+		}
+		return value >= 0 && value < players && value !== this.#seat ? value : null;
 	}
 
 	/**
@@ -682,13 +754,12 @@ class RemoteRoom {
 	}
 
 	/**
-	 * The server deals the deck before anyone joins, so an online game "starts"
-	 * when the second seat fills. An empty history keeps a mid-game reload from
-	 * counting it twice.
+	 * An online game starts when the lobby deals. An empty history keeps a
+	 * mid-game reload from counting it twice.
 	 */
 	#trackApply(prev: PublicGameState | null, next: PublicGameState): void {
-		if (next.seatsTaken < 2) return;
-		if (!prev || prev.seatsTaken < 2) {
+		if (!isStarted(next)) return;
+		if (!prev || !isStarted(prev)) {
 			if (next.history.length === 0) track(gameEvent('game_started', next, 'online'));
 			return;
 		}

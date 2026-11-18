@@ -13,11 +13,16 @@
 		itemMode,
 		itemNumber,
 		maxBid,
+		bidders,
 		minBid,
+		needers,
 		other,
 		rosterFull,
-		solventPlayer
+		seats,
+		solventPlayer,
+		stillToAnswer
 	} from '$lib/game/engine';
+	import { playerAccent } from './accent';
 	import { game } from '$lib/game/store.svelte';
 	import type { Action, GameState, PlayerId } from '$lib/game/types';
 	import type { IconName } from '$lib/icons';
@@ -29,7 +34,7 @@
 		/** Where actions go. Defaults to applying them locally. */
 		dispatch?: (action: Action) => void;
 		/** The seat this device controls, or null when one device drives both. */
-		seat?: 0 | 1 | null;
+		seat?: number | null;
 		/**
 		 * Locally quitting means `reset`, the default below. Remotely it cannot:
 		 * `reset` is a legal engine action, so it wrote `initialState()` to the
@@ -101,7 +106,16 @@
 			? maxBid(s, solventPlayer(s))
 			: seat !== null
 				? Math.max(maxBid(s, seat), floor)
-				: Math.max(maxBid(s, 0), maxBid(s, 1), floor)
+				: Math.max(...seats(s).map((id) => maxBid(s, id)), floor)
+	);
+
+	/**
+	 * Nobody this device speaks for can make a bid right now: they hold the
+	 * standing bid, have passed, are broke, or can't cover the next raise. The
+	 * dial would only show a number nobody can bid (all in at $20, "raise to $21").
+	 */
+	const sittingOut = $derived(
+		!(seat !== null ? [seat] : seats(s)).some((id) => canBid(s, id, floor))
 	);
 
 	/** Dial position. Null means "sitting at the minimum". */
@@ -142,46 +156,66 @@
 	let confirmQuit = $state(false);
 
 	const nameOf = (id: PlayerId) => s.players[id].name;
+	/** Three or four players: online rooms only, never pass-and-play. */
+	const crowd = $derived(s.players.length > 2);
+	const listNames = (ids: PlayerId[]) =>
+		ids.length <= 1
+			? (ids.map(nameOf)[0] ?? '')
+			: `${ids.slice(0, -1).map(nameOf).join(', ')} and ${nameOf(ids.at(-1)!)}`;
+	const passed = (id: PlayerId) => !!s.bid?.passed?.includes(id);
+
+	/** Who can bid on this item at all: room left and money left. */
+	const bidding = $derived(bidders(s));
 
 	/** Colour says whose button it is, so the label is only the action. */
 	function bidLabel(id: PlayerId): string {
 		if (s.bid?.holder === id) return `Winning at $${s.bid.amount}`;
+		if (passed(id)) return 'You passed';
+		if (!bidding.includes(id)) return s.players[id].money <= 0 ? 'Out of money' : 'Roster full';
 		if (amount > s.players[id].money) return `Only $${s.players[id].money} left`;
 		return `Bid $${amount}`;
 	}
 
 	/** With one seat on this device, the button also says whose move it is. */
 	function bidHint(id: PlayerId): string | null {
-		if (seat === null || !s.bid) return null;
-		return s.bid.holder === id ? `${nameOf(other(id))}'s move` : 'your move';
+		if (seat === null || !s.bid || passed(id) || !bidding.includes(id)) return null;
+		if (s.bid.holder !== id) return 'your move';
+		return crowd ? `waiting on ${listNames(stillToAnswer(s))}` : `${nameOf(other(id))}'s move`;
 	}
 
 	/** Online and against the bot, only this device's own button is shown. */
-	const bidders = $derived<PlayerId[]>(seat === null ? [0, 1] : [seat]);
+	const buttons = $derived<PlayerId[]>(seat === null ? seats(s) : [seat]);
 
 	/**
-	 * Whoever isn't holding the bid — accepting it is giving up, so it can't be the
-	 * leader's call. With no bid the button is dead, so seat 0 is a placeholder.
+	 * Who this device passes for. Online that's its own seat; on a shared device
+	 * it's whoever isn't holding the bid. With no bid the button is dead, so seat
+	 * 0 is a placeholder.
 	 */
-	const conceder = $derived(s.bid ? other(s.bid.holder) : 0);
+	const conceder = $derived(seat ?? (s.bid ? other(s.bid.holder) : 0));
 	/** True when this device is the one that has to let the item go. */
-	const yours = $derived(controls(conceder));
+	const yours = $derived(canSell(s, conceder));
 
 	function soldLabel(): string {
 		if (!s.bid) return 'Nobody has opened';
-		if (!yours) return `Waiting on ${nameOf(conceder)}`;
-		return `Let ${nameOf(s.bid.holder)} have it`;
+		if (!yours) {
+			if (seat !== null && !bidding.includes(seat)) return 'Sitting this one out';
+			return `Waiting on ${listNames(stillToAnswer(s))}`;
+		}
+		return crowd ? 'Pass' : `Let ${nameOf(s.bid.holder)} have it`;
 	}
 
 	function soldHint(): string {
 		if (!s.bid) return 'someone has to bid first';
-		if (!yours) return 'only they can hand it over';
+		if (!yours) return crowd ? 'last one bidding wins it' : 'only they can hand it over';
 		// One device speaks for both seats, so nobody in particular is conceding.
-		return seat === null ? 'nobody else is raising' : 'stop raising and hand it over';
+		if (seat === null) return 'nobody else is raising';
+		return crowd ? "drop out, you can't come back in" : 'stop raising and hand it over';
 	}
 
 	/** Why the uncontested player is the only one who can take this. */
-	function forcedReason(shutOut: PlayerId): string {
+	function forcedReason(heir: PlayerId): string {
+		if (crowd) return 'Every other roster is full.';
+		const shutOut = other(heir);
 		if (rosterFull(s, shutOut)) return `${nameOf(shutOut)}'s roster is full.`;
 		return `${nameOf(shutOut)} can't take this one.`;
 	}
@@ -218,13 +252,15 @@
 		{/each}
 	</div>
 
-	<div class="players" data-tour="players">
-		{#each [0, 1] as const as id (id)}
+	<!-- Three across, or two rows of two. -->
+	<div class="players" data-tour="players" style:--cols={s.players.length === 3 ? 3 : 2}>
+		{#each seats(s) as id (id)}
 			<PlayerStatus
 				player={s.players[id]}
 				roster={s.config.roster}
 				positional={s.config.positional}
 				leading={s.bid?.holder === id}
+				passed={s.phase === 'resolve' && (s.bid?.passed?.includes(id) ?? false)}
 				emote={emotes[id]}
 			/>
 		{/each}
@@ -261,7 +297,7 @@
 						<div
 							class="price"
 							data-tour="standing"
-							style:--accent={s.bid.holder === 0 ? 'var(--p1)' : 'var(--p2)'}
+							style:--accent={playerAccent(s.bid.holder)}
 						>
 							<span class="price__amount">${s.bid.amount}</span>
 							<span class="price__who">{nameOf(s.bid.holder)} leads</span>
@@ -278,14 +314,16 @@
 
 	{#if award}
 		<div class="resolve">
-			<div class="stamp" data-tour="stamp" style:--accent={award.playerId === 0 ? 'var(--p1)' : 'var(--p2)'}>
+			<div class="stamp" data-tour="stamp" style:--accent={playerAccent(award.playerId)}>
 				<span class="stamp__price">{award.free ? 'Free' : `$${award.price}`}</span>
 				<span class="stamp__to">
 					to {nameOf(award.playerId)}{s.config.positional ? ` · ${award.slotLabel}` : ''}
 				</span>
 			</div>
 			{#if award.declined}
-				<p class="note">{nameOf(other(award.playerId))} passed, so it's a freebie.</p>
+				<p class="note">
+					{crowd ? 'Nobody paid' : `${nameOf(other(award.playerId))} passed`}, so it's a freebie.
+				</p>
 			{/if}
 
 			{#if assignable.length > 1}
@@ -313,23 +351,26 @@
 	{:else if s.phase === 'resolve'}
 		{#if mode === 'contest'}
 			<div class="resolve">
-				<AmountDial
-					value={amount}
-					min={floor}
-					max={ceiling}
-					label={s.bid ? 'raise to' : 'open at'}
-					onchange={setAmount}
-				/>
+				<!-- Online, a player who is broke or has passed has no amount to pick. -->
+				{#if !sittingOut}
+					<AmountDial
+						value={amount}
+						min={floor}
+						max={ceiling}
+						label={s.bid ? 'raise to' : 'open at'}
+						onchange={setAmount}
+					/>
+				{/if}
 
-				<div class="duel" class:duel--solo={bidders.length === 1}>
-					{#each bidders as id (id)}
+				<div class="duel" class:duel--solo={buttons.length === 1}>
+					{#each buttons as id (id)}
 						{@const hint = bidHint(id)}
 						<button
 							class="btn duel__btn"
 							data-rattle
 							class:duel__btn--holding={s.bid?.holder === id}
 							data-tour="bid-{id}"
-							style:--accent={id === 0 ? 'var(--p1)' : 'var(--p2)'}
+							style:--accent={playerAccent(id)}
 							type="button"
 							aria-label="{nameOf(id)}: {bidLabel(id)}{hint ? `, ${hint}` : ''}"
 							disabled={!canBid(s, id, amount) || !controls(id)}
@@ -342,11 +383,11 @@
 				</div>
 
 				<button
-					class="btn btn--hot"
+					class="btn btn--hot sold"
 					class:sold--waiting={!!s.bid && !yours}
 					data-tour="sold"
 					type="button"
-					disabled={!canSell(s, conceder) || !yours}
+					disabled={!yours}
 					onclick={() => send({ type: 'sold', player: conceder })}
 				>
 					{soldLabel()}
@@ -355,11 +396,12 @@
 			</div>
 		{:else if mode === 'solo'}
 			{@const seller = solventPlayer(s)}
-			{@const beggar = other(seller)}
+			{@const beggar = freeRecipient(s)}
+			{@const broke = needers(s).filter((id) => id !== seller)}
 			<div class="resolve">
 				<p class="banner">
-					<b>{nameOf(beggar)}</b> is out of money. <b>{nameOf(seller)}</b> names the price — there's
-					nobody left to outbid.
+					<b>{listNames(broke)}</b> {broke.length > 1 ? 'are' : 'is'} out of money.
+					<b>{nameOf(seller)}</b> names the price — there's nobody left to outbid.
 				</p>
 
 				<AmountDial
@@ -395,9 +437,10 @@
 			<div class="resolve">
 				<p class="banner" data-tour="banner">
 					{#if mode === 'alternate'}
-						Both wallets are empty. The rest go out free, alternating.
+						{crowd ? 'Every wallet is' : 'Both wallets are'} empty. The rest go out free,
+						{crowd ? 'taking turns' : 'alternating'}.
 					{:else}
-						{forcedReason(other(heir))} Nobody to bid against, so it's
+						{forcedReason(heir)} Nobody to bid against, so it's
 						<b>{nameOf(heir)}</b>'s for free.
 					{/if}
 				</p>
@@ -507,7 +550,7 @@
 
 	.players {
 		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
+		grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
 		gap: 0.6rem;
 		margin-bottom: 0.2rem;
 	}
@@ -684,6 +727,11 @@
 	.duel__btn--holding:disabled {
 		background: var(--accent);
 		opacity: 1;
+	}
+
+	/* Dropping out reads as a stop, not a go. */
+	.sold:not(:disabled) {
+		background: var(--red);
 	}
 
 	.sold--waiting:disabled {

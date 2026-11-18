@@ -13,7 +13,7 @@ export function headline(state: GameState): string {
 }
 
 /** Roster order, so positional rosters read PG, SG, SF, PF, C. */
-export function orderedPicks(state: GameState, id: 0 | 1): RosterEntry[] {
+export function orderedPicks(state: GameState, id: number): RosterEntry[] {
 	return state.config.roster
 		.map((slot) => entryInSlot(state, id, slot.id))
 		.filter((entry): entry is RosterEntry => !!entry);

@@ -1,4 +1,4 @@
-import type { GameState } from './vendor/game/types.ts';
+import type { GameConfig, GameState } from './vendor/game/types.ts';
 import { currentItem } from './vendor/game/engine.ts';
 
 /**
@@ -21,16 +21,22 @@ export interface PublicGameState {
 	/** 1-based position in the deck, for the "Item 3 of 10" readout. */
 	itemNumber: number;
 	deckSize: number;
-	/**
-	 * Can't be inferred from the state: a new game seeds a placeholder name for
-	 * player two, so "has a name" is true before anyone joins.
-	 */
+	/** Seats filled. In the lobby that's the players listed so far. */
 	seatsTaken: number;
+	/** The room's size: the lobby starts itself once this many have joined. */
+	maxPlayers: number;
+	/** `room_players` ids by seat, so a device finds its seat after the lobby closes up. */
+	seatIds?: string[];
+	/** Lobby only: orders lobby writes, see `write_lobby`. */
+	lobbyRev?: number;
 	/** Null while the card is face down. */
 	item: ReturnType<typeof currentItem>;
 }
 
-export function redact(state: GameState, seatsTaken: number): PublicGameState {
+/** Server-only extras carried in `games.state` beside the engine's fields. */
+export type ServerState = GameState & { seatIds?: string[]; maxPlayers?: number };
+
+export function redact(state: ServerState): PublicGameState {
 	const faceDown = state.phase === 'reveal';
 	return {
 		phase: state.phase,
@@ -42,7 +48,40 @@ export function redact(state: GameState, seatsTaken: number): PublicGameState {
 		history: state.history,
 		itemNumber: Math.min(state.index + 1, state.deck.length),
 		deckSize: state.deck.length,
-		seatsTaken,
+		seatsTaken: state.players.length,
+		maxPlayers: state.maxPlayers ?? state.players.length,
+		...(state.seatIds ? { seatIds: state.seatIds } : {}),
 		item: faceDown ? null : currentItem(state)
+	};
+}
+
+export interface LobbySeat {
+	id: string;
+	seat: number;
+	name: string;
+}
+
+/** A lobby as players see it: the settings and who has sat down, no deck yet. */
+export function lobbyView(
+	config: GameConfig,
+	seats: LobbySeat[],
+	maxPlayers: number,
+	rev: number
+): PublicGameState {
+	return {
+		phase: 'setup',
+		config,
+		players: seats.map((seat, id) => ({ id, name: seat.name, money: config.budget, roster: [] })),
+		bid: null,
+		freeTurn: 0,
+		lastAward: null,
+		history: [],
+		itemNumber: 0,
+		deckSize: 0,
+		seatsTaken: seats.length,
+		maxPlayers,
+		seatIds: seats.map((seat) => seat.id),
+		lobbyRev: rev,
+		item: null
 	};
 }

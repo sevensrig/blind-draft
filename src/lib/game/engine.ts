@@ -1,6 +1,7 @@
 import type { Item, SlotSpec, Tier } from '$lib/data/types';
 import { openRoster, slotSuits } from '$lib/data/types';
 import type { Action, Award, GameConfig, GameState, ItemMode, Player, PlayerId } from './types';
+import { MAX_PLAYERS, MIN_PLAYERS } from './types';
 
 /**
  * The whole rulebook, as one pure reducer. No Svelte, DOM or storage.
@@ -15,11 +16,21 @@ export const MIN_BID = 1;
 /** Longest player name: what still fits the player panels and bid buttons on a small phone. */
 export const NAME_MAX = 12;
 
-const OTHER: Record<PlayerId, PlayerId> = { 0: 1, 1: 0 };
-
 export const cleanName = (name: string): string => name.trim().slice(0, NAME_MAX).trim();
 
-export const other = (id: PlayerId): PlayerId => OTHER[id];
+/** The opponent in a two-player game. Bot and pass-and-play code only. */
+export const other = (id: PlayerId): PlayerId => (id === 0 ? 1 : 0);
+
+/** Every seat in the game, in order. */
+export const seats = (state: GameState): PlayerId[] => state.players.map((player) => player.id);
+
+/** The first of `candidates` at or after `from`, going round the table. */
+function nextFrom(state: GameState, from: PlayerId, candidates: PlayerId[]): PlayerId {
+	const count = state.players.length;
+	const order = state.players.map((_, step) => (from + step) % count);
+	// Candidates are always seats, so this only falls through when there are none.
+	return order.find((id) => candidates.includes(id)) ?? 0;
+}
 
 function blankPlayer(id: PlayerId, name: string, money: number): Player {
 	return { id, name, money, roster: [] };
@@ -87,32 +98,51 @@ export function isBroke(state: GameState, id: PlayerId): boolean {
 	return state.players[id].money <= 0;
 }
 
-/** Which rule governs the current item. A full roster outranks the money rules. */
-export function itemMode(state: GameState): ItemMode {
+/** Players with a slot left for the current item. */
+export function needers(state: GameState): PlayerId[] {
 	const item = currentItem(state);
-	if (!item) return 'forced';
+	return item ? seats(state).filter((id) => canReceive(state, id, item)) : [];
+}
 
-	if (!canReceive(state, 0, item) || !canReceive(state, 1, item)) return 'forced';
-	if (!isBroke(state, 0) && !isBroke(state, 1)) return 'contest';
-	if (isBroke(state, 0) && isBroke(state, 1)) return 'alternate';
-	return 'solo';
+/** Players who can bid on the current item: room left and money left. */
+export function bidders(state: GameState): PlayerId[] {
+	return needers(state).filter((id) => !isBroke(state, id));
+}
+
+/**
+ * Which rule governs the current item. A full roster outranks the money rules,
+ * and with more than two players the broke ones sit an auction out.
+ */
+export function itemMode(state: GameState): ItemMode {
+	if (needers(state).length <= 1) return 'forced';
+	const solvent = bidders(state).length;
+	if (solvent >= 2) return 'contest';
+	return solvent === 1 ? 'solo' : 'alternate';
 }
 
 /** In `solo` mode, the player who still has money to spend. */
 export function solventPlayer(state: GameState): PlayerId {
-	return isBroke(state, 0) ? 1 : 0;
+	return bidders(state)[0] ?? 0;
 }
 
-/** Who receives a free award. */
+/** Who receives a free award. Several candidates take turns, from `freeTurn`. */
 export function freeRecipient(state: GameState): PlayerId {
-	const item = currentItem(state);
 	const mode = itemMode(state);
+	const open = needers(state);
 
-	if (mode === 'forced') return item && canReceive(state, 0, item) ? 0 : 1;
-	if (mode === 'solo') return other(solventPlayer(state));
-	// Alternate: follow the pointer, skipping a player who can't use the item.
-	if (item && !canReceive(state, state.freeTurn, item)) return other(state.freeTurn);
-	return state.freeTurn;
+	if (mode === 'forced') return open[0] ?? 0;
+	if (mode === 'solo') {
+		const broke = open.filter((id) => isBroke(state, id));
+		return nextFrom(state, state.freeTurn, broke);
+	}
+	return nextFrom(state, state.freeTurn, open);
+}
+
+/** Bidders still in on this item: neither holding the bid nor dropped out. */
+export function stillToAnswer(state: GameState): PlayerId[] {
+	const bid = state.bid;
+	if (!bid) return bidders(state);
+	return bidders(state).filter((id) => id !== bid.holder && !bid.passed?.includes(id));
 }
 
 /** Smallest legal bid right now: $1 to open, else a dollar over the standing bid. */
@@ -127,20 +157,21 @@ export function maxBid(state: GameState, id: PlayerId): number {
 
 export function canBid(state: GameState, id: PlayerId, amount: number): boolean {
 	if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return false;
-	// You can't raise your own standing bid.
-	if (state.bid?.holder === id) return false;
+	// You can't raise your own standing bid, or come back once you've passed.
+	if (state.bid?.holder === id || state.bid?.passed?.includes(id)) return false;
+	if (!bidders(state).includes(id)) return false;
 	if (!Number.isInteger(amount)) return false;
 	return amount >= minBid(state) && amount <= maxBid(state, id);
 }
 
 /**
- * Whether `id` may declare the standing bid sold. Not the holder: accepting your
- * own bid would be a self-serve win button. Conceding is the other player's move.
+ * Whether `id` may stop raising. Not the holder: accepting your own bid would be
+ * a self-serve win button. Once every other bidder has passed, the item is sold.
  */
 export function canSell(state: GameState, id: PlayerId): boolean {
 	if (state.phase !== 'resolve' || itemMode(state) !== 'contest') return false;
 	if (!state.bid) return false;
-	return state.bid.holder !== id;
+	return stillToAnswer(state).includes(id);
 }
 
 export function canBuy(state: GameState, id: PlayerId, amount: number): boolean {
@@ -159,7 +190,7 @@ export function rosterFull(state: GameState, id: PlayerId): boolean {
 }
 
 export function isGameOver(state: GameState): boolean {
-	return rosterFull(state, 0) && rosterFull(state, 1);
+	return seats(state).every((id) => rosterFull(state, id));
 }
 
 /** 1-based position in the deck, for the "Item 3 of 10" readout. */
@@ -172,7 +203,7 @@ export function entryInSlot(
 	state: GameState,
 	id: PlayerId,
 	slotId: string
-): GameState['players'][PlayerId]['roster'][number] | undefined {
+): GameState['players'][number]['roster'][number] | undefined {
 	return state.players[id].roster.find((entry) => entry.slotId === slotId);
 }
 
@@ -215,7 +246,7 @@ function rebalance(state: GameState): GameState {
 	const current = currentItem(state);
 	if (bench.length === 0 || !current) return state;
 
-	const slots = [...openSlots(state, 0), ...openSlots(state, 1)];
+	const slots = seats(state).flatMap((id) => openSlots(state, id));
 	const cards = state.deck.slice(state.index);
 	const best = matched(naturalMatching(cards, slots));
 	if (best === slots.length) return state;
@@ -247,8 +278,8 @@ function rebalance(state: GameState): GameState {
  * Reducer
  * ------------------------------------------------------------------ */
 
-function replacePlayer(state: GameState, id: PlayerId, next: Player): [Player, Player] {
-	return id === 0 ? [next, state.players[1]] : [state.players[0], next];
+function replacePlayer(state: GameState, id: PlayerId, next: Player): Player[] {
+	return state.players.map((player) => (player.id === id ? next : player));
 }
 
 /** The single place money leaves a wallet and a roster slot gets consumed. */
@@ -298,15 +329,15 @@ function awardCurrent(
 export function applyAction(state: GameState, action: Action): GameState {
 	switch (action.type) {
 		case 'start': {
-			const [nameA, nameB] = action.names;
+			const names = action.names.slice(0, MAX_PLAYERS);
+			while (names.length < MIN_PLAYERS) names.push('');
 			return {
 				...initialState(),
 				phase: 'reveal',
 				config: action.config,
-				players: [
-					blankPlayer(0, cleanName(nameA) || 'Player 1', action.config.budget),
-					blankPlayer(1, cleanName(nameB) || 'Player 2', action.config.budget)
-				],
+				players: names.map((name, id) =>
+					blankPlayer(id, cleanName(name) || `Player ${id + 1}`, action.config.budget)
+				),
 				deck: action.deck,
 				bench: action.bench ?? []
 			};
@@ -319,7 +350,11 @@ export function applyAction(state: GameState, action: Action): GameState {
 
 		case 'bid': {
 			if (!canBid(state, action.player, action.amount)) return state;
-			return { ...state, bid: { amount: action.amount, holder: action.player } };
+			const passed = state.bid?.passed;
+			return {
+				...state,
+				bid: { amount: action.amount, holder: action.player, ...(passed ? { passed } : {}) }
+			};
 		}
 
 		case 'sold': {
@@ -328,6 +363,9 @@ export function applyAction(state: GameState, action: Action): GameState {
 			// test only narrows the type — `canSell` already requires a bid.
 			const bid = state.bid;
 			if (!canSell(state, action.player) || !bid) return state;
+			if (stillToAnswer(state).length > 1) {
+				return { ...state, bid: { ...bid, passed: [...(bid.passed ?? []), action.player] } };
+			}
 			return awardCurrent(state, bid.holder, bid.amount, { free: false });
 		}
 
@@ -339,8 +377,12 @@ export function applyAction(state: GameState, action: Action): GameState {
 		case 'decline': {
 			if (state.phase !== 'resolve' || itemMode(state) !== 'solo') return state;
 			if (action.player !== solventPlayer(state)) return state;
-			// Rule 7: nobody bought it, so the broke player takes it for nothing.
-			return awardCurrent(state, other(action.player), 0, { free: true, declined: true });
+			// Rule 7: nobody bought it, so a broke player takes it for nothing.
+			const recipient = freeRecipient(state);
+			const next = awardCurrent(state, recipient, 0, { free: true, declined: true });
+			// Two broke players or more take turns at the freebies.
+			if (next === state || state.players.length === 2) return next;
+			return { ...next, freeTurn: (recipient + 1) % state.players.length };
 		}
 
 		case 'claim': {
@@ -352,7 +394,9 @@ export function applyAction(state: GameState, action: Action): GameState {
 			const next = awardCurrent(state, recipient, 0, { free: true });
 			if (next === state) return state;
 			// Rule 8's alternation advances only on alternating awards.
-			return mode === 'alternate' ? { ...next, freeTurn: other(recipient) } : next;
+			return mode === 'alternate'
+				? { ...next, freeTurn: (recipient + 1) % state.players.length }
+				: next;
 		}
 
 		case 'assign': {

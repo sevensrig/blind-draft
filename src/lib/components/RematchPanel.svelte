@@ -13,6 +13,7 @@
 		opponentName,
 		opponentGone,
 		config,
+		players = 2,
 		onPropose,
 		onAccept,
 		onCancel
@@ -23,6 +24,8 @@
 		opponentGone: boolean;
 		/** The game just played, which the picker starts from. */
 		config: GameConfig;
+		/** Everyone in the room, so the picker only offers settings the pool can deal. */
+		players?: number;
 		onPropose: (settings: RoomSettings) => Promise<void>;
 		onAccept: () => Promise<void>;
 		onCancel: () => Promise<void>;
@@ -62,14 +65,17 @@
 		const from = offer ?? config;
 		// Online configs never carry the custom pool, so fall back to this device's draft.
 		const draft = getCategory(from.categoryId)?.custom ? loadCustomDraft() : null;
-		form = new SettingsForm({
-			categoryId: from.categoryId,
-			variantId: from.variantId,
-			budget: from.budget,
-			slots: from.slots,
-			customName: draft?.name,
-			customItems: draft?.text.split('\n')
-		});
+		form = new SettingsForm(
+			{
+				categoryId: from.categoryId,
+				variantId: from.variantId,
+				budget: from.budget,
+				slots: from.slots,
+				customName: draft?.name,
+				customItems: draft?.text.split('\n')
+			},
+			players
+		);
 		prompt?.close();
 		dialog?.showModal();
 	}
@@ -104,7 +110,7 @@
 	</div>
 	<button class="btn btn--hot" type="button" onclick={() => run(onAccept)} disabled={busy}>
 		{busy ? 'Starting…' : 'Accept'}
-		<span class="btn__sub">fresh deck, same opponent</span>
+		<span class="btn__sub">fresh deck, same players</span>
 	</button>
 	<button class="btn" type="button" onclick={openPicker} disabled={busy}>
 		Pick something else
@@ -115,7 +121,7 @@
 {:else}
 	<button class="btn btn--hot" type="button" onclick={openPicker}>
 		Play again
-		<span class="btn__sub">same opponent · change the category if you like</span>
+		<span class="btn__sub">same players · change the category if you like</span>
 	</button>
 {/if}
 
@@ -129,7 +135,7 @@
 		<div class="picker__dock">
 			<button class="btn btn--hot" type="button" onclick={() => run(onAccept)} disabled={busy}>
 				{busy ? 'Starting…' : 'Play again'}
-				<span class="btn__sub">fresh deck, same opponent</span>
+				<span class="btn__sub">fresh deck, same players</span>
 			</button>
 			<button class="btn" type="button" onclick={openPicker} disabled={busy}>
 				Pick something else

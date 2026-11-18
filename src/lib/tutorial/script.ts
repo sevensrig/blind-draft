@@ -170,16 +170,16 @@ export const STEPS: Step[] = [
 	{
 		kind: 'do',
 		title: 'Sushi — go get it',
-		body: 'The chips jump the amount. Tap +5 to make it $6, then tap “Bid $6”. “All in” bets everything — there’s no minimum you have to keep.',
+		body: '“All in” jumps the amount to everything you have left. Tap it to make it $15, then tap “Bid $15”. There’s no minimum you have to keep.',
 		target: ['dial', 'bid-0'],
-		expect: bid(0, 6),
-		hint: 'Set the dial to $6 (tap +5), then tap “Bid $6”.'
+		expect: bid(0, 15),
+		hint: 'Tap “All in” to set the dial to $15, then tap “Bid $15”.'
 	},
 	{ kind: 'tutor', action: { type: 'sold', player: 1 } },
 	{
 		kind: 'info',
 		title: 'Your roster is full',
-		body: 'Coach let it go for $6. Both your slots are filled with $9 to spare.',
+		body: 'Coach let it go for $15. Both your slots are filled and your wallet is empty.',
 		target: ['stamp', 'players']
 	},
 	{

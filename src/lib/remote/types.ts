@@ -15,15 +15,20 @@ export interface PublicGameState {
 	history: GameState['history'];
 	itemNumber: number;
 	deckSize: number;
-	/** 1 while waiting in the lobby, 2 once the game is on. */
+	/** Seats filled: the lobby so far, or everyone playing. */
 	seatsTaken: number;
+	/** The room's size. Absent from rooms made before lobbies, which held two. */
+	maxPlayers?: number;
+	/** `room_players` ids by seat, so a device can find its seat after the lobby closes up. */
+	seatIds?: string[];
+	lobbyRev?: number;
 	/** Null while the card is face down. */
 	item: GameState['deck'][number] | null;
 }
 
 /** A pending rematch, as `game_public.rematch` shows it. */
 export interface RematchOffer {
-	by: 0 | 1;
+	by: number;
 	categoryId: string;
 	variantId: string;
 	categoryLabel: string;
@@ -48,6 +53,9 @@ export interface RoomListing {
 	variant_label: string | null;
 	budget: number;
 	slots: number;
+	/** Absent on the rooms browser's fake room. */
+	max_players?: number;
+	players?: number;
 	created_at: string;
 }
 
@@ -65,12 +73,12 @@ export type ConnectionStatus =
 /** A row of `chat_messages`, as a player may read it. */
 export interface ChatMessage {
 	id: number;
-	seat: 0 | 1;
+	seat: number;
 	body: string;
 }
 
 export interface EmoteEvent {
 	key: number;
-	seat: 0 | 1;
+	seat: number;
 	emote: EmoteId;
 }

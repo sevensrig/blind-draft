@@ -437,3 +437,6 @@ verify_jwt = true
 
 [functions.rematch]
 verify_jwt = true
+
+[functions.start-room]
+verify_jwt = true
