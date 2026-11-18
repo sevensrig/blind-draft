@@ -30,11 +30,9 @@ export const seats = (state: GameState): PlayerId[] => state.players.map((player
 /** The first of `candidates` at or after `from`, going round the table. */
 function nextFrom(state: GameState, from: PlayerId, candidates: PlayerId[]): PlayerId {
 	const count = state.players.length;
-	for (let step = 0; step < count; step++) {
-		const id = (from + step) % count;
-		if (candidates.includes(id)) return id;
-	}
-	return candidates[0] ?? 0;
+	const order = state.players.map((_, step) => (from + step) % count);
+	// Candidates are always seats, so this only falls through when there are none.
+	return order.find((id) => candidates.includes(id)) ?? 0;
 }
 
 function blankPlayer(id: PlayerId, name: string, money: number): Player {
