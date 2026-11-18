@@ -74,6 +74,15 @@ describe('BidScreen', () => {
 		expect(game.state.bid).toEqual({ amount: 1, holder: 0 });
 	});
 
+	it('hides the dial after an all-in nobody can top', async () => {
+		game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 20));
+		render(BidScreen);
+
+		await expect.element(page.getByText('$20', { exact: true }).first()).toBeVisible();
+		expect(page.getByText('raise to').elements()).toHaveLength(0);
+		expect(page.getByText(/\$21/).elements()).toHaveLength(0);
+	});
+
 	it('raises to the dial amount and blocks the holder from bidding again', async () => {
 		game.replace(withStandingBid(contested({ names: ['Sri', 'Alex'] }), 0, 4));
 		render(BidScreen);
@@ -85,7 +94,8 @@ describe('BidScreen', () => {
 		// Sri holds the bid, so their button reads as leading and is unavailable.
 		await expect.element(page.getByRole('button', { name: /Sri: Winning at \$4/ })).toBeDisabled();
 
-		await page.getByRole('button', { name: /\+2/ }).click();
+		await page.getByRole('button', { name: 'Increase by one dollar' }).click();
+		await page.getByRole('button', { name: 'Increase by one dollar' }).click();
 		await page.getByRole('button', { name: /Alex/ }).click();
 
 		expect(game.state.bid).toEqual({ amount: 7, holder: 1 });

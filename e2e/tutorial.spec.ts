@@ -39,7 +39,7 @@ test('the tutorial walks a new player through three bids to the end', async ({ p
 	await button(/Next item/).click();
 
 	await button(/Tap to reveal/).click();
-	await page.getByRole('button', { name: '+5', exact: true }).click();
+	await page.getByRole('button', { name: /All in/ }).click();
 	await button(/^You/).click();
 	await expect(tip).toContainText('Your roster is full');
 	await gotIt();
