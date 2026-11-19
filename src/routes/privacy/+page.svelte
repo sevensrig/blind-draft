@@ -18,7 +18,7 @@
 		},
 		{
 			q: 'Anonymous usage stats',
-			a: "We use Vercel Web Analytics and PostHog in cookieless mode to count visits and see which categories get played. Events carry the page path, category, budget and number of slots — never player names or the items you type in. Visitors aren't given an ID: the services hash a few request details with a salt that changes every day, so a visit can't be followed from one day to the next. IP address collection is switched off in both. We also send crash reports so we can fix bugs, with the same limits."
+			a: "We use Vercel Web Analytics and PostHog in cookieless mode to count visits and see which categories get played. Events carry the page path, category, budget, number of slots and which build of the site you're on — never player names or the items you type in. Visitors aren't given an ID: the services hash a few request details with a salt that changes every day, so a visit can't be followed from one day to the next. IP address collection is switched off in both. We also send crash reports so we can fix bugs, with the same limits."
 		},
 		{
 			q: 'Online play',

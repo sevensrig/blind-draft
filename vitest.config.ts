@@ -17,6 +17,12 @@ export default defineConfig({
 			}
 		})
 	],
+	// `vite.config.ts` is a separate file and its `define` doesn't reach here.
+	// Tests want something defined, not the real SHA — the analytics module reads
+	// this at import time, so leaving it out is a ReferenceError.
+	define: {
+		__APP_VERSION__: JSON.stringify('test')
+	},
 	test: {
 		projects: [
 			{

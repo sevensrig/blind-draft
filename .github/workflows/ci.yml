@@ -185,6 +185,24 @@ jobs:
           path: load-summary.json
           retention-days: 14
 
+  annotate:
+    name: Annotate PostHog
+    # Marks the deploy on every chart. Needs the same green light as `deploy`:
+    # a run that never shipped is not a deploy worth marking.
+    needs: [static, unit, component, e2e, load]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Mark the deploy in PostHog
+        env:
+          POSTHOG_PERSONAL_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
+          POSTHOG_PROJECT_ID: ${{ vars.POSTHOG_PROJECT_ID }}
+          POSTHOG_API_HOST: ${{ vars.POSTHOG_API_HOST }}
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/posthog-annotate.sh
+
   deploy:
     name: Deploy Supabase
     # Migrations and functions have no preview environment and no easy rollback,
