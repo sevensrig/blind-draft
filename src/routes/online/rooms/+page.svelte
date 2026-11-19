@@ -5,10 +5,11 @@
 	import { botSuggestionEvent } from '$lib/analytics/events';
 	import BidScreen from '$lib/components/BidScreen.svelte';
 	import EmoteBar from '$lib/components/EmoteBar.svelte';
+	import FeedbackPrompt from '$lib/components/FeedbackPrompt.svelte';
 	import NamePrompt from '$lib/components/NamePrompt.svelte';
 	import RematchPanel from '$lib/components/RematchPanel.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
-	import { loadState } from '$lib/game/persist';
+	import { clearState, loadState } from '$lib/game/persist';
 	import { game } from '$lib/game/store.svelte';
 	import { LOBBY_HOSTS, RemoteError, supabase } from '$lib/remote/client';
 	import {
@@ -18,6 +19,8 @@
 		type Decoy,
 		EMOTE_DELAY_MS,
 		EMOTE_QUIET_MS,
+		IDLE_NUDGE_MS,
+		IDLE_QUIT_MS,
 		OFFER_DELAY_MS,
 		awardEmote,
 		between,
@@ -158,7 +161,44 @@
 	function sendEmote(id: EmoteId) {
 		showEmote(0, id);
 		botEmote(replyEmote(id));
+		pokes++;
 	}
+
+	/*
+	 * Idling: the player's, not the bot's, so only their taps, keys and emotes
+	 * restart the clock. After a minute the bot nudges with "Bid!" (not on the
+	 * results sheet, where there's nothing to bid on); after three it leaves
+	 * mid-draft the way a bored person would.
+	 */
+	let pokes = $state(0);
+	/** The bot walked out mid-draft. At results, `botLeft` says it instead. */
+	let botQuit = $state(false);
+
+	$effect(() => {
+		void pokes;
+		if (!playing || botQuit || botLeft) return;
+		const nudge = setTimeout(() => {
+			if (game.state.phase === 'results') return;
+			botEmotedAt = Date.now();
+			showEmote(1, 'bid');
+		}, IDLE_NUDGE_MS);
+		const quit = setTimeout(() => {
+			if (game.state.phase === 'results') {
+				offer = null;
+				settled = true;
+				botLeft = true;
+				return;
+			}
+			clearEmotes();
+			botQuit = true;
+			// A reload shouldn't bring them back to finish it.
+			clearState();
+		}, IDLE_QUIT_MS);
+		return () => {
+			clearTimeout(nudge);
+			clearTimeout(quit);
+		};
+	});
 
 	function clearEmotes() {
 		for (const timer of emoteTimers) clearTimeout(timer);
@@ -220,7 +260,8 @@
 		// A reload mid decoy game resumes it here. Any other saved game is left for
 		// `/`, since hydrating it would start its bot ticking on this page.
 		if (loadState()?.config.disguised) {
-			game.hydrate();
+			// Silently, even in a fresh tab: a prompt would give the decoy away.
+			game.hydrate({ ask: false });
 			decoyGame = game.state.phase !== 'setup';
 			const saved = recallDecoy();
 			if (decoyGame && saved) {
@@ -314,6 +355,7 @@
 		decoyGame = false;
 		offer = null;
 		botLeft = false;
+		botQuit = false;
 		settled = false;
 		if (game.state.phase !== 'setup') game.dispatch({ type: 'reset' });
 		adopt(makeDecoy(Math.random, decoy));
@@ -358,9 +400,19 @@
 	}
 </script>
 
+<svelte:window onpointerdown={() => playing && pokes++} onkeydown={() => playing && pokes++} />
+
 <svelte:head><title>Open rooms — {SITE_NAME}</title></svelte:head>
 
-{#if playing}
+{#if playing && botQuit}
+	<!-- Same as a real room an opponent walks out of: no winner for a draft that didn't finish. -->
+	<div class="shell centre">
+		<span class="eyebrow">Game over</span>
+		<p class="status status--bad" role="alert">{botName} left the draft.</p>
+		<button class="btn btn--hot" type="button" onclick={leaveDecoy}>Back to rooms</button>
+		<FeedbackPrompt />
+	</div>
+{:else if playing}
 	<!-- No `view`: the decoy game lives in the local store. -->
 	{#if game.state.phase === 'results'}
 		<ResultsScreen onLeave={leaveDecoy} leaveLabel="Back to rooms">
@@ -454,6 +506,28 @@
 {/if}
 
 <style>
+	.centre {
+		display: flex;
+		flex-direction: column;
+		gap: 0.8rem;
+		align-items: center;
+		justify-content: center;
+		min-height: 60dvh;
+	}
+
+	.status {
+		margin: 0;
+		font-size: 0.9rem;
+		font-weight: 900;
+	}
+
+	.status--bad {
+		padding: 0.6rem 0.7rem;
+		background: var(--red);
+		border: var(--bw) solid var(--ink);
+		box-shadow: var(--shadow-sm);
+	}
+
 	.browse {
 		display: flex;
 		flex-direction: column;

@@ -71,6 +71,11 @@ export const EMOTE_DELAY_MS = [2000, 5000] as const;
 /** After one emote the bot keeps quiet at least this long, so it never chatters. */
 export const EMOTE_QUIET_MS = 10_000;
 
+/** A minute with nothing happening and the bot nudges with "Bid!", like a waiting opponent. */
+export const IDLE_NUDGE_MS = 60_000;
+/** Three minutes and it gives up and leaves, as a real person would. */
+export const IDLE_QUIT_MS = 180_000;
+
 /**
  * The bot's reaction to a card going, or null (it usually keeps quiet). It gloats
  * over a good card it bought, sulks when the player takes one, and laughs at a
