@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { playRound, playToResults, setUpGame } from './helpers';
+import { playRound, playToResults, setUpGame, waitForHydration } from './helpers';
 
 /**
  * Full journeys through the assembled app, via visible controls only. They run
@@ -147,6 +147,64 @@ test('resumes an in-progress draft after a reload', async ({ page }) => {
 	// And the app is still alive: the next tap works.
 	await page.getByRole('button', { name: /Tap to reveal/ }).click();
 	await expect(page.getByText('On the block')).toBeVisible();
+});
+
+test('a reopened tab asks before picking the draft back up', async ({ page, context }) => {
+	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
+	await playRound(page, { winner: 'Sri' });
+	await page.close();
+
+	// Same browser, new tab: localStorage carries over, sessionStorage doesn't.
+	const reopened = await context.newPage();
+	await reopened.goto('/');
+	await waitForHydration(reopened);
+
+	await expect(reopened.getByText('Pick up where you left off?')).toBeVisible();
+	await expect(reopened.getByText('Item 2 of 6')).toBeVisible();
+	await reopened.getByRole('button', { name: 'Resume' }).click();
+
+	await reopened.getByRole('button', { name: /Tap to reveal/ }).click();
+	await expect(reopened.getByText('On the block')).toBeVisible();
+});
+
+test('turning the old draft down starts fresh, and stays fresh', async ({ page, context }) => {
+	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
+	await page.close();
+
+	const reopened = await context.newPage();
+	await reopened.goto('/');
+	await waitForHydration(reopened);
+	await reopened.getByRole('button', { name: 'New game' }).click();
+	await expect(reopened.getByText("Who's playing")).toBeVisible();
+
+	await reopened.reload();
+	await waitForHydration(reopened);
+	await expect(reopened.getByText("Who's playing")).toBeVisible();
+	await expect(reopened.getByText('Pick up where you left off?')).toHaveCount(0);
+});
+
+// The bug: a game left mid-draft was still on screen the next day.
+test('a tab left open for hours wakes up on setup', async ({ page }) => {
+	await page.clock.install();
+	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
+	await playRound(page, { winner: 'Sri' });
+
+	await page.clock.fastForward('07:00:00');
+	// What the browser fires when a backgrounded tab comes back.
+	await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+
+	await expect(page.getByText("Who's playing")).toBeVisible();
+});
+
+test('a reload after hours away starts on setup', async ({ page }) => {
+	await page.clock.install();
+	await setUpGame(page, { names: ['Sri', 'Alex'], slots: '3' });
+
+	await page.clock.fastForward('07:00:00');
+	await page.reload();
+	await waitForHydration(page);
+
+	await expect(page.getByText("Who's playing")).toBeVisible();
 });
 
 test('quitting twice abandons the draft and returns to setup', async ({ page }) => {

@@ -2,18 +2,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openRoster } from '$lib/data/types';
 import { defaultConfig, initialState } from './engine';
 import {
+	SAVE_TTL_MS,
 	clearState,
+	isExpired,
 	loadCustomDraft,
+	loadSave,
 	loadSetupCarry,
 	loadState,
 	saveCustomDraft,
 	saveSetupCarry,
-	saveState
+	saveState,
+	tabId
 } from './persist';
 import type { GameState } from './types';
 
-const KEY = 'blind-draft:state:v2';
-const LEGACY_KEY = 'blind-draft:state:v1';
+const KEY = 'blind-draft:state:v3';
+const LEGACY_KEYS = ['blind-draft:state:v1', 'blind-draft:state:v2'];
+
+/** Writes a raw game state the way the current format wraps it. */
+function stored(state: unknown, savedAt = Date.now()): string {
+	return JSON.stringify({ state, savedAt });
+}
 
 /** Minimal localStorage so these run without a DOM. */
 function installStorage(): Map<string, string> {
@@ -91,7 +100,7 @@ describe('persistence', () => {
 			lastAward: null,
 			history: []
 		};
-		store.set(KEY, JSON.stringify(stale));
+		store.set(KEY, stored(stale));
 
 		expect(loadState()).toBeNull();
 		// And it's binned, so it can't fail again on the next load.
@@ -101,7 +110,7 @@ describe('persistence', () => {
 	it('drops a pick pointing at a slot the template does not have', () => {
 		const state = playableState();
 		state.players[0].roster[0].slotId = 'no-such-slot';
-		store.set(KEY, JSON.stringify(state));
+		store.set(KEY, stored(state));
 		expect(loadState()).toBeNull();
 	});
 
@@ -143,7 +152,7 @@ describe('persistence', () => {
 	])('rejects a save with %s', (_label, corrupt) => {
 		const state = JSON.parse(JSON.stringify(playableState())) as Record<string, unknown>;
 		corrupt(state);
-		store.set(KEY, JSON.stringify(state));
+		store.set(KEY, stored(state));
 		expect(loadState()).toBeNull();
 	});
 
@@ -153,14 +162,41 @@ describe('persistence', () => {
 		saveState(vsBot);
 		expect(loadState()).toEqual(vsBot);
 
-		store.set(KEY, JSON.stringify({ ...vsBot, config: { ...vsBot.config, bot: 2 } }));
+		store.set(KEY, stored({ ...vsBot, config: { ...vsBot.config, bot: 2 } }));
 		expect(loadState()).toBeNull();
 	});
 
 	it('clears keys from previous versions', () => {
-		store.set(LEGACY_KEY, JSON.stringify({ anything: true }));
+		for (const key of LEGACY_KEYS) store.set(key, JSON.stringify({ anything: true }));
 		loadState();
-		expect(store.has(LEGACY_KEY)).toBe(false);
+		for (const key of LEGACY_KEYS) expect(store.has(key)).toBe(false);
+	});
+
+	describe('expiry', () => {
+		const t0 = Date.UTC(2026, 10, 19, 22);
+
+		it('keeps a game touched within six hours', () => {
+			saveState(playableState(), t0);
+			expect(loadSave(t0 + SAVE_TTL_MS)).toMatchObject({ state: playableState(), savedAt: t0 });
+		});
+
+		// The bug: a game left mid-draft came back the next day.
+		it('drops a game nobody has touched in six hours', () => {
+			saveState(playableState(), t0);
+			expect(loadState(t0 + SAVE_TTL_MS + 1)).toBeNull();
+			expect(store.has(KEY)).toBe(false);
+		});
+
+		it('drops a save with no timestamp', () => {
+			store.set(KEY, JSON.stringify({ state: playableState() }));
+			expect(loadState()).toBeNull();
+			expect(store.has(KEY)).toBe(false);
+		});
+
+		it('is measured from the last move', () => {
+			expect(isExpired(t0, t0 + SAVE_TTL_MS)).toBe(false);
+			expect(isExpired(t0, t0 + SAVE_TTL_MS + 1)).toBe(true);
+		});
 	});
 
 	it('survives malformed json and unwritable storage', () => {
@@ -310,5 +346,46 @@ describe('setup carry-over', () => {
 
 		expect(() => saveSetupCarry({ names: ['Ann', 'Bo'], vsBot: false })).not.toThrow();
 		expect(loadSetupCarry()).toBeNull();
+	});
+});
+
+describe('which tab wrote the save', () => {
+	let session: Map<string, string>;
+
+	beforeEach(() => {
+		installStorage();
+		session = new Map<string, string>();
+		vi.stubGlobal('sessionStorage', {
+			getItem: (k: string) => session.get(k) ?? null,
+			setItem: (k: string, v: string) => void session.set(k, v)
+		});
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	it('keeps one id for the life of the tab', () => {
+		expect(tabId()).toBe(tabId());
+	});
+
+	it('stamps the save with the tab that wrote it', () => {
+		saveState(playableState());
+		expect(loadSave()?.tab).toBe(tabId());
+
+		// A new tab gets a new id, so the save reads as someone else's.
+		session.clear();
+		expect(loadSave()?.tab).not.toBe(tabId());
+	});
+
+	it('has no id when sessionStorage is blocked', () => {
+		vi.stubGlobal('sessionStorage', {
+			getItem: () => {
+				throw new Error('blocked');
+			}
+		});
+		expect(tabId()).toBeNull();
+		saveState(playableState());
+		expect(loadSave()?.tab).toBeNull();
 	});
 });
