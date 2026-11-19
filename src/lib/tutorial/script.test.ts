@@ -11,7 +11,7 @@ describe('tutorial script', () => {
 			state = next;
 		}
 		expect(state.phase).toBe('results');
-		expect(state.players.map((player) => player.money)).toEqual([0, 18]);
+		expect(state.players.map((player) => player.money)).toEqual([13, 18]);
 	});
 
 	it('teaches the free award by reaching a forced item', () => {

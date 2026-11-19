@@ -72,6 +72,12 @@ export interface RoundOptions {
 	pass?: boolean;
 }
 
+/** Runs the dial up to this player's whole wallet, a dollar at a time. */
+async function maxOut(page: Page): Promise<void> {
+	const plus = page.getByRole('button', { name: 'Increase by one dollar' });
+	for (let guard = 0; guard < 100 && (await plus.isEnabled()); guard++) await plus.click();
+}
+
 /** Resolves exactly one item, whichever rule applies, then advances. */
 export async function playRound(page: Page, options: RoundOptions = {}): Promise<Mode> {
 	const { winner, allIn = false, pass = false } = options;
@@ -80,7 +86,7 @@ export async function playRound(page: Page, options: RoundOptions = {}): Promise
 	const mode = await currentMode(page);
 
 	if (mode === 'contest') {
-		if (allIn) await page.getByRole('button', { name: /All in/ }).click();
+		if (allIn) await maxOut(page);
 		const bidder = winner ?? 'Sri';
 		await page.getByRole('button', { name: new RegExp(`${bidder}[\\s\\S]*bid \\$`, 'i') }).click();
 		await page.getByRole('button', { name: /^Let .+ have it/ }).click();
@@ -88,7 +94,7 @@ export async function playRound(page: Page, options: RoundOptions = {}): Promise
 		if (pass) {
 			await page.getByRole('button', { name: /^Pass/ }).click();
 		} else {
-			if (allIn) await page.getByRole('button', { name: /All in/ }).click();
+			if (allIn) await maxOut(page);
 			await page.getByRole('button', { name: /takes it for \$/ }).click();
 		}
 	} else {
