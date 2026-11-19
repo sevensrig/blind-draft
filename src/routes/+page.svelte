@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import BidScreen from '$lib/components/BidScreen.svelte';
 	import ResultsScreen from '$lib/components/ResultsScreen.svelte';
+	import ResumePrompt from '$lib/components/ResumePrompt.svelte';
 	import Seo from '$lib/components/Seo.svelte';
 	import SetupScreen from '$lib/components/SetupScreen.svelte';
 	import { other } from '$lib/game/engine';
@@ -15,11 +16,25 @@
 		// still in progress is kept — that's someone's game, not a leftover.
 		const wantsBot = new URLSearchParams(location.search).get('opponent') === 'bot';
 		if (wantsBot && game.state.phase === 'results') game.dispatch({ type: 'reset' });
+		if (wantsBot && game.pending?.phase === 'results') game.discard();
 		// Marks the client bundle as alive. The page is prerendered, so a dead
 		// hydration still renders perfectly with every control inert — a failure
 		// this app has shipped. The E2E suite waits on this before its first tap.
 		document.documentElement.dataset.hydrated = 'true';
+
+		// A tab left open overnight wakes up without reloading, so check again then.
+		const wake = () => {
+			if (document.visibilityState === 'visible') game.expireIfStale();
+		};
+		document.addEventListener('visibilitychange', wake);
+		window.addEventListener('pageshow', wake);
+		return () => {
+			document.removeEventListener('visibilitychange', wake);
+			window.removeEventListener('pageshow', wake);
+		};
 	});
+
+	const pending = $derived(game.pending);
 
 	const phase = $derived(game.state.phase);
 	const bot = $derived(game.state.config.bot);
@@ -34,7 +49,9 @@
 />
 
 <main>
-	{#if phase === 'setup'}
+	{#if pending}
+		<ResumePrompt saved={pending} resume={() => game.resume()} discard={() => game.discard()} />
+	{:else if phase === 'setup'}
 		<SetupScreen />
 	{:else if phase === 'results'}
 		<ResultsScreen />

@@ -7,9 +7,26 @@ import type { GameConfig, GameState, Player } from './types';
  * during hydration, leaving prerendered HTML on screen with dead handlers — hence
  * the versioned key and the real shape check below. Anything unvouched is dropped.
  */
-const KEY = 'blind-draft:state:v2';
-/** Older keys, cleared on load so they don't linger. */
-const LEGACY_KEYS = ['blind-draft:state:v1'];
+const KEY = 'blind-draft:state:v3';
+/** Older keys, cleared on load so they don't linger. v2 had no timestamp. */
+const LEGACY_KEYS = ['blind-draft:state:v1', 'blind-draft:state:v2'];
+
+/**
+ * How long an untouched game survives. Long enough for a break mid-draft, short
+ * enough that nobody opens the app the next morning still in last night's game.
+ */
+export const SAVE_TTL_MS = 6 * 60 * 60 * 1000;
+
+/** A saved game, when its last move was made, and which tab made it. */
+export interface Save {
+	state: GameState;
+	savedAt: number;
+	tab: string | null;
+}
+
+export function isExpired(savedAt: number, now = Date.now()): boolean {
+	return now - savedAt > SAVE_TTL_MS;
+}
 
 function isPlayer(value: unknown, slotIds: Set<string>): value is Player {
 	if (!value || typeof value !== 'object') return false;
@@ -45,27 +62,44 @@ function looksLikeGameState(value: unknown): value is GameState {
 	return state.players.every((player) => isPlayer(player, slotIds));
 }
 
-export function saveState(state: GameState): void {
+export function saveState(state: GameState, now = Date.now()): void {
 	try {
-		localStorage.setItem(KEY, JSON.stringify(state));
+		const save: Save = { state, savedAt: now, tab: tabId() };
+		localStorage.setItem(KEY, JSON.stringify(save));
 	} catch {
 		// Private mode or full quota: the game plays, it just won't resume.
 	}
 }
 
-export function loadState(): GameState | null {
+/** The saved game with its timestamp, or null if there's none, it's unreadable or it's expired. */
+export function loadSave(now = Date.now()): Save | null {
 	try {
 		for (const stale of LEGACY_KEYS) localStorage.removeItem(stale);
 		const raw = localStorage.getItem(KEY);
 		if (!raw) return null;
-		const parsed: unknown = JSON.parse(raw);
-		if (looksLikeGameState(parsed)) return parsed;
-		// Unrecognisable: bin it rather than leave it to fail again next load.
+		const parsed = JSON.parse(raw) as Partial<Save> | null;
+		const savedAt = parsed?.savedAt;
+		if (
+			typeof savedAt === 'number' &&
+			looksLikeGameState(parsed?.state) &&
+			!isExpired(savedAt, now)
+		) {
+			return {
+				state: parsed.state,
+				savedAt,
+				tab: typeof parsed.tab === 'string' ? parsed.tab : null
+			};
+		}
+		// Unrecognisable or too old: bin it rather than meet it again next load.
 		localStorage.removeItem(KEY);
 		return null;
 	} catch {
 		return null;
 	}
+}
+
+export function loadState(now = Date.now()): GameState | null {
+	return loadSave(now)?.state ?? null;
 }
 
 export function clearState(): void {
@@ -73,6 +107,29 @@ export function clearState(): void {
 		localStorage.removeItem(KEY);
 	} catch {
 		// Nothing to do — see saveState.
+	}
+}
+
+/* ------------------------------------------------------------------ *
+ * Which tab wrote the save
+ *
+ * A save from this tab (a reload, or a hop back from the rooms pages) resumes
+ * silently; one from another tab asks first. sessionStorage survives a reload
+ * and dies with the tab, so an id kept there names the tab.
+ * ------------------------------------------------------------------ */
+
+const TAB_KEY = 'blind-draft:tab:v1';
+
+/** This tab's id, minted on first use. Null when sessionStorage is blocked. */
+export function tabId(): string | null {
+	try {
+		const existing = sessionStorage.getItem(TAB_KEY);
+		if (existing) return existing;
+		const fresh = crypto.randomUUID();
+		sessionStorage.setItem(TAB_KEY, fresh);
+		return fresh;
+	} catch {
+		return null;
 	}
 }
 
