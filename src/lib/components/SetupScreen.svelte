@@ -140,6 +140,8 @@
 		{/if}
 	</header>
 
+	<!-- Wrappers are `display: contents` on phones; the desktop grid places them. -->
+	<div class="config">
 	<section class="block">
 		<h2 class="block__title">Who's playing</h2>
 		<div class="chips">
@@ -232,8 +234,10 @@
 		{/if}
 	</section>
 
-	<section class="block">
-		<h2 class="block__title">Category</h2>
+	</div>
+
+	<section class="block pick">
+		<h2 class="block__title">Pick a category</h2>
 
 		<!-- Above the grid: below fourteen tiles this toggle was off-screen and
 		     looked like it hadn't appeared at all. -->
@@ -278,6 +282,7 @@
 		</div>
 	</section>
 
+	<div class="more">
 	<details class="rules">
 		<summary>How it works</summary>
 		<!-- Plain definition, and the names the game goes by: still prerendered
@@ -317,9 +322,11 @@
 			{/each}
 		</ul>
 	</nav>
+	</div>
 
 	<!-- Only docked once there's something to start: a sticky disabled button
 	     swallowed taps aimed at the tiles scrolled underneath it. -->
+	<div class="go">
 	{#if category}
 		<div class="dock">
 			<button class="btn btn--hot start" type="button" disabled={!canStart} onclick={start}>
@@ -334,6 +341,7 @@
 	{:else}
 		<p class="prompt">Pick a category to start</p>
 	{/if}
+	</div>
 
 	<footer class="feedback">
 		<a href={FEEDBACK_URL} target="_blank" rel="noopener">Send feedback</a>
@@ -741,5 +749,130 @@
 		font-size: 0.64rem;
 		font-weight: 700;
 		color: var(--ink-muted);
+	}
+	/* ---------- desktop: settings rail left, categories right ---------- */
+
+	.config,
+	.more,
+	.go {
+		display: contents;
+	}
+
+	@media (min-width: 64rem) {
+		.setup {
+			display: grid;
+			grid-template-columns: minmax(21rem, 24rem) minmax(0, 1fr);
+			grid-template-areas:
+				'hero pick'
+				'config pick'
+				'go pick'
+				'more pick'
+				'footer footer';
+			grid-template-rows: auto auto auto 1fr auto;
+			gap: 1.5rem 2.5rem;
+			align-items: start;
+			max-width: 78rem;
+			padding: 1.5rem 2rem 2.5rem;
+		}
+
+		.hero {
+			grid-area: hero;
+			padding-top: 0;
+		}
+
+		.config,
+		.more {
+			display: flex;
+			flex-direction: column;
+			gap: 1.3rem;
+		}
+
+		.config {
+			grid-area: config;
+		}
+
+		.go {
+			display: block;
+			grid-area: go;
+		}
+
+		.more {
+			grid-area: more;
+		}
+
+		.pick {
+			grid-area: pick;
+			gap: 0.8rem;
+		}
+
+		.pick .block__title {
+			font-size: 1.4rem;
+			letter-spacing: -0.01em;
+		}
+
+		.feedback {
+			grid-area: footer;
+		}
+
+		.hero__dollar {
+			font-size: 3.6rem;
+		}
+
+		.hero__rest {
+			font-size: 3.4rem;
+		}
+
+		.hero__tag {
+			max-width: none;
+			font-size: 1.05rem;
+		}
+
+		.grid {
+			grid-template-columns: repeat(auto-fill, minmax(11.5rem, 1fr));
+			gap: 0.9rem;
+		}
+
+		.tile {
+			gap: 0.3rem;
+			min-height: 6.25rem;
+			padding: 0.75rem 0.85rem 0.8rem;
+		}
+
+		.tile:hover:not(.tile--on) {
+			background: color-mix(in srgb, var(--accent) 35%, var(--white));
+		}
+
+		.tile__icon {
+			width: 2.4rem;
+			height: 2.4rem;
+			font-size: 1.25rem;
+		}
+
+		.tile__label {
+			font-size: 1rem;
+		}
+
+		.tile__blurb {
+			font-size: 0.74rem;
+		}
+
+		.chip:hover:not(.chip--on):not(:disabled) {
+			background: var(--yellow);
+		}
+
+		/* Sits right under the settings, so it never needs to float. */
+		.dock {
+			position: static;
+			margin: 0;
+			padding: 0;
+			background: none;
+			border: 0;
+		}
+
+		.prompt {
+			padding: 1.4rem 1rem;
+			background: var(--white);
+			border: var(--bw-thin) dashed var(--ink);
+		}
 	}
 </style>
