@@ -94,6 +94,13 @@ export const CATEGORY_COPY: Record<string, CategoryCopy> = {
 		intro:
 			'The NFL draft fills a fantasy-style offence: quarterback, running back, two receivers and a flex. The pools are offence-only, because there is no defensive slot to draft into and a linebacker nobody can start is a dead card.'
 	},
+	soccer: {
+		title: 'Soccer $20 Draft — World Cup 2026 top 100',
+		description:
+			"Play the $20 draft game with soccer players from Fox Sports' World Cup 2026 top 100. Bid blind on Yamal, Mbappé, Kane and more. Two players, free in your browser.",
+		intro:
+			"The soccer pool is the whole of Fox Sports' top 100 players for the 2026 World Cup, from Lamine Yamal down. There are no positions, so you can draft a back line of strikers if you want. Picks score by where Fox ranked them, and the players near the bottom of the list are the ones you'll regret."
+	},
 	celebrities: {
 		title: 'Celebrity $20 Draft — assemble an entourage',
 		description:
