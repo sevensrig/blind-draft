@@ -42,10 +42,18 @@ export function fail(code: ErrorCode, message: string, extra: Record<string, unk
 }
 
 /**
- * Best-effort caller identity for rate limiting. Behind Supabase's proxy the
- * real address is in x-forwarded-for; the token is the fallback.
+ * Best-effort caller identity for rate limiting.
+ *
+ * `cf-connecting-ip` comes first: Cloudflare sits in front of hosted functions
+ * and overwrites it, so a client can't choose it. The leftmost x-forwarded-for
+ * entry is whatever the client sent, so trusting it first let anyone dodge every
+ * limit (and guess private room codes) with a fresh fake IP per request. It
+ * stays as the fallback for local dev, where there's no Cloudflare; the token
+ * is last.
  */
 export function actorOf(req: Request, token?: string | null): string {
+	const edge = req.headers.get('cf-connecting-ip')?.trim();
+	if (edge) return edge;
 	const forwarded = req.headers.get('x-forwarded-for');
 	const ip = forwarded?.split(',')[0]?.trim();
 	return ip || token || 'unknown';
