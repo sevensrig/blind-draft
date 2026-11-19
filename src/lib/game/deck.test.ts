@@ -25,6 +25,8 @@ function tierItems(tier: Tier, n: number): Item[] {
 	}));
 }
 
+const isGreatItem = (item: Item) => item.tier === 'great';
+
 function pool(perTier: number): Item[] {
 	return TIERS.flatMap((tier) =>
 		Array.from({ length: perTier }, (_, i) => ({ id: `${tier}-${i}`, name: `${tier} ${i}`, tier }))
@@ -96,36 +98,44 @@ describe('buildDeck', () => {
 		expect(maxSlotsFor(9)).toBe(4);
 	});
 
-	it('holds the curve: mid+good dominates and great stays a minority', () => {
+	it('deals each tier in proportion to the pool', () => {
+		const items = [...tierItems('great', 10), ...tierItems('good', 20), ...tierItems('mid', 30)];
 		const rng = seeded(42);
-		const decks = Array.from({ length: 400 }, () => buildDeck(pool(20), openRoster(5), rng));
+		const seen = new Map<string, number>();
+		for (let i = 0; i < 2000; i++)
+			for (const item of buildDeck(items, openRoster(5), rng))
+				seen.set(item.tier, (seen.get(item.tier) ?? 0) + 1);
 
-		const avg = (fn: (deck: Item[]) => number) =>
-			decks.reduce((sum, deck) => sum + fn(deck), 0) / decks.length;
-
-		// ~15-20% great, the rest mid+good, with rounding slack.
-		expect(avg((d) => share(d, 'great'))).toBeGreaterThanOrEqual(0.14);
-		expect(avg((d) => share(d, 'great'))).toBeLessThanOrEqual(0.22);
-		expect(avg((d) => share(d, 'mid', 'good'))).toBeGreaterThanOrEqual(0.72);
-		expect(avg((d) => share(d, 'mid', 'good'))).toBeLessThanOrEqual(0.86);
+		const dealt = (seen.get('great') ?? 0) + (seen.get('good') ?? 0) + (seen.get('mid') ?? 0);
+		expect((seen.get('great') ?? 0) / dealt).toBeCloseTo(1 / 6, 1);
+		expect((seen.get('good') ?? 0) / dealt).toBeCloseTo(2 / 6, 1);
+		expect((seen.get('mid') ?? 0) / dealt).toBeCloseTo(3 / 6, 1);
 	});
 
-	it('deals every good and mid item about equally often, however the pool splits', () => {
-		// Lopsided on purpose: a fixed good/mid split would overdeal the small tier.
-		const items = [...pool(4).filter((item) => item.tier !== 'mid'), ...tierItems('mid', 24)];
+	// The bug twice over: a fixed good/mid split, then an even split by tier, each
+	// overdealt whichever tier was smallest and repeated its items game after game.
+	it('deals every great, good and mid item about equally often, however the pool splits', () => {
+		const items = [...tierItems('great', 6), ...tierItems('good', 10), ...tierItems('mid', 30)];
 		const rng = seeded(8);
 		const seen = new Map<string, number>();
 		for (let i = 0; i < 4000; i++)
 			for (const item of buildDeck(items, openRoster(5), rng))
-				seen.set(item.tier, (seen.get(item.tier) ?? 0) + 1);
+				seen.set(item.id, (seen.get(item.id) ?? 0) + 1);
 
-		const perGood = (seen.get('good') ?? 0) / 4;
-		const perMid = (seen.get('mid') ?? 0) / 24;
-		expect(perGood / perMid).toBeGreaterThan(0.85);
-		expect(perGood / perMid).toBeLessThan(1.15);
+		const rates = items.map((item) => seen.get(item.id) ?? 0);
+		expect(Math.max(...rates) / Math.min(...rates)).toBeLessThan(1.25);
 	});
 
-	it('deals at most one bad item, about a quarter of the time, always last', () => {
+	it('draws fresh every game, so the mix changes', () => {
+		const rng = seeded(3);
+		const mixes = new Set<number>();
+		for (let i = 0; i < 200; i++) {
+			mixes.add(buildDeck(pool(20), openRoster(5), rng).filter(isGreatItem).length);
+		}
+		expect(mixes.size).toBeGreaterThan(3);
+	});
+
+	it('deals at most one bad item, four decks in ten, always last', () => {
 		const rng = seeded(42);
 		const runs = 4000;
 		let withBad = 0;
@@ -141,8 +151,8 @@ describe('buildDeck', () => {
 		}
 
 		const rate = withBad / runs;
-		expect(rate).toBeGreaterThan(0.21);
-		expect(rate).toBeLessThan(0.29);
+		expect(rate).toBeGreaterThan(0.36);
+		expect(rate).toBeLessThan(0.44);
 	});
 
 	it('ends on a polarising item most of the time, but not reliably', () => {
@@ -156,10 +166,10 @@ describe('buildDeck', () => {
 			if (last === 'great' || last === 'bad') polarised++;
 		}
 
-		// A quarter close on the bad card; most of the rest are weighted to a great.
+		// 40% close on the bad card; most of the rest are weighted to a great.
 		const rate = polarised / runs;
-		expect(rate).toBeGreaterThan(0.7);
-		expect(rate).toBeLessThan(0.85);
+		expect(rate).toBeGreaterThan(0.75);
+		expect(rate).toBeLessThan(0.88);
 	});
 });
 
@@ -214,6 +224,44 @@ describe('positional decks', () => {
 		// `bad` is a rare closer by design, so only the ordinary tiers must all turn up.
 		const missed = players.filter((item) => item.tier !== 'bad' && !dealt.has(item.id));
 		expect(missed.map((item) => item.name)).toEqual([]);
+	});
+
+	it('deals every non-bad player in a position about equally often', () => {
+		// One great among many mids at each spot: picking a tier first overdealt it.
+		const hoops: Item[] = (['PG', 'SG', 'SF', 'PF', 'C'] as Position[]).flatMap((position) => [
+			{ id: `${position}-g`, name: `${position} star`, tier: 'great' as Tier, position },
+			...Array.from({ length: 6 }, (_, i) => ({
+				id: `${position}-m${i}`,
+				name: `${position} ${i}`,
+				tier: 'mid' as Tier,
+				position
+			}))
+		]);
+		const rng = seeded(13);
+		const seen = new Map<string, number>();
+		for (let i = 0; i < 4000; i++)
+			for (const item of buildDeck(hoops, NBA_ROSTER, rng))
+				seen.set(item.id, (seen.get(item.id) ?? 0) + 1);
+
+		const rates = hoops.map((item) => seen.get(item.id) ?? 0);
+		expect(Math.max(...rates) / Math.min(...rates)).toBeLessThan(1.25);
+	});
+
+	it('closes four positional decks in ten on a bad card', () => {
+		const rng = seeded(17);
+		const hoops = positionalPool(['PG', 'SG', 'SF', 'PF', 'C'], 3);
+		let withBad = 0;
+		for (let i = 0; i < 4000; i++) {
+			const deck = buildDeck(hoops, NBA_ROSTER, rng);
+			const bad = deck.filter((item) => item.tier === 'bad');
+			expect(bad.length).toBeLessThanOrEqual(1);
+			if (bad.length) {
+				expect(deck.at(-1)?.tier).toBe('bad');
+				withBad++;
+			}
+		}
+		expect(withBad / 4000).toBeGreaterThan(0.36);
+		expect(withBad / 4000).toBeLessThan(0.44);
 	});
 
 	it('still leans on the tier curve while satisfying positions', () => {

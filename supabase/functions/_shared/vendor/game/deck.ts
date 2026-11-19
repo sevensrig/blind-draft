@@ -2,20 +2,18 @@
 // Source: src/lib/game/deck.ts. Run `npm run vendor` after changing the engine or pools.
 
 import type { Item, Position, SlotSpec, Tier } from '../data/types.ts';
-import { between, sample, shuffle, type Rng, defaultRng } from './rng.ts';
+import { sample, shuffle, type Rng, defaultRng } from './rng.ts';
 
 /**
  * Deck curation. Exactly `players x slots` items, so the rosters consume it
- * precisely. Tiers never surface in the UI — they only shape the curve:
- * ~15-20% great, the rest mid+good, re-rolled every game. Inside that band every
- * good and mid item is equally likely, so the split follows the pool: a fixed
- * split overdrew whichever tier was smaller and dealt its items every game.
+ * precisely. Tiers never surface in the UI. Every great, good and mid item is
+ * equally likely to be dealt, so each tier's share follows the pool and nothing
+ * repeats more than the pool forces. Weighting by tier instead overdealt
+ * whichever tier was smallest. A `bad` card only ever comes as the closer.
  *
  * Positional categories satisfy their position multiset first, then honour the
  * curve as closely as that allows.
  */
-
-const GREAT_BAND = [0.15, 0.2] as const;
 
 /**
  * A `bad` card is a rare closer, not a tax spread through the deck: most drafts
@@ -23,7 +21,7 @@ const GREAT_BAND = [0.15, 0.2] as const;
  * wants to burn a roster slot on a dud mid-draft, but a dud arriving when a
  * player is broke with a slot open is the joke landing.
  */
-const BAD_CARD_CHANCE = 0.25;
+const BAD_CARD_CHANCE = 0.4;
 
 /** Chance a bad-free deck still ends on a `great`. */
 const GREAT_FINALE_CHANCE = 0.675;
@@ -51,12 +49,15 @@ function weightedPick<T>(
 	rng: Rng
 ): T | undefined {
 	const total = options.reduce((sum, option) => sum + weight(option), 0);
-	let roll = rng() * total;
-	for (const option of options) {
-		roll -= weight(option);
-		if (roll < 0) return option;
-	}
-	return options.at(-1);
+	const roll = rng() * total;
+	let running = 0;
+	// The last option catches float drift, and an empty list gives undefined.
+	return (
+		options.find((option) => {
+			running += weight(option);
+			return roll < running;
+		}) ?? options.at(-1)
+	);
 }
 
 const isPositional = (roster: SlotSpec[]) => roster.some((slot) => slot.drafts !== null);
@@ -73,13 +74,12 @@ function targetCounts(
 	groups: Record<Tier, readonly Item[]>,
 	rng: Rng
 ): Record<Tier, number> {
-	const great = Math.max(1, Math.round(size * between(GREAT_BAND[0], GREAT_BAND[1], rng)));
 	const bad = rng() < BAD_CARD_CHANCE ? 1 : 0;
-	const middle = Math.max(0, size - great - bad);
-	// Fill the band as if drawing from good and mid pooled together.
-	const band = [...groups.good, ...groups.mid];
-	const good = sample(band, middle, rng).filter((item) => item.tier === 'good').length;
-	return { great, good, mid: middle - good, bad };
+	// Draw as if from great, good and mid pooled together, so every item has the same chance.
+	const band = [...groups.great, ...groups.good, ...groups.mid];
+	const counts: Record<Tier, number> = { bad, mid: 0, good: 0, great: 0 };
+	for (const item of sample(band, Math.max(0, size - bad), rng)) counts[item.tier]++;
+	return counts;
 }
 
 /**
@@ -213,7 +213,11 @@ function positionDemand(
 	return demand;
 }
 
-/** Positions exactly, then the tier curve. Scarce positions pick first. */
+/**
+ * Positions exactly, then every non-bad player in a position equally likely.
+ * Scarce positions pick first. Picking a tier first and a player second skewed
+ * it: a position's lone great turned up far more often than its mids.
+ */
 function buildPositionalDeck(
 	pool: readonly Item[],
 	roster: SlotSpec[],
@@ -223,45 +227,38 @@ function buildPositionalDeck(
 ): Item[] {
 	const demand = positionDemand(roster, pool, rng, players);
 	const supply = countByPosition(pool);
-	const quota = targetCounts(size, groupByTier(pool), rng);
 
 	const scarcestFirst = shuffle(demand, rng).sort(
 		(a, b) => (supply.get(a) ?? 0) - (supply.get(b) ?? 0)
 	);
 
+	// The closer, when this deck gets one, goes to a position that has a bad card.
+	const hasBad = (position: Position) =>
+		pool.some((item) => item.position === position && item.tier === 'bad');
+	const badSlots = scarcestFirst.flatMap((position, i) => (hasBad(position) ? [i] : []));
+	const badSlot =
+		badSlots.length > 0 && rng() < BAD_CARD_CHANCE
+			? badSlots[Math.floor(rng() * badSlots.length)]
+			: -1;
+
 	const used = new Set<string>();
 	const picked: Item[] = [];
 
-	for (const position of scarcestFirst) {
+	scarcestFirst.forEach((position, i) => {
 		const candidates = pool.filter((item) => item.position === position && !used.has(item.id));
 		if (candidates.length === 0) throw new Error(`Ran out of ${position} building the deck`);
 
-		// A tier drawn by its outstanding quota times its players here, so the curve
-		// holds but no position is stuck with the same tier, or player, every game.
-		// Picking the biggest quota first instead dealt a near-fixed deck.
-		const inPosition = (tier: Tier) => candidates.filter((item) => item.tier === tier).length;
-		const offered = BACKFILL_ORDER.filter((tier) => quota[tier] > 0 && inPosition(tier) > 0);
-		const tier = weightedPick(offered, (t) => quota[t] * inPosition(t), rng);
-
-		let chosen: Item | undefined;
-		if (tier) {
-			const inTier = candidates.filter((item) => item.tier === tier);
-			chosen = inTier[Math.floor(rng() * inTier.length)];
-		}
-		if (!chosen) {
-			// No candidate in any wanted tier, so the curve bends to the position — but
-			// never onto `bad`, whose quota is at most one and may already be spent.
-			const ordinary = candidates.filter((item) => item.tier !== 'bad');
-			const spare = ordinary.length > 0 ? ordinary : candidates;
-			chosen = spare[Math.floor(rng() * spare.length)];
-		}
+		const bad = candidates.filter((item) => item.tier === 'bad');
+		const ordinary = candidates.filter((item) => item.tier !== 'bad');
+		// Onto a bad card only for the closer, or when the position has nothing else.
+		const from = i === badSlot && bad.length > 0 ? bad : ordinary.length > 0 ? ordinary : bad;
+		const chosen = from[Math.floor(rng() * from.length)];
 
 		used.add(chosen.id);
-		quota[chosen.tier] = Math.max(0, quota[chosen.tier] - 1);
 		picked.push(chosen);
-	}
+	});
 
-	return picked;
+	return picked.slice(0, size);
 }
 
 /** Whether a pool can supply every position a roster template demands. */
