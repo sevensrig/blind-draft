@@ -99,7 +99,7 @@
 	/**
 	 * Highest amount for the dial. On a shared device it covers whichever
 	 * player can bid the most; online and against the bot it is only this
-	 * device's own wallet, so "All in" means your money, not the richer side's.
+	 * device's own wallet, so the top of the dial is your money, not the richer side's.
 	 */
 	const ceiling = $derived(
 		mode === 'solo'

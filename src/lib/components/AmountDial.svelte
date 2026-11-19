@@ -39,11 +39,6 @@
 			aria-label="Increase by one dollar">+</button
 		>
 	</div>
-
-	<!-- The one shortcut. The knobs cover single dollars. -->
-	<button class="allin" type="button" onclick={() => onchange(max)} disabled={atMax}>
-		All in ${max}
-	</button>
 </div>
 
 <style>
@@ -105,26 +100,4 @@
 		font-variant-numeric: tabular-nums;
 	}
 
-	.allin {
-		padding: 0.7rem 0.5rem;
-		background: var(--money);
-		border: var(--bw) solid var(--ink);
-		box-shadow: var(--shadow-sm);
-		font-size: 0.95rem;
-		font-weight: 900;
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
-	}
-
-	.allin:active:not(:disabled) {
-		transform: translate(4px, 4px);
-		box-shadow: none;
-	}
-
-	.allin:disabled {
-		transform: translate(4px, 4px);
-		box-shadow: none;
-		opacity: 0.4;
-		cursor: not-allowed;
-	}
 </style>
